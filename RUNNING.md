@@ -151,3 +151,8 @@ are explicit; suggested read-only page facts remain available without Gemini.
 For a public Sandbox demo, use [the HTTPS deployment guide](docs/DEPLOYMENT.md) and `render.yaml`.
 The Blueprint supplies two single-instance services with separate persistent ledgers. Do not replace
 safe origin checks with arbitrary URLs or assume a GitHub push has deployed or configured Webhooks.
+
+A concise decision → after-income what-if → saved before/after outcome walkthrough is available
+in [the demo script](docs/DEMO_SCRIPT.md). Timing previews are read-only and cannot schedule/pay;
+new capture comparisons require newly saved before/after snapshots. Historical payments remain
+readable and explicitly report a missing before snapshot.

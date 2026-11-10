@@ -137,3 +137,21 @@ current-input-hash-validated insights API. AI-selected sentences remain server-a
 Same-day payment allocation consistency, an explicit engine waiting recommendation and exact
 HTTPS deployment origins are covered by this follow-up. See IMPLEMENTATION_STATUS.md for current
 acceptance evidence; earlier test counts and local-only restrictions above are historical notes.
+
+
+## Decision, timing and outcome follow-up
+
+Shop and review now open with a concise engine conclusion, and support a real after-income,
+full-price timing comparison. Comparing this fixed-date scenario changes the chart, goal plan
+and grounded AI context, while hiding current payment actions. Choosing a current payment
+scenario returns to current timing. The comparison scrolls into view on activation; mobile
+cards stack and date grids wrap while charts retain local scrolling.
+
+New capture records store the same-date before/after model snapshots atomically. Success shows
+those saved amounts and goal-plan changes; historical captures with no before snapshot show
+unavailability rather than a synthetic comparison. The rest of the payment ledger is preserved.
+
+Immediate engine summaries, bounded requests, stale-assessment rejection, persona response
+isolation, order remounts and a synchronous confirmation lock improve demo reliability. All 85
+checks and production build pass. These include server-rendered component assertions, not a claim
+of live mobile/browser acceptance. See IMPLEMENTATION_STATUS.md for outstanding acceptance.

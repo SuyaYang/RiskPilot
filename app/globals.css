@@ -676,3 +676,60 @@ input[type=range] { padding:0;min-height:32px;accent-color:var(--accent); }
 .defer-recommendation { border:1px solid var(--accent-border);border-left:3px solid var(--accent);border-radius:16px;padding:22px 24px;background:var(--card); }
 .defer-recommendation>.row:first-child { color:var(--navy); }
 .defer-recommendation p { font-size:15px;color:var(--muted);margin:12px 0 18px;max-width:800px; }
+
+.copilot-panel .copilot-footnote { font-size:11px;line-height:1.5;padding:8px 16px;flex-shrink:0; }
+
+.goal-planner { scroll-margin-top:24px; }
+/* A clear decision, a read-only timing comparison, and the saved result. */
+.purchase-conclusion { display:flex;gap:18px;align-items:flex-start;padding:26px 28px;border:1px solid var(--line);border-radius:20px;background:var(--card); }
+.conclusion-icon { display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;background:var(--accent-soft);color:var(--accent);border-radius:13px; }
+.purchase-conclusion h2 { font-size:24px;margin-bottom:12px; }
+.purchase-conclusion p { font-size:15px;line-height:1.8;max-width:800px; }
+.purchase-conclusion .page-kicker { margin-bottom:8px; }
+.purchase-conclusion .row { margin:16px 0 10px; }
+.conclusion-recommendation { padding-left:14px;border-left:2px solid var(--accent); }
+.timing-comparison h2 { margin-bottom:8px; }
+.timing-options { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0; }
+.timing-options>button { display:flex;align-items:flex-start;flex-direction:column;gap:6px;text-align:left;padding:20px;border-radius:15px; }
+.timing-options>button[aria-pressed=true] { border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft); }
+.timing-options>button>strong { font-size:15px; }
+.timing-options>button>span:not(.badge) { font-size:13px;color:var(--muted);font-weight:500; }
+.timing-options b { font-size:28px;letter-spacing:-1px;margin-top:10px; }
+.timing-stress { display:flex;flex-direction:column;gap:6px;padding:16px 0;border-block:1px solid var(--line);font-size:14px;margin-bottom:14px; }
+.timing-stress>span { color:var(--muted); }
+.timing-stress strong>span { padding:0 8px;color:var(--muted); }
+.timing-goals>div { display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);font-size:14px; }
+.timing-goals>div>span { display:flex;flex-direction:column; }
+.timing-goals small { font-size:12px;color:var(--muted); }
+.timing-assumptions { margin:16px 0 0; }
+.timing-preview-banner { background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:12px;padding:16px 20px;font-size:14px; }
+.timing-preview-banner p { margin-bottom:12px; }
+.skip-purchase .btn { margin-top:12px;width:100%; }
+.capture-comparison { border-top:1px solid var(--line);margin-top:24px;padding-top:24px; }
+.capture-metrics { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:22px 0; }
+.capture-metrics>div { padding:18px;background:var(--bg);border-radius:14px;display:flex;flex-direction:column;align-items:flex-start;gap:8px; }
+.capture-metrics>div>span,.capture-metrics small { font-size:13px;color:var(--muted); }
+.capture-metrics strong { font-size:23px;letter-spacing:-.6px; }
+.capture-metrics i { font-size:16px;font-style:normal;color:var(--muted);margin:0 3px; }
+.capture-comparison .flow-legend { margin-top:28px; }
+.capture-goals>div { border-bottom:1px solid var(--line);padding:14px 0;font-size:14px; }
+.capture-goals p { margin:6px 0 3px; }
+.capture-goals span { color:var(--muted); }
+.capture-comparison>p:last-child { margin:18px 0 0; }
+.success-shell:has(.capture-comparison) { max-width:860px; }
+@media(max-width:600px) {
+  .purchase-conclusion { padding:22px 18px;gap:12px; }
+  .conclusion-icon { width:32px;height:32px;border-radius:10px; }
+  .purchase-conclusion h2 { font-size:21px; }
+  .timing-comparison { padding:22px 18px; }
+  .timing-options>button { padding:15px 12px; }
+  .timing-options b { font-size:24px; }
+  .timing-goals>div { grid-template-columns:1fr 1fr;gap:8px; }
+  .timing-goals>div>strong { grid-column:1/-1; }
+  .capture-metrics { grid-template-columns:1fr; }
+  .capture-metrics strong { font-size:24px; }
+  .purchase-conclusion .row { align-items:stretch;flex-direction:column; }
+}
+@media(max-width:360px) { .timing-options { grid-template-columns:1fr; } }
+
+.timing-comparison { scroll-margin-top:24px; }

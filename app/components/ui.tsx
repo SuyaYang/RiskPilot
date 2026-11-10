@@ -7,6 +7,9 @@ export const money = (n: number) =>
 export const fmtDate = (s: string | null | undefined) =>
   s ? new Date(`${s.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "—";
 
+export const fullDate = (s: string | null | undefined) =>
+  s ? new Date(`${s.slice(0,10)}T00:00:00Z`).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}) : "Not projected";
+
 export function RiskBadge({ risk }: { risk: "green" | "yellow" | "red" }) {
   const label = risk === "green" ? "Within buffer" : risk === "yellow" ? "Caution" : "Risky";
   return <span className={`badge ${risk}`}>{label}</span>;
@@ -22,13 +25,17 @@ export function useApi<T>(url: string) {
     const request = new AbortController();
     controller.current = request;
     setData(null); setError(null);
+    const deadline=setTimeout(()=>{
+      if(controller.current===request && !request.signal.aborted){request.abort();setError("This request timed out. Please try again.");}
+    },20000);
     fetch(url, { cache: "no-store", signal: request.signal })
       .then(async (r) => {
         const j = await r.json();
         if (!r.ok) throw new Error(j.error || "Request failed");
         if (!request.signal.aborted) { setData(j); setError(null); }
       })
-      .catch((e) => { if (!request.signal.aborted) setError(e.message); });
+      .catch((e) => { if (!request.signal.aborted) setError(e.message); })
+      .finally(()=>clearTimeout(deadline));
   }, [url]);
   useEffect(() => {
     load();
@@ -39,7 +46,10 @@ export function useApi<T>(url: string) {
 }
 
 export async function postJson(url: string, body: unknown, method = "POST") {
-  const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal:AbortSignal.timeout(40000) }).catch(error=>{
+    if(error.name==="TimeoutError")throw new Error("The request timed out. Check the current status before retrying.");
+    throw error;
+  });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.error) throw new Error(j.error || `Request failed (${r.status})`);
   return j;

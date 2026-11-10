@@ -8,6 +8,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const owner = await currentPersonaId(), { id } = await ctx.params;
     const order = ownedOrder(id, owner);
     const body = await req.json().catch(() => ({}));
+    if (body.timing !== undefined && body.timing !== "now") throw new CheckoutError("PREVIEW_ONLY", "A future-date preview cannot submit payment. Return to the current checkout.", 400);
     if (body.reviewConfirmed !== true) throw new CheckoutError("REVIEW_REQUIRED", "Review the purchase impact and select Make payment to confirm.", 400);
     if (order.status !== "CAPTURED" && body.inputHash !== inputHash(owner)) {
       throw new CheckoutError("STALE_REVIEW", "Your finances changed. Refresh the purchase overview before paying.");

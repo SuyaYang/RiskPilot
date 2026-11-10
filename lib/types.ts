@@ -98,6 +98,7 @@ export interface OptionResult {
   payments: Payment[];
   extraCost: number; // interest, estimate
   forecast: ForecastResult;
+  goalPlan?: Allocation;
   goalImpact: { goalId: string; name: string; delayDays: number }[];
   responsible: { ok: boolean; reasons: string[] };
   recommended: boolean;
@@ -114,5 +115,16 @@ export interface Decision {
   baseline: ForecastResult;
   options: OptionResult[];
   recommendedMethod: MethodId;
+  afterIncome?: PurchaseTiming;
   explanation?: { text: string; source: "ai" | "template" };
 }
+
+export type PurchaseTiming = { available:false; reason:string } | {
+  available:true;
+  income:{name:string;date:string;amount:number;uncertain:boolean};
+  purchaseDate:string;
+  forecast:ForecastResult;
+  allocation:Allocation;
+  goalImpact:OptionResult["goalImpact"];
+  payment:Payment;
+};

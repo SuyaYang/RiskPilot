@@ -16,7 +16,7 @@ export function orderReview(order: OrderRecord) {
   const decision: Decision = {
     id: order.decisionId, personaId: order.personaId, productId: order.productId,
     createdAt: new Date().toISOString(), inputHash: hash, schemaVersion: "rp-v1",
-    baseline: forecast(persona, payments), options: result.options, recommendedMethod: result.recommended,
+    baseline: forecast(persona, payments), options: result.options, afterIncome:result.afterIncome, recommendedMethod: result.recommended,
   };
   const asOf = iso(today());
   const upcoming = [

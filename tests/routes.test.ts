@@ -86,8 +86,20 @@ test("middleware and API integration without opening a network listener", async 
     const status = await within(a, () => order.GET(new Request("http://localhost:3000"), params(orderId))).then(r => r.json());
     assert.equal(status.forecastSnapshot.data.forecast.startBalance, after.forecast.startBalance);
     assert.equal(status.order.amount, 900);
+    assert.equal(status.comparison.available,true);
+    assert.equal(status.forecastSnapshot.before.purchases.length,0);
+    assert.equal(status.forecastSnapshot.data.purchases.length,1);
+    assert.equal(status.comparison.before.forecast.startBalance,before.forecast.startBalance);
+    assert.equal(status.comparison.after.forecast.startBalance,after.forecast.startBalance);
+    const savedComparison=JSON.stringify(status.comparison);
+    const legacyStore=JSON.parse(fs.readFileSync(process.env.STORE_PATH!,"utf8"));
+    delete legacyStore.snapshots[status.forecastSnapshot.id].before;
+    const {captureComparison}=await import("../lib/captureComparison");
+    assert.equal(captureComparison(legacyStore.orders[orderId],legacyStore)?.available,false);
     await within(a, () => simulate.POST(req("/simulate", {}), params(orderId)));
     assert.equal((await within(a, () => snap.GET()).then(r => r.json())).purchases.length, 1);
+    const repeated=await within(a,()=>order.GET(new Request("http://localhost:3000"),params(orderId))).then(r=>r.json());
+    assert.equal(JSON.stringify(repeated.comparison),savedComparison,"Repeated capture must preserve the original before/after snapshots");
   });
   await t.test("purchase overview is read-only and explicit current review is required", async () => {
     const assessment = await within(a, () => decisions.POST(req("/api/decisions", { productId: "quiet-buds" }))).then(r => r.json());
@@ -115,6 +127,11 @@ test("middleware and API integration without opening a network listener", async 
     assert.ok(status.review.context.upcoming.some((item: { label: string }) => item.label === "Rent"));
     const body = { question: "afford", method: "full", inputHash: status.review.decision.inputHash };
     const before = fs.readFileSync(process.env.STORE_PATH!, "utf8");
+    const timing=status.review.decision.afterIncome;
+    assert.equal(timing.available,true);
+    const previewAnswer=await within(a,()=>insights.POST(req("/insights",{...body,method:"full",question:"overview",timing:"after_income"}),params(created.id))).then(r=>r.json());
+    assert.equal(previewAnswer.source,"template");assert.match(previewAnswer.text,/future-date preview/);
+    assert.equal((await within(a,()=>insights.POST(req("/insights",{...body,method:"pay_in_4",timing:"after_income"}),params(created.id)))).status,400);
     const answer = await within(a, () => insights.POST(req("/insights", body), params(created.id))).then(r => r.json());
     assert.equal(answer.readOnly, true); assert.equal(answer.source, "template");
     assert.equal(answer.inputHash, body.inputHash);
@@ -137,6 +154,23 @@ test("middleware and API integration without opening a network listener", async 
     assert.equal((await within(a, () => insights.POST(req("/insights", { ...body, inputHash: "stale" }), params(created.id)))).status, 409);
     await within(a, () => goals.POST(req("/goals", { name: "New commitment", type: "spend", targetAmount: 100, savedSoFar: 0, priority: 2, targetDate: "2027-03-01" })));
     assert.equal((await within(a, () => insights.POST(req("/insights", body), params(created.id)))).status, 409);
+    const recorded=await within(a,()=>order.GET(new Request("http://localhost:3000"),params(orderId))).then(r=>r.json());
+    assert.equal(recorded.comparison.available,true);
+    assert.equal(recorded.comparison.before.forecast.startBalance,3500);
+    assert.equal(recorded.comparison.after.forecast.startBalance,2600);
+  });
+  await t.test("an assessment is discarded if finances change while Gemini is preparing its explanation",async()=>{
+    const originalFetch=globalThis.fetch;
+    const {update}=await import("../lib/store");
+    process.env.GEMINI_API_KEY="fixture-only";
+    globalThis.fetch=async()=>{
+      update(store=>{const id=Object.keys(store.personas).find(id=>id.startsWith(a.match(/rp_workspace=([^;]+)/)![1]))!;store.personas[id].goals[0].savedSoFar+=1;});
+      return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({factIds:["recommendation","buffer"]})}]}}]});
+    };
+    try{
+      const result=await within(a,()=>decisions.POST(req("/api/decisions",{productId:"aero-14"})));
+      assert.equal(result.status,409);assert.equal((await result.json()).code,"STALE_DECISION");
+    }finally{globalThis.fetch=originalFetch;delete process.env.GEMINI_API_KEY;}
   });
   await t.test("goal confirmation, cent precision, optimistic version and invalid dates", async () => {
     const response = await within(a, () => goals.POST(req("/goals", { name: "Test trip", type: "spend", targetAmount: 123.45, savedSoFar: 12.34, priority: 2, targetDate: "2027-03-01" })));

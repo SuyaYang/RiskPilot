@@ -28,6 +28,9 @@ export function copilotFacts(data:ReturnType<typeof snapshot>, decision?:Decisio
   });
   CONCEPT_LIST.forEach(concept=>{facts[`learn_${concept.id}`]=conceptAnswer(concept.id)!;});
   if(decision) {
+    const timing=decision.afterIncome;
+    if(timing?.available){facts.purchase_timing=`The same full-price purchase is simulated on ${timing.purchaseDate}, one day after expected ${timing.income.name} on ${timing.income.date}. Lowest projected cash ${usd(timing.forecast.minBalance)}; risk ${timing.forecast.risk}. With income a week late and purchase date unchanged, lowest cash ${usd(timing.forecast.stressMinBalance)}. Preview only, not scheduled.`;facts.purchase_timing_goals=timing.allocation.goals.map(goal=>`${goal.name}: predicted completion ${goal.eta||"not projected"}, status ${goal.status}`).join("; ")||"No goals to compare.";}
+    else facts.purchase_timing=timing&&!timing.available?timing.reason:"Refresh the purchase assessment for an after-income calculation.";
     decision.options.forEach(option=>{
       const key=`purchase_${option.method}`;
       facts[key]=`${option.label}, ${option.productName}: ${usd(option.price)}. ${option.hypothetical?"Hypothetical estimate; PayPal determines eligibility and actual terms.":option.method==="wait"?"No purchase or checkout.":"Full-price scenario; checkout eligibility is determined separately."} Lowest projected cash ${usd(option.forecast.minBalance)} on ${option.forecast.minBalanceDate}; risk ${option.forecast.risk}; buffer gap ${usd(option.forecast.bufferGap)}. Estimated extra cost ${usd(option.extraCost)}.`;

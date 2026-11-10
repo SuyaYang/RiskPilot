@@ -14,6 +14,7 @@ export function recordCapture(orderId: string, captureId: string, capturedAmount
     const st = d.personas[order.personaId];
     const existing = st.purchases.find(p => p.id === captureId);
     if (existing) return { order, purchase: existing, duplicate: true };
+    const before = structuredClone(snapshot(order.personaId, d));
     const purchase = {
       id: captureId, orderId, productName: order.productName, amount: order.amount, method: order.method,
       payments: [{ date: iso(today()), amount: order.amount, label: "Conservative reserve · funding unconfirmed" }],
@@ -26,7 +27,7 @@ export function recordCapture(orderId: string, captureId: string, capturedAmount
     const id = `capture:${captureId}`;
     d.snapshots[id] = {
       id, personaId: order.personaId, orderId, inputHash: inputHash(order.personaId, d), schemaVersion: "rp-v1",
-      createdAt: new Date().toISOString(), data: snapshot(order.personaId, d),
+      createdAt: new Date().toISOString(), before, data: snapshot(order.personaId, d),
     };
     order.snapshotId = id;
     order.projectionStatus = "UPDATED";

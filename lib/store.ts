@@ -31,7 +31,7 @@ export interface StoreData {
   orders: Record<string, OrderRecord>;
   commands: Record<string, CreateCommand>;
   webhookEvents: Record<string, WebhookRecord>;
-  snapshots: Record<string, { id: string; personaId: string; orderId: string; inputHash: string; schemaVersion: "rp-v1"; createdAt: string; data: ReturnType<typeof snapshot> }>;
+  snapshots: Record<string, { id: string; personaId: string; orderId: string; inputHash: string; schemaVersion: "rp-v1"; createdAt: string; before?: ReturnType<typeof snapshot>; data: ReturnType<typeof snapshot> }>;
 }
 const STORE_PATH = process.env.STORE_PATH || path.join(process.cwd(), "data", "store.json");
 const fresh = (): StoreData => ({ version: 2, personas: {}, decisions: {}, orders: {}, commands: {}, webhookEvents: {}, snapshots: {} });

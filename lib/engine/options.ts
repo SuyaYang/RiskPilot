@@ -1,5 +1,6 @@
-import type { Allocation, Goal, MethodId, OptionResult, Payment, Persona } from "../types";
+import type { Allocation, Goal, MethodId, OptionResult, Payment, Persona, PurchaseTiming } from "../types";
 import type { Product } from "../catalog";
+import { purchaseAfterIncome } from "./purchaseTiming";
 import { addDays, iso, today } from "../dates";
 import { forecast } from "./forecast";
 import { allocateGoals, goalImpact } from "./goals";
@@ -54,7 +55,7 @@ export function buildOptions(
   existing: Payment[],
   product: Product,
   alternative?: Product,
-): { baselineAlloc: Allocation; options: OptionResult[]; recommended: MethodId } {
+): { baselineAlloc: Allocation; options: OptionResult[]; recommended: MethodId; afterIncome: PurchaseTiming } {
   const t = today();
   // Payments on or before today already reduce forecast.startBalance. Do not allocate them twice.
   const futureExisting = existing.filter((x) => x.date > iso(t));
@@ -94,6 +95,7 @@ export function buildOptions(
       payments,
       extraCost,
       forecast: f,
+      goalPlan: alloc,
       goalImpact: goalImpact(baselineAlloc, alloc),
       responsible: { ok: eligible && f.bufferGap >= 0, reasons },
       recommended: false,
@@ -115,5 +117,5 @@ export function buildOptions(
   );
   const recommended: MethodId = green[0]?.method ?? "wait";
   for (const o of options) o.recommended = o.method === recommended;
-  return { baselineAlloc, options, recommended };
+  return { baselineAlloc, options, recommended, afterIncome:purchaseAfterIncome(p,goals,existing,product.price,baselineAlloc) };
 }

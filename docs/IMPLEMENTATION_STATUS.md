@@ -10,6 +10,34 @@ explicit Confirm and pay → merchant capture → provider-verified receipt. No 
 Dashboard, Goals, Shop and Invest have distinct responsive compositions within one neutral design
 system. See [UI implementation](UI_REDESIGN.md) and [running instructions](../RUNNING.md).
 
+## Decision, timing and outcome follow-up
+
+- A deterministic full-price conclusion summarizes normal/stress buffer risk and goal impact,
+  with explicit next actions rather than waiting for an AI request to finish.
+- Shop and merchant review compare full payment now with the same purchase one day after the
+  next scheduled future income, inside the 45-day window. The existing forecast/allocation
+  engines recalculate both dates; no income means an explicit unavailable state. The date remains
+  fixed during late-income stress, so improvement does not imply safety. Arbitrary future dates,
+  future stock/price and actual payment eligibility remain unknown.
+- Previewing timing never schedules an order. Future-date mode removes current checkout actions;
+  capture/simulation APIs reject a request explicitly marked as a future preview. Current orders
+  still require their existing confirmation, approval, ownership and recovery checks.
+- Newly recorded captures atomically save an immutable before-reserve and after-reserve snapshot.
+  Success shows saved cash/allocation changes and goal dates, including years. Repeated capture or
+  later goal edits do not replace these snapshots. Legacy captures explicitly lack before data;
+  no historical numbers are fabricated or backfilled.
+- Engine summaries display immediately while Gemini loads. Read timeouts have retry states;
+  assessment writes reject changed inputs and late responses cannot cross a persona switch.
+  Payment clicks have a synchronous lock; different order URLs remount review state.
+- The small two-line assistant footer and the goal editor's automatic scroll/focus fix are retained.
+
+The 85-test suite includes fixed-date/stress/no-income examples, preview capture rejection,
+immutable comparison/legacy handling, stale AI assessments and server-rendered decision states.
+Live Gemini successfully selected the calculated future-date facts and identified the preview as
+read-only. TypeScript/build pass. No new Sandbox capture was performed, and browser/mobile
+acceptance remains outstanding under the saved localhost:3100 permission restriction.
+See [demo walkthrough](DEMO_SCRIPT.md) for a controlled presentation sequence.
+
 ## P0 / P1 review follow-up
 
 | Review item | Implementation / evidence |
@@ -22,7 +50,7 @@ system. See [UI implementation](UI_REDESIGN.md) and [running instructions](../RU
 
 ## Validation
 
-- All 76 automated tests pass: finance, same-day baseline regression, goals, grounded AI,
+- All 85 automated tests pass: finance, same-day baseline regression, goals, grounded AI,
   provider failure, workspace isolation, stale review, payment recovery, merchant handoff,
   capture/receipt, HTTPS allowlist, secure callbacks and merchant-ledger restart persistence.
 - TypeScript and production build pass. CI is separately recorded in GitHub Actions after push;

@@ -1,12 +1,11 @@
 "use client";
 import { useState } from "react";
 import type { ForecastResult } from "@/lib/types";
-import type { PurchaseReview } from "@/lib/orderReview";
 import { BalanceChart, fmtDate, money } from "./ui";
 
 export default function CashFlowExplorer({ baseline, forecast, buffer, upcoming, label }: {
   baseline: ForecastResult; forecast: ForecastResult; buffer: number;
-  upcoming: PurchaseReview["context"]["upcoming"]; label: string;
+  upcoming: {date:string;amount:number;label:string;source:"fixture"|"purchase-reserve"|"what-if"}[]; label: string;
 }) {
   const [day, setDay] = useState(0);
   const selected = forecast.dailyBalances[day];
@@ -18,7 +17,7 @@ export default function CashFlowExplorer({ baseline, forecast, buffer, upcoming,
     <label className="chart-scrubber">Explore a day <strong>{fmtDate(selected?.date)}</strong><input type="range" min={0} max={Math.max(0, forecast.dailyBalances.length - 1)} value={day} onChange={event => setDay(Number(event.target.value))} aria-label="Explore forecast day" aria-valuetext={`${fmtDate(selected?.date)}: projected cash ${money(selected?.balance ?? 0)}`} /></label>
     <div className="day-readout" aria-live="polite"><div><span>Selected scenario</span><strong>{money(selected?.balance ?? 0)}</strong></div><div><span>Without purchase</span><strong>{money(baseline.dailyBalances[day]?.balance ?? 0)}</strong></div><div><span>Due this day</span><strong>{bills.length ? money(bills.reduce((sum, item) => sum + item.amount, 0)) : "—"}</strong></div></div>
     <p className="small muted chart-day-events">{bills.length ? bills.map(item => item.label).join(" · ") : "No scheduled bills or purchase reserves on this day. Everyday spending remains in the forecast."}</p>
-    <details><summary>Upcoming bills & commitments <span className="muted">({upcoming.length})</span></summary><ul className="commitment-list">{upcoming.map((item, index) => <li key={`${item.date}-${index}`}><div><strong>{item.label}</strong><span>{fmtDate(item.date)} · {item.source === "fixture" ? "Fictional scheduled bill" : "Recorded purchase reserve"}</span></div><strong>{money(item.amount)}</strong></li>)}</ul>{!upcoming.length && <p className="small muted">No scheduled commitments within this chart.</p>}</details>
+    <details><summary>Upcoming bills & commitments <span className="muted">({upcoming.length})</span></summary><ul className="commitment-list">{upcoming.map((item, index) => <li key={`${item.date}-${index}`}><div><strong>{item.label}</strong><span>{fmtDate(item.date)} · {item.source === "fixture" ? "Fictional scheduled bill" : item.source === "what-if" ? "What-if purchase, not scheduled" : "Recorded purchase reserve"}</span></div><strong>{money(item.amount)}</strong></li>)}</ul>{!upcoming.length && <p className="small muted">No scheduled commitments within this chart.</p>}</details>
     <p className="chart-note">Daily balances are projections from fictional inputs. Risk checks extend through {fmtDate(forecast.evaluatedThrough)} to include later payments.</p>
   </section>;
 }

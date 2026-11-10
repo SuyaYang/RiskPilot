@@ -17,8 +17,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const review = orderReview(order);
     if (body.inputHash !== review.decision.inputHash) throw new CheckoutError("STALE_REVIEW", "Refresh the impact to use your latest financial inputs.", 409);
     if (!review.decision.options.some(item => item.method === body.method && item.eligible)) throw new CheckoutError("INVALID_SCENARIO", "Choose an available forecast scenario.", 400);
+    if(body.timing!==undefined && !["now","after_income"].includes(body.timing))throw new CheckoutError("INVALID_SCENARIO", "Choose a supported purchase timing.", 400);
+    if(body.timing==="after_income" && (body.method!=="full" || !review.decision.afterIncome?.available))throw new CheckoutError("INVALID_SCENARIO", "After-income preview is unavailable for this scenario.", 400);
     const question = body.question as ReviewQuestion;
-    const { facts, required, inputHash } = reviewFacts(review, body.method as MethodId, question);
+    const { facts, required, inputHash } = reviewFacts(review, body.method as MethodId, question, body.timing || "now");
     if (body.prompt && !process.env.GEMINI_API_KEY) throw new CheckoutError("AI_UNAVAILABLE", "Gemini is not configured. Use the suggested questions or configure the server key.", 503);
     const explanation = body.prompt ? await answerCopilot(body.prompt.trim(), "Checkout review", facts) : await explainReviewFacts(facts, required, REVIEW_QUESTIONS[question]);
     if (currentInputHash(order.personaId) !== inputHash) throw new CheckoutError("STALE_REVIEW", "Your finances changed. Refresh this review before asking again.", 409);

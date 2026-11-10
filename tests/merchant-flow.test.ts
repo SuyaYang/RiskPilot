@@ -124,6 +124,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     assert.equal((await merchantRequest("/api/riskpilot")).status, 401);
     await assert.rejects(() => captureCheckout(owner, id), /captured by its merchant/);
     assert.equal((await confirm({ inputHash: reviewedHash })).status, 400);
+    assert.equal((await confirm({reviewConfirmed:true,inputHash:reviewedHash,timing:"after_income"})).status,400);
     assert.equal(captures, 0);
   });
   await t.test("a changed goal invalidates confirmation until the impact is refreshed", async () => {
@@ -156,6 +157,8 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     const receipt = await merchantRequest("/api/status", { method: "GET", cookie: merchantCookie });
     assert.equal(receipt.data.status, "CAPTURED"); assert.equal(receipt.data.captureId, `CAP-${id}`);
     const data = await view(); assert.equal(data.review, null); assert.ok(data.forecastSnapshot);
+    assert.equal(data.comparison.available,true);assert.equal(data.comparison.before.forecast.startBalance,9000);assert.equal(data.comparison.after.forecast.startBalance,8100);
+    assert.equal(data.forecastSnapshot.before.purchases.length,0);assert.equal(data.forecastSnapshot.data.purchases.length,1);
     const persisted = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
     assert.equal(Object.values(persisted.sessions as { [id: string]: { reviewedHash: string } }).find(record => record.reviewedHash)?.reviewedHash, reviewedHash);
   });
