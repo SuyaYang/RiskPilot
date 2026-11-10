@@ -1,0 +1,112 @@
+import type { Allocation, Goal, GoalStatus, Payment, Persona } from "../types";
+import { addDays, daysBetween, iso, monthsBetween, parseIso, today } from "../dates";
+import { monthlySurplus } from "./forecast";
+
+const MONTH_DAYS = 30.4;
+const MAX_MONTHS = 48;
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+function sortGoals(goals: Goal[]): Goal[] {
+  return [...goals].sort((a, b) => a.priority - b.priority || a.targetDate.localeCompare(b.targetDate));
+}
+
+/**
+ * Month-by-month funding simulation. Each month the monthly surplus, minus any purchase payments
+ * falling in that month, is allocated to goals by priority then deadline, each up to the amount it
+ * needs per month; anything left accelerates the same goals in order. A shortfall (including
+ * restoring the cash buffer) carries forward and must be repaid before goals get money again.
+ */
+export function allocateGoals(
+  p: Persona,
+  goals: Goal[],
+  futurePayments: Payment[] = [],
+  bufferDeficit = 0,
+): Allocation {
+  const t = today();
+  const surplus = monthlySurplus(p);
+  const outByMonth = new Array(MAX_MONTHS).fill(0);
+  for (const x of futurePayments) {
+    const d = daysBetween(t, parseIso(x.date));
+    if (d < 0) continue;
+    const m = Math.min(MAX_MONTHS - 1, Math.floor(d / MONTH_DAYS));
+    outByMonth[m] += x.amount;
+  }
+  const active = sortGoals(goals.filter((g) => !g.paused));
+  const remaining = new Map(active.map((g) => [g.id, Math.max(0, g.targetAmount - g.savedSoFar)]));
+  const required = new Map(
+    active.map((g) => {
+      // whole months left, so a goal funded at this rate completes by its target date
+      const months = Math.max(1, Math.floor(monthsBetween(t, parseIso(g.targetDate))));
+      return [g.id, round2((remaining.get(g.id) ?? 0) / months)];
+    }),
+  );
+  const firstMonth = new Map<string, number>();
+  const doneMonth = new Map<string, number>();
+  let carry = 0;
+  for (let m = 0; m < MAX_MONTHS; m++) {
+    let avail = surplus - outByMonth[m] - (m === 0 ? bufferDeficit : 0) + carry;
+    if (avail < 0) {
+      carry = avail;
+      avail = 0;
+    } else carry = 0;
+    const give = (g: Goal, cap: number) => {
+      const r = remaining.get(g.id) ?? 0;
+      const amt = Math.min(r, cap, avail);
+      if (amt <= 0) return;
+      avail -= amt;
+      remaining.set(g.id, r - amt);
+      if (m === 0) firstMonth.set(g.id, (firstMonth.get(g.id) ?? 0) + amt);
+      if (r - amt <= 0.005 && !doneMonth.has(g.id)) doneMonth.set(g.id, m);
+    };
+    for (const g of active) give(g, required.get(g.id) ?? 0);
+    for (const g of active) give(g, Infinity);
+    if ([...remaining.values()].every((r) => r <= 0.005)) break;
+  }
+
+  const statuses: GoalStatus[] = sortGoals(goals).map((g) => {
+    const rem = Math.max(0, g.targetAmount - g.savedSoFar);
+    if (g.paused) {
+      return base(g, rem, 0, 0, null, "paused", 0);
+    }
+    if (rem <= 0) return base(g, 0, 0, 0, iso(t), "done", 0);
+    const dm = doneMonth.get(g.id);
+    const eta = dm === undefined ? null : iso(addDays(t, Math.round((dm + 1) * MONTH_DAYS)));
+    const delay = eta === null ? 9999 : Math.max(0, daysBetween(parseIso(g.targetDate), parseIso(eta)));
+    return base(g, rem, required.get(g.id) ?? 0, round2(firstMonth.get(g.id) ?? 0), eta, delay > 0 ? "delayed" : "on_track", delay);
+  });
+  return { monthlySurplus: surplus, goals: statuses };
+}
+
+function base(
+  g: Goal,
+  remaining: number,
+  requiredMonthly: number,
+  allocatedThisMonth: number,
+  eta: string | null,
+  status: GoalStatus["status"],
+  delayDays: number,
+): GoalStatus {
+  return {
+    goalId: g.id,
+    name: g.name,
+    type: g.type,
+    priority: g.priority,
+    remaining: round2(remaining),
+    requiredMonthly,
+    allocatedThisMonth,
+    eta,
+    targetDate: g.targetDate,
+    status,
+    delayDays,
+  };
+}
+
+/** Extra delay (days) each goal suffers in `withOption` compared with `baseline`. */
+export function goalImpact(baseline: Allocation, withOption: Allocation) {
+  return withOption.goals.map((g) => {
+    const b = baseline.goals.find((x) => x.goalId === g.goalId);
+    const etaDays = (s: string | null) => (s === null ? MAX_MONTHS * MONTH_DAYS : daysBetween(today(), parseIso(s)));
+    const delayDays = b ? Math.max(0, Math.round(etaDays(g.eta) - etaDays(b.eta))) : 0;
+    return { goalId: g.goalId, name: g.name, delayDays };
+  });
+}
