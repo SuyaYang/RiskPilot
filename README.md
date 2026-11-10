@@ -4,7 +4,7 @@
 
 RiskPilot compares a cart with upcoming bills, cash reserves, and savings goals. The customer chooses an option and approves checkout through PayPal. RiskPilot records the confirmed merchant payment, updates its own cash-flow projection, and later reconciles bank activity without counting the expense twice.
 
-> **Status:** implementation architecture. This workspace contains design documents, not a running app. API routes, repository paths, and environment variables below are proposed contracts. No credentials, Sandbox payment, or deployment have been verified yet.
+> **Status:** local fictional-data Checkout MVP in progress. Dashboard, Goals, Shop and Invest are implemented; payment recovery, versioned snapshots and regression tests are available. The architecture below remains the target, not a claim that Supabase/Python/worker/deployment are complete. Start with [RUNNING.md](RUNNING.md) and the [acceptance status](docs/IMPLEMENTATION_STATUS.md). Real Sandbox payment and public deployment remain unverified.
 
 **Hackathon scope:** US, USD, one RiskPilot demo store, one PayPal Sandbox merchant, and Plaid Sandbox or clearly marked manual financial data. Investment views show cash capacity and educational scenarios; they do not transfer funds or place trades. Pay Later scenarios are hypothetical until PayPal confirms eligibility and the buyer confirms actual loan terms.
 
@@ -108,7 +108,7 @@ These are **RiskPilot routes**, not vendor endpoints. Except webhooks and health
 | Inbound/ops | `POST /api/webhooks/paypal`; `POST /api/webhooks/plaid`; `GET /api/health` | Verify raw event, persist inbox, then acknowledge; health exposes no secrets |
 | Demo-only | `POST /api/demo/reset` | Authorized reset of one demo user's scenario; absent in production |
 
-The private engine exposes `POST /v1/forecast`, `POST /v1/allocate-goals`, `POST /v1/evaluate-purchase`, and `POST /v1/investment-capacity`. All accept `schema_version`, `policy_version`, `as_of`, timezone, currency, and an input hash; money uses integer minor units. The latter three reuse one cash-flow kernel. Errors include stable `code`, `retryable`, and `trace_id`. [Full internal contracts](outputs/RiskPilot-完整架构设计.md)
+The private engine exposes `POST /v1/forecast`, `POST /v1/allocate-goals`, `POST /v1/evaluate-purchase`, and `POST /v1/investment-capacity`. All accept `schema_version`, `policy_version`, `as_of`, timezone, currency, and an input hash; money uses integer minor units. The latter three reuse one cash-flow kernel. Errors include stable `code`, `retryable`, and `trace_id`. [Implementation and contract gaps](docs/IMPLEMENTATION_STATUS.md)
 
 ## 4. External APIs and SDKs
 
@@ -199,4 +199,4 @@ Only `NEXT_PUBLIC_*` variables may enter the browser. The PayPal browser and ser
 - Financial numbers come from the deterministic engine; AI explanations show only current verified facts and fall back to templates when unavailable.
 - The demo has tested startup/reset instructions, migrations, `.env.example`, a license, and a public video/repository before submission.
 
-Implementation details and source checks: [full architecture](outputs/RiskPilot-完整架构设计.md) · [official-resource audit](outputs/RiskPilot-比赛与官方资料核验表.md). The product/prompt draft is in [the design prompt](outputs/RiskPilot-优化后的架构设计Prompt.md).
+Implementation details and verification: [acceptance status](docs/IMPLEMENTATION_STATUS.md) · [local demo instructions](RUNNING.md).

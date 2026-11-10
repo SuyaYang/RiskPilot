@@ -19,12 +19,13 @@ export async function POST(req: Request) {
   const personaId = await currentPersonaId();
   const before = snapshot(personaId).allocation;
   const goal: Goal = {
-    id: crypto.randomUUID().slice(0, 8),
+    id: crypto.randomUUID(),
+    version: 1,
     name: String(body.name).trim().slice(0, 60),
     type: body.type!,
-    targetAmount: Math.round(Number(body.targetAmount)),
+    targetAmount: Math.round(Number(body.targetAmount) * 100) / 100,
     targetDate: body.targetDate!,
-    savedSoFar: Math.round(Number(body.savedSoFar ?? 0)),
+    savedSoFar: Math.round(Number(body.savedSoFar ?? 0) * 100) / 100,
     priority: Number(body.priority) as Goal["priority"],
   };
   update((d) => {

@@ -83,7 +83,7 @@ test("investable amount drops after a Pay in 4 purchase and is zero when a check
   const p = persona("alex");
   const f0 = forecast(p);
   const inv0 = investableNow(p, f0, allocateGoals(p, p.goals));
-  assert.equal(inv0.investable, 270);
+  assert.equal(inv0.investable, 90);
   const { payments } = schedule("pay_in_4", 900);
   const f1 = forecast(p, payments);
   const inv1 = investableNow(p, f1, allocateGoals(p, p.goals, payments.slice(1)));
@@ -91,4 +91,13 @@ test("investable amount drops after a Pay in 4 purchase and is zero when a check
   const j = persona("jordan");
   const fj = forecast(j);
   assert.equal(investableNow(j, fj, allocateGoals(j, j.goals)).investable, 0);
+});
+
+test("risk checks include payments beyond the visible 45-day chart", () => {
+  const p = { ...persona("sam"), checkingBalance: 5000, buffer: 1000, dailySpend: 0, recurring: [], goals: [] };
+  const f = forecast(p, [], [{ date: "2027-02-10", amount: 4500, label: "Later installment" }]);
+  assert.equal(f.dailyBalances.length, 45);
+  assert.equal(f.risk, "red");
+  assert.equal(f.minBalance, 500);
+  assert.equal(f.evaluatedThrough, "2027-02-10");
 });

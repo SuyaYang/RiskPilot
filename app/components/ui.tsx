@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
 export const money = (n: number) =>
   `${n < 0 ? "−" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
@@ -8,7 +8,7 @@ export const fmtDate = (s: string | null | undefined) =>
   s ? new Date(`${s.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "—";
 
 export function RiskBadge({ risk }: { risk: "green" | "yellow" | "red" }) {
-  const label = risk === "green" ? "Safe" : risk === "yellow" ? "Caution" : "Risky";
+  const label = risk === "green" ? "Within buffer" : risk === "yellow" ? "Caution" : "Risky";
   return <span className={`badge ${risk}`}>{label}</span>;
 }
 
@@ -16,20 +16,24 @@ export function RiskBadge({ risk }: { risk: "green" | "yellow" | "red" }) {
 export function useApi<T>(url: string) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const controller = useRef<AbortController | null>(null);
   const load = useCallback(() => {
-    fetch(url, { cache: "no-store" })
+    controller.current?.abort();
+    const request = new AbortController();
+    controller.current = request;
+    setData(null); setError(null);
+    fetch(url, { cache: "no-store", signal: request.signal })
       .then(async (r) => {
         const j = await r.json();
         if (!r.ok) throw new Error(j.error || "Request failed");
-        setData(j);
-        setError(null);
+        if (!request.signal.aborted) { setData(j); setError(null); }
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => { if (!request.signal.aborted) setError(e.message); });
   }, [url]);
   useEffect(() => {
     load();
     window.addEventListener("rp:refresh", load);
-    return () => window.removeEventListener("rp:refresh", load);
+    return () => { window.removeEventListener("rp:refresh", load); controller.current?.abort(); };
   }, [load]);
   return { data, error, reload: load };
 }
@@ -37,7 +41,7 @@ export function useApi<T>(url: string) {
 export async function postJson(url: string, body: unknown, method = "POST") {
   const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+  if (!r.ok || j.error) throw new Error(j.error || `Request failed (${r.status})`);
   return j;
 }
 

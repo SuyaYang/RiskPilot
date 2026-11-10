@@ -22,6 +22,7 @@ export interface Goal {
   savedSoFar: number;
   priority: Priority;
   paused?: boolean;
+  version?: number;
 }
 
 export interface Persona {
@@ -52,6 +53,8 @@ export interface Purchase {
   method: MethodId;
   payments: Payment[];
   capturedAt: string;
+  fundingStatus: "UNCONFIRMED";
+  simulated: boolean;
 }
 
 export interface ForecastResult {
@@ -63,6 +66,7 @@ export interface ForecastResult {
   stressMinBalance: number;
   stressBufferGap: number;
   risk: "green" | "yellow" | "red";
+  evaluatedThrough: string;
 }
 
 export interface GoalStatus {
@@ -97,6 +101,7 @@ export interface OptionResult {
   goalImpact: { goalId: string; name: string; delayDays: number }[];
   responsible: { ok: boolean; reasons: string[] };
   recommended: boolean;
+  hypothetical: boolean;
 }
 
 export interface Decision {
@@ -104,6 +109,8 @@ export interface Decision {
   personaId: string;
   productId: string;
   createdAt: string;
+  inputHash: string;
+  schemaVersion: "rp-v1";
   baseline: ForecastResult;
   options: OptionResult[];
   recommendedMethod: MethodId;

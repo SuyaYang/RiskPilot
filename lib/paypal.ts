@@ -1,4 +1,5 @@
 const BASE = process.env.PAYPAL_API_BASE || "https://api-m.sandbox.paypal.com";
+if (BASE !== "https://api-m.sandbox.paypal.com") throw new Error("This demo supports PayPal Sandbox only");
 const ORIGIN = process.env.APP_ORIGIN || "http://localhost:3000";
 
 export function paypalConfigured(): boolean {
@@ -14,6 +15,8 @@ async function accessToken(): Promise<string> {
     method: "POST",
     headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
     body: "grant_type=client_credentials",
+    signal: AbortSignal.timeout(8000),
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`PayPal auth failed (${res.status}). Check PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET.`);
   const j = await res.json();
@@ -28,13 +31,13 @@ async function call(pathname: string, init: RequestInit & { requestId?: string }
   };
   if (init.requestId) headers["PayPal-Request-Id"] = init.requestId;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 20000);
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const res = await fetch(`${BASE}${pathname}`, { ...init, headers, signal: ctrl.signal });
+    const res = await fetch(`${BASE}${pathname}`, { ...init, headers, signal: ctrl.signal, cache: "no-store" });
     const text = await res.text();
     const body = text ? JSON.parse(text) : {};
     if (!res.ok) {
-      const err = new Error(`PayPal ${pathname} failed (${res.status}): ${body?.details?.[0]?.issue ?? body?.name ?? text.slice(0, 200)}`);
+      const err = new Error(`PayPal request failed (${res.status}): ${body?.details?.[0]?.issue ?? body?.name ?? "PROVIDER_ERROR"}`);
       (err as Error & { status?: number }).status = res.status;
       throw err;
     }
@@ -88,9 +91,24 @@ export async function captureOrder(orderId: string) {
   });
 }
 
-export function readCapture(order: { status?: string; purchase_units?: Array<{ payments?: { captures?: Array<{ id: string; status: string; amount: { value: string } }> } }> }) {
-  const cap = order.purchase_units?.[0]?.payments?.captures?.[0];
-  return cap ? { id: cap.id, status: cap.status, amount: Number(cap.amount.value) } : null;
+export interface PayPalOrder {
+  id: string;
+  status: string;
+  purchase_units?: Array<{
+    custom_id?: string;
+    amount?: { value: string; currency_code: string };
+    payments?: { captures?: Array<{ id: string; status: string; amount: { value: string; currency_code: string } }> };
+  }>;
+  links?: Array<{ rel: string; href: string }>;
+}
+export function readCapture(order: PayPalOrder) {
+  const caps = order.purchase_units?.flatMap(u => u.payments?.captures ?? []) ?? [];
+  if (caps.length > 1) throw new Error("Unexpected multiple captures; manual reconciliation required");
+  const cap = caps[0];
+  return cap ? { id: cap.id, status: cap.status, amount: Number(cap.amount.value), currency: cap.amount.currency_code } : null;
+}
+export async function getCapture(captureId: string) {
+  return call(`/v2/payments/captures/${encodeURIComponent(captureId)}`, { method: "GET" });
 }
 
 export async function verifyWebhook(headers: Headers, rawBody: string): Promise<boolean> {

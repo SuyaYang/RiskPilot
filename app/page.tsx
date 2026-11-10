@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BalanceChart, fmtDate, money, RiskBadge, useApi } from "./components/ui";
 
 interface Snapshot {
-  persona: { name: string; tagline: string; buffer: number; savingsBalance: number };
+  persona: { name: string; tagline: string; buffer: number; checkingBalance: number; savingsBalance: number };
   forecast: {
     startBalance: number;
     dailyBalances: { date: string; balance: number }[];
@@ -34,12 +34,13 @@ export default function Dashboard() {
   return (
     <div className="stack">
       <h1>Hi {persona.name}</h1>
-      <p className="sub">{persona.tagline}. Everything below is projected for the next 45 days.</p>
+      <p className="sub">{persona.tagline}. Fictional manual data. Forecast chart shows 45 days; risk checks cover later commitments too.</p>
 
       <div className="grid g3">
         <div className="card">
-          <div className="muted small">Checking balance now</div>
-          <div className="big">{money(f.startBalance)}</div>
+          <div className="muted small">Demo checking balance (manual)</div>
+          <div className="big">{money(persona.checkingBalance)}</div>
+          <p className="small muted">Projection after purchase reserves: {money(f.startBalance)}</p>
           <div className="small muted">Savings {money(persona.savingsBalance)} · buffer {money(persona.buffer)}</div>
         </div>
         <div className="card">
@@ -51,7 +52,7 @@ export default function Dashboard() {
           </div>
         </div>
         <Link href="/invest" className="card" style={{ color: "inherit" }}>
-          <div className="muted small">Investable now</div>
+          <div className="muted small">Available to allocate today</div>
           <div className="big">{money(investable.investable)}</div>
           <div className="small muted">After bills, your buffer and this month&apos;s goal savings →</div>
         </Link>
@@ -98,7 +99,7 @@ export default function Dashboard() {
           </table>
         </div>
         <div className="card">
-          <h2>Upcoming PayPal payments</h2>
+          <h2>Upcoming projected commitments</h2>
           {upcomingPayments.length === 0 ? (
             <p className="muted small">
               None yet. <Link href="/shop">Try a purchase</Link> to see how it changes your plan.

@@ -28,7 +28,7 @@ export function investableNow(p: Persona, f: ForecastResult, alloc: Allocation):
     { id: "stress", label: "Buffer still holds if income is a week late", ok: f.stressBufferGap >= 0 },
     { id: "goals", label: "Goals due within 6 months are on track", ok: shortTerm.every((g) => g.status === "on_track") },
   ];
-  const raw = round2(f.bufferGap - reserved);
+  const raw = round2(Math.min(f.startBalance - p.buffer, f.bufferGap, f.stressBufferGap) - reserved);
   const investable = checks.every((c) => c.ok) ? Math.max(0, raw) : 0;
   return {
     currentBalance: f.startBalance,

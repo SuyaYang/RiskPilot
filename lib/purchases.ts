@@ -1,35 +1,35 @@
 import { update } from "./store";
-import { schedule } from "./engine/options";
-import { today } from "./dates";
+import { inputHash, snapshot } from "./state";
+import { iso, today } from "./dates";
 
-/**
- * Record a verified capture exactly once. Called from the capture route and the webhook; the
- * capture id is the idempotency key, so a repeated or out-of-order event cannot double-count.
- */
-export function recordCapture(orderId: string, captureId: string, capturedAmount: number) {
-  return update((d) => {
+/** Verified merchant payment ≠ a confirmed consumer loan or funding account. */
+export function recordCapture(orderId: string, captureId: string, capturedAmount: number, currency = "USD") {
+  return update(d => {
     const order = d.orders[orderId];
     if (!order) throw new Error("Unknown order");
-    if (Math.abs(order.amount - capturedAmount) > 0.005) {
-      order.status = "FAILED";
-      throw new Error(`Captured amount ${capturedAmount} does not match order amount ${order.amount}`);
-    }
-    order.status = "CAPTURED";
-    order.captureId = captureId;
+    if (!captureId || currency !== order.currency || !Number.isFinite(capturedAmount) ||
+        Math.round(capturedAmount * 100) !== Math.round(order.amount * 100)) throw new Error("Capture currency or amount mismatch");
+    if (order.captureId && order.captureId !== captureId) throw new Error("Order already has a different capture");
+    if (Object.values(d.orders).some(o => o.orderId !== orderId && o.captureId === captureId)) throw new Error("Capture already belongs to another order");
     const st = d.personas[order.personaId];
-    const existing = st.purchases.find((p) => p.id === captureId);
+    const existing = st.purchases.find(p => p.id === captureId);
     if (existing) return { order, purchase: existing, duplicate: true };
-    const method = order.method === "cheaper" ? "full" : order.method;
     const purchase = {
-      id: captureId,
-      orderId,
-      productName: order.productName,
-      amount: order.amount,
-      method: order.method,
-      payments: schedule(method, order.amount).payments,
-      capturedAt: today().toISOString(),
+      id: captureId, orderId, productName: order.productName, amount: order.amount, method: order.method,
+      payments: [{ date: iso(today()), amount: order.amount, label: "Conservative reserve · funding unconfirmed" }],
+      capturedAt: new Date().toISOString(), fundingStatus: "UNCONFIRMED" as const, simulated: Boolean(order.simulated),
     };
     st.purchases.push(purchase);
+    order.status = "CAPTURED";
+    order.captureId = captureId;
+    order.captureCommand = "COMPLETED";
+    const id = `capture:${captureId}`;
+    d.snapshots[id] = {
+      id, personaId: order.personaId, orderId, inputHash: inputHash(order.personaId, d), schemaVersion: "rp-v1",
+      createdAt: new Date().toISOString(), data: snapshot(order.personaId, d),
+    };
+    order.snapshotId = id;
+    order.projectionStatus = "UPDATED";
     return { order, purchase, duplicate: false };
   });
 }

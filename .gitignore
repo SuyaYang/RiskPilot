@@ -5,3 +5,11 @@ node_modules
 data/store.json
 *.log
 .DS_Store
+
+*.tsbuildinfo
+.env.*
+!.env.example
+data/*.json
+data/*.lock
+data/*.tmp
+next-env.d.ts

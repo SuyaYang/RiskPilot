@@ -52,43 +52,11 @@ export function numbersAreGrounded(text: string, allowed: number[]): { ok: boole
   return { ok: bad.length === 0, bad };
 }
 
-function decisionFacts(d: Decision, personaName: string, buffer: number) {
-  const options = d.options
-    .filter((o) => o.eligible)
-    .map((o) => ({
-      option: o.label,
-      product: o.productName,
-      price: o.price,
-      risk: o.forecast.risk,
-      lowestBalance: Math.round(o.forecast.minBalance),
-      lowestBalanceDate: fmtDate(o.forecast.minBalanceDate),
-      cushionAboveBuffer: Math.round(o.forecast.bufferGap),
-      lowestBalanceIfPayLate: Math.round(o.forecast.stressMinBalance),
-      interestEstimate: Math.round(o.extraCost),
-      goalDelaysInDays: Object.fromEntries(o.goalImpact.map((g) => [g.name, g.delayDays])),
-      recommended: o.recommended,
-    }));
-  return { person: personaName, cashBuffer: buffer, recommendedOption: d.options.find((o) => o.recommended)?.label, options };
-}
-
-function allowedNumbers(facts: ReturnType<typeof decisionFacts>): number[] {
-  const out: number[] = [facts.cashBuffer];
-  for (const o of facts.options) {
-    out.push(o.price, o.lowestBalance, o.cushionAboveBuffer, Math.abs(o.cushionAboveBuffer), o.lowestBalanceIfPayLate, o.interestEstimate);
-    out.push(...Object.values(o.goalDelaysInDays));
-    out.push(...Object.values(o.goalDelaysInDays).map((d) => Math.round(d / 7)), ...Object.values(o.goalDelaysInDays).map((d) => Math.round(d / 30)));
-    const day = Number(o.lowestBalanceDate.split(" ")[1]);
-    if (day) out.push(day);
-    out.push(o.price / 4);
-  }
-  return out;
-}
-
 export function templateExplanation(d: Decision, buffer: number): string {
   const rec = d.options.find((o) => o.recommended) as OptionResult;
   const full = d.options.find((o) => o.method === "full");
   if (rec.method === "wait") {
-    return `Every way of paying would take your balance below your ${money(buffer)} cash buffer in the next 45 days, so the safest choice is to wait. Your lowest projected balance even without this purchase is ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}.`;
+    return `No purchase scenario keeps your ${money(buffer)} buffer intact under both the baseline and late-income checks, so waiting is the suggested scenario. Your lowest projected balance even without this purchase is ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}.`;
   }
   const delays = rec.goalImpact.filter((g) => g.delayDays > 0).map((g) => `${g.name} by about ${g.delayDays} days`);
   const parts = [
@@ -103,21 +71,31 @@ export function templateExplanation(d: Decision, buffer: number): string {
 }
 
 export async function explainDecision(d: Decision, personaName: string, buffer: number) {
-  const facts = decisionFacts(d, personaName, buffer);
-  const allowed = allowedNumbers(facts);
-  const system =
-    "You explain a purchase decision to the buyer in plain English, 3 to 4 short sentences, speaking to them as 'you'. " +
-    "Use ONLY numbers that appear in FACTS, written as whole dollars or as given. Never invent numbers or dates. " +
-    "Say which option is recommended and the main trade-off versus paying in full. Mention goal delays in days or weeks. " +
-    "Do not give investment advice and do not mention specific stocks or funds. If the recommendation is to wait, say so plainly.";
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const text = await gemini(`FACTS:\n${JSON.stringify(facts, null, 2)}`, system);
-    if (!text) break;
-    const check = numbersAreGrounded(text, allowed);
-    if (check.ok) return { text: text.trim(), source: "ai" as const };
-    console.warn("Explanation rejected, ungrounded numbers:", check.bad);
-  }
-  return { text: templateExplanation(d, buffer), source: "template" as const };
+  const rec = d.options.find(o => o.recommended)!;
+  const full = d.options.find(o => o.method === "full");
+  const facts: Record<string, string> = {
+    recommendation: rec.method === "wait"
+      ? `Waiting is the suggested scenario. Your lowest baseline projection is ${money(rec.forecast.minBalance)}.`
+      : `${rec.hypothetical ? "In this hypothetical scenario, " : ""}${rec.label} gives a lowest projected balance of ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}.`,
+    buffer: `Your cash buffer is ${money(buffer)}; the scenario's minimum is ${money(Math.abs(rec.forecast.bufferGap))} ${rec.forecast.bufferGap < 0 ? "below" : "above"} it.`,
+    stress: `If income arrives a week late, the lowest projection is ${money(rec.forecast.stressMinBalance)}.`,
+  };
+  if (full && rec.method !== "full") facts.comparison = `Paying in full gives a lowest projection of ${money(full.forecast.minBalance)}.`;
+  const delays = rec.goalImpact.filter(g => g.delayDays > 0);
+  facts.goals = delays.length ? delays.map(g => `${g.name} is delayed by ${g.delayDays} days.`).join(" ") : "This scenario adds no projected goal delay.";
+  if (rec.extraCost > 0) facts.cost = `Estimated additional cost is ${money(rec.extraCost)}; actual terms are unconfirmed.`;
+  const fallback = { text: templateExplanation(d, buffer), source: "template" as const };
+  // Gemini chooses useful facts; only server-owned sentences enter the explanation. Numeric matching
+  // alone cannot catch an AI assigning the right dollar amount to the wrong payment method.
+  const raw = await gemini(JSON.stringify({ person: personaName, facts }),
+    'Select 2 to 4 useful fact IDs for a short buyer explanation. Start with recommendation, include buffer. Return only JSON {"factIds":[...]}. Do not calculate or write new claims.', true);
+  if (!raw) return fallback;
+  try {
+    const ids: unknown = JSON.parse(raw).factIds;
+    if (!Array.isArray(ids) || ids.length < 2 || ids.length > 4 || ids[0] !== "recommendation" || !ids.includes("buffer") ||
+        new Set(ids).size !== ids.length || ids.some(id => typeof id !== "string" || !Object.hasOwn(facts, id))) return fallback;
+    return { text: ids.map(id => facts[id]).join(" "), source: "ai" as const };
+  } catch { return fallback; }
 }
 
 export interface GoalDraft {
@@ -140,10 +118,12 @@ export async function parseGoal(text: string, todayIso: string): Promise<GoalDra
     const j = JSON.parse(out);
     const amount = Number(j.targetAmount);
     if (!j.name || !Number.isFinite(amount) || amount <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(j.targetDate)) return null;
+    const date = new Date(`${j.targetDate}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== j.targetDate) return null;
     return {
       name: String(j.name).slice(0, 60),
       type: j.type === "invest" ? "invest" : "spend",
-      targetAmount: Math.round(amount),
+      targetAmount: Math.round(amount * 100) / 100,
       targetDate: j.targetDate,
       priority: [1, 2, 3].includes(Number(j.priority)) ? (Number(j.priority) as 1 | 2 | 3) : 2,
     };

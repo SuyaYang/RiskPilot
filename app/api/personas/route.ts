@@ -3,7 +3,7 @@ import { buildPersonas } from "@/lib/personas";
 import { currentPersonaId, PERSONA_COOKIE } from "@/lib/state";
 
 export async function GET() {
-  const active = await currentPersonaId();
+  const active = (await currentPersonaId()).split(":").at(-1);
   return NextResponse.json({
     active,
     personas: buildPersonas().map((p) => ({ id: p.id, name: p.name, tagline: p.tagline })),

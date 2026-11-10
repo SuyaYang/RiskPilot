@@ -13,27 +13,40 @@ const LINKS = [
 export default function Nav() {
   const path = usePathname();
   const [personas, setPersonas] = useState<{ id: string; name: string; tagline: string }[]>([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [active, setActive] = useState("alex");
 
   useEffect(() => {
     fetch("/api/personas")
-      .then((r) => r.json())
+      .then(async (r) => { if (!r.ok) throw new Error("Could not load personas"); return r.json(); })
       .then((j) => {
         setPersonas(j.personas);
         setActive(j.active);
-      });
+      }).catch(() => setError("Could not load demo personas. Reload to retry."));
   }, []);
 
   async function choose(id: string) {
-    await fetch("/api/personas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    setActive(id);
-    window.dispatchEvent(new Event("rp:refresh"));
+    setBusy(true); setError("");
+    try {
+      const response = await fetch("/api/personas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      window.dispatchEvent(new Event("rp:persona"));
+      setActive(id);
+      window.dispatchEvent(new Event("rp:refresh"));
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
-
   async function resetDemo() {
-    if (!window.confirm("Reset all demo data (goals, purchases)?")) return;
-    await fetch("/api/reset", { method: "POST" });
-    window.dispatchEvent(new Event("rp:refresh"));
+    if (!window.confirm("Reset this demo persona (goals, simulated purchases)?")) return;
+    setBusy(true); setError("");
+    try {
+      const response = await fetch("/api/reset", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      window.dispatchEvent(new Event("rp:persona"));
+      window.dispatchEvent(new Event("rp:refresh"));
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
   return (
@@ -46,16 +59,17 @@ export default function Nav() {
           </Link>
         ))}
         <span className="spacer" />
-        <select aria-label="Demo persona" value={active} onChange={(e) => choose(e.target.value)}>
+        <select disabled={busy} aria-label="Demo persona" value={active} onChange={(e) => choose(e.target.value)}>
           {personas.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} · {p.tagline}
             </option>
           ))}
         </select>
-        <button onClick={resetDemo} className="small">
+        <button disabled={busy} onClick={resetDemo} className="small">
           Reset demo
         </button>
+        {error && <span className="error" role="alert">{error}</span>}
       </div>
     </nav>
   );

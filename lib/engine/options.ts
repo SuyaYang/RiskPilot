@@ -96,6 +96,7 @@ export function buildOptions(
       goalImpact: goalImpact(baselineAlloc, alloc),
       responsible: { ok: eligible && f.bufferGap >= 0, reasons },
       recommended: false,
+      hypothetical: method === "pay_in_4" || method === "pay_monthly",
     };
   });
 

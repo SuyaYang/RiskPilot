@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { currentPersonaId, personaWithState } from "@/lib/state";
+import { currentPersonaId, personaWithState, inputHash } from "@/lib/state";
 import { getProduct } from "@/lib/catalog";
 import { buildOptions } from "@/lib/engine/options";
 import { forecast } from "@/lib/engine/forecast";
@@ -21,6 +21,8 @@ export async function POST(req: Request) {
     personaId,
     productId,
     createdAt: new Date().toISOString(),
+    inputHash: inputHash(personaId),
+    schemaVersion: "rp-v1",
     baseline: forecast(persona, payments),
     options,
     recommendedMethod: recommended,
