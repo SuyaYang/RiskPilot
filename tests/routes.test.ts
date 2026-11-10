@@ -23,7 +23,10 @@ test("middleware and API integration without opening a network listener", async 
   const orders = await import("../app/api/orders/route");
   const order = await import("../app/api/orders/[id]/route");
   const capture = await import("../app/api/orders/[id]/capture/route");
+  const insights = await import("../app/api/orders/[id]/insights/route");
   const simulate = await import("../app/api/orders/[id]/simulate/route");
+  const copilot = await import("../app/api/copilot/route");
+  const parse = await import("../app/api/goals/parse/route");
   const snap = await import("../app/api/snapshot/route");
   const reset = await import("../app/api/reset/route");
   const webhook = await import("../app/api/webhooks/paypal/route");
@@ -42,6 +45,26 @@ test("middleware and API integration without opening a network listener", async 
   }
   const req = (url: string, body: unknown, method = "POST") => new Request(`http://localhost:3000${url}`, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const params = (id: string) => ({ params: Promise.resolve({ id }) });
+  await t.test("copilot validates input and reports missing Gemini configuration without network calls",async()=>{
+    const invalid=await copilot.POST(req("/api/copilot",{question:"",page:"Goals"}));assert.equal(invalid.status,400);
+    const unavailable=await copilot.POST(req("/api/copilot",{question:"Am I on track?",page:"Goals"}));assert.equal(unavailable.status,503);
+    assert.match((await unavailable.json()).error,/not configured/);
+    const draft=await parse.POST(req("/api/goals/parse",{text:"Save $1000 for travel"}));assert.equal(draft.status,503);
+  });
+  await t.test("copilot uses the active workspace and rejects another workspace's purchase",async()=>{
+    const originalFetch=globalThis.fetch;
+    process.env.GEMINI_API_KEY="fixture-only";
+    globalThis.fetch=async()=>Response.json({candidates:[{content:{parts:[{text:JSON.stringify({supported:true,factIds:["context","forecast"]})}]}}]});
+    try{
+      const before=await within(a,()=>snap.GET()).then(r=>r.json());
+      const result=await within(a,()=>copilot.POST(req("/api/copilot",{question:"What is my cash forecast?",page:"Dashboard"})));
+      assert.equal(result.status,200);const answer=await result.json();assert.equal(answer.source,"ai");assert.match(answer.text,/fictional demo/);
+      const after=await within(a,()=>snap.GET()).then(r=>r.json());assert.deepEqual(after,before);
+      const assessed=await within(a,()=>decisions.POST(req("/api/decisions",{productId:"aero-14"}))).then(r=>r.json());
+      const denied=await within(b,()=>copilot.POST(req("/api/copilot",{question:"Can I buy it?",page:"Shop",decisionId:assessed.decision.id})));assert.equal(denied.status,404);
+    }finally{globalThis.fetch=originalFetch;delete process.env.GEMINI_API_KEY;}
+  });
+
   let decisionId = "", orderId = "";
   await t.test("cross-site writes rejected; first request receives an opaque workspace", () => {
     const res = middleware(new NextRequest("http://localhost:3000/api/orders", { method: "POST", headers: { origin: "https://evil.example" } }));
@@ -83,6 +106,37 @@ test("middleware and API integration without opening a network listener", async 
     assert.equal((await within(b, () => simulate.POST(req("/simulate", {}), params(orderId)))).status, 404);
     assert.equal((await within(b, () => orders.POST(req("/orders", { decisionId, method: "full" })))).status, 404);
     assert.equal((await within(b, () => snap.GET()).then(r => r.json())).purchases.length, 0);
+  });
+  await t.test("review insights are grounded, read-only, scoped and invalidated by changed inputs", async () => {
+    const assessment = await within(a, () => decisions.POST(req("/api/decisions", { productId: "quiet-buds" }))).then(r => r.json());
+    const created = await within(a, () => orders.POST(req("/api/orders", { decisionId: assessment.decision.id, method: "full" }))).then(r => r.json());
+    const status = await within(a, () => order.GET(new Request("http://localhost:3000"), params(created.id))).then(r => r.json());
+    assert.equal(status.review.context.source, "fictional-manual-demo");
+    assert.ok(status.review.context.upcoming.some((item: { label: string }) => item.label === "Rent"));
+    const body = { question: "afford", method: "full", inputHash: status.review.decision.inputHash };
+    const before = fs.readFileSync(process.env.STORE_PATH!, "utf8");
+    const answer = await within(a, () => insights.POST(req("/insights", body), params(created.id))).then(r => r.json());
+    assert.equal(answer.readOnly, true); assert.equal(answer.source, "template");
+    assert.equal(answer.inputHash, body.inputHash);
+    assert.match(answer.uncertainty, /fictional/);
+    const delay = await within(a, () => insights.POST(req("/insights", { ...body, question: "delay" }), params(created.id))).then(r => r.json());
+    assert.match(delay.text, /has not been evaluated/);
+    assert.equal((await within(a,()=>insights.POST(req("/insights",{...body,prompt:"Why is my cash low?"}),params(created.id)))).status,503);
+    const originalFetch=globalThis.fetch;
+    process.env.GEMINI_API_KEY="fixture-only";
+    globalThis.fetch=async()=>Response.json({candidates:[{content:{parts:[{text:JSON.stringify({supported:true,factIds:["outlook","buffer","stress"]})}]}}]});
+    try{
+      const own=await within(a,()=>insights.POST(req("/insights",{...body,prompt:"Why is my cash low?"}),params(created.id)));
+      assert.equal(own.status,200);assert.equal((await own.json()).source,"ai");
+      assert.equal((await within(b,()=>insights.POST(req("/insights",{...body,prompt:"Why is my cash low?"}),params(created.id)))).status,404);
+    }finally{globalThis.fetch=originalFetch;delete process.env.GEMINI_API_KEY;}
+    assert.equal(fs.readFileSync(process.env.STORE_PATH!, "utf8"), before, "Insights must not mutate financial or payment state");
+    assert.equal((await within(b, () => insights.POST(req("/insights", body), params(created.id)))).status, 404);
+    assert.equal((await within(a, () => insights.POST(req("/insights", { ...body, question: "capture this payment" }), params(created.id)))).status, 400);
+    assert.equal((await within(a, () => insights.POST(req("/insights", { ...body, method: "invented" }), params(created.id)))).status, 400);
+    assert.equal((await within(a, () => insights.POST(req("/insights", { ...body, inputHash: "stale" }), params(created.id)))).status, 409);
+    await within(a, () => goals.POST(req("/goals", { name: "New commitment", type: "spend", targetAmount: 100, savedSoFar: 0, priority: 2, targetDate: "2027-03-01" })));
+    assert.equal((await within(a, () => insights.POST(req("/insights", body), params(created.id)))).status, 409);
   });
   await t.test("goal confirmation, cent precision, optimistic version and invalid dates", async () => {
     const response = await within(a, () => goals.POST(req("/goals", { name: "Test trip", type: "spend", targetAmount: 123.45, savedSoFar: 12.34, priority: 2, targetDate: "2027-03-01" })));

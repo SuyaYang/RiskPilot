@@ -101,3 +101,17 @@ test("risk checks include payments beyond the visible 45-day chart", () => {
   assert.equal(f.minBalance, 500);
   assert.equal(f.evaluatedThrough, "2027-02-10");
 });
+
+test("after a same-day payment, assessment baseline matches the Dashboard goal allocation",()=>{
+  const p=persona("alex"),payments=[{date:"2026-11-10",amount:900,label:"Recorded full-price reserve"}];
+  const f=forecast(p,payments);
+  const dashboard=allocateGoals(p,p.goals,[],Math.max(0,-f.bufferGap));
+  const decision=buildOptions(p,p.goals,payments,laptop,cheaper);
+  assert.deepEqual(decision.baselineAlloc,dashboard);
+  assert.equal(decision.options.find(option=>option.method==="wait")!.forecast.startBalance,f.startBalance);
+});
+test("assessment still includes future reserves once while excluding previously paid commitments",()=>{
+  const p=persona("alex"),payments=[{date:"2026-11-09",amount:100,label:"Past"},{date:"2026-11-10",amount:225,label:"Today"},{date:"2026-11-24",amount:225,label:"Future"}];
+  const f=forecast(p,payments);
+  assert.deepEqual(buildOptions(p,p.goals,payments,laptop).baselineAlloc,allocateGoals(p,p.goals,[payments[2]],Math.max(0,-f.bufferGap)));
+});

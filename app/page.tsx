@@ -1,124 +1,36 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
+import LoadingState from "./components/LoadingState";
+import ContextCopilot from "./components/ContextCopilot";
+import Icon from "./components/Icon";
 import { BalanceChart, fmtDate, money, RiskBadge, useApi } from "./components/ui";
-
-interface Snapshot {
-  persona: { name: string; tagline: string; buffer: number; checkingBalance: number; savingsBalance: number };
-  forecast: {
-    startBalance: number;
-    dailyBalances: { date: string; balance: number }[];
-    minBalance: number;
-    minBalanceDate: string;
-    bufferGap: number;
-    risk: "green" | "yellow" | "red";
-  };
-  allocation: { monthlySurplus: number; goals: { goalId: string; name: string; type: string; status: string; eta: string | null; targetDate: string; allocatedThisMonth: number; remaining: number }[] };
-  investable: { investable: number };
-  upcomingPayments: { date: string; amount: number; label: string }[];
-  goals: { id: string; targetAmount: number; savedSoFar: number }[];
-}
-
-const STATUS: Record<string, { label: string; cls: string }> = {
-  on_track: { label: "On track", cls: "green" },
-  delayed: { label: "Delayed", cls: "yellow" },
-  paused: { label: "Paused", cls: "gray" },
-  done: { label: "Done", cls: "green" },
-};
+import { scheduledItems } from "@/lib/presentation";
+import type { snapshot } from "@/lib/state";
+type Snapshot = ReturnType<typeof snapshot>;
 
 export default function Dashboard() {
-  const { data, error } = useApi<Snapshot>("/api/snapshot");
-  if (error) return <p className="error">{error}</p>;
-  if (!data) return <p className="muted">Loading…</p>;
-  const { persona, forecast: f, allocation, investable, upcomingPayments } = data;
-
-  return (
-    <div className="stack">
-      <h1>Hi {persona.name}</h1>
-      <p className="sub">{persona.tagline}. Fictional manual data. Forecast chart shows 45 days; risk checks cover later commitments too.</p>
-
-      <div className="grid g3">
-        <div className="card">
-          <div className="muted small">Demo checking balance (manual)</div>
-          <div className="big">{money(persona.checkingBalance)}</div>
-          <p className="small muted">Projection after purchase reserves: {money(f.startBalance)}</p>
-          <div className="small muted">Savings {money(persona.savingsBalance)} · buffer {money(persona.buffer)}</div>
-        </div>
-        <div className="card">
-          <div className="muted small">Lowest projected balance</div>
-          <div className="big">{money(f.minBalance)}</div>
-          <div className="row small">
-            <RiskBadge risk={f.risk} />
-            <span className="muted">on {fmtDate(f.minBalanceDate)}</span>
-          </div>
-        </div>
-        <Link href="/invest" className="card" style={{ color: "inherit" }}>
-          <div className="muted small">Available to allocate today</div>
-          <div className="big">{money(investable.investable)}</div>
-          <div className="small muted">After bills, your buffer and this month&apos;s goal savings →</div>
-        </Link>
-      </div>
-
-      <div className="card">
-        <h2>Next 45 days</h2>
-        <BalanceChart series={f.dailyBalances} buffer={persona.buffer} />
-      </div>
-
-      <div className="grid g2">
-        <div className="card">
-          <div className="row between">
-            <h2>Goals</h2>
-            <Link href="/goals" className="small">
-              Edit goals
-            </Link>
-          </div>
-          <p className="small muted">You can set aside about {money(allocation.monthlySurplus)} a month.</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Goal</th>
-                <th>This month</th>
-                <th>Expected</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {allocation.goals.map((g) => (
-                <tr key={g.goalId}>
-                  <td>
-                    {g.name}
-                    {g.type === "invest" && <span className="badge blue" style={{ marginLeft: 6 }}>invest</span>}
-                  </td>
-                  <td>{money(g.allocatedThisMonth)}</td>
-                  <td>{g.status === "paused" ? "—" : g.eta ? fmtDate(g.eta) : "not reachable"}</td>
-                  <td>
-                    <span className={`badge ${STATUS[g.status].cls}`}>{STATUS[g.status].label}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="card">
-          <h2>Upcoming projected commitments</h2>
-          {upcomingPayments.length === 0 ? (
-            <p className="muted small">
-              None yet. <Link href="/shop">Try a purchase</Link> to see how it changes your plan.
-            </p>
-          ) : (
-            <table>
-              <tbody>
-                {upcomingPayments.map((p, i) => (
-                  <tr key={i}>
-                    <td>{fmtDate(p.date)}</td>
-                    <td>{p.label}</td>
-                    <td>{money(p.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  const { data, error, reload } = useApi<Snapshot>("/api/snapshot");
+  const [day, setDay] = useState(0);
+  if (error) return <div className="card stack"><h1>Overview unavailable</h1><p className="error" role="alert">{error}</p><button onClick={reload}>Try again</button></div>;
+  if (!data) return <LoadingState label="Loading your financial overview" />;
+  const { persona, forecast: f, allocation, investable } = data;
+  const events = scheduledItems(persona.recurring, data.upcomingPayments, data.asOf);
+  const largest = events.reduce<(typeof events)[number] | undefined>((max, item) => !max || item.amount > max.amount ? item : max, undefined);
+  const selected = f.dailyBalances[Math.min(day, f.dailyBalances.length - 1)];
+  const recent = [...data.purchases].sort((a,b) => b.capturedAt.localeCompare(a.capturedAt)).slice(0,5);
+  return <div className="command-page">
+    <div className="command-heading"><div><span className="page-kicker">Financial overview</span><h1>Good to see you, {persona.name}.</h1></div><div className="freshness"><span className="badge gray">Fictional profile</span><span>Forecast as of {fmtDate(data.asOf)}</span></div></div>
+    <div className="position-strip"><div><span>Checking · manual fixture</span><strong>{money(persona.checkingBalance)}</strong><small>No live bank observation</small></div><div><span>Lowest projected cash</span><strong>{money(f.minBalance)}</strong><small>{fmtDate(f.minBalanceDate)} · <RiskBadge risk={f.risk} /></small></div><div><span>Available to allocate</span><strong>{money(investable.investable)}</strong><Link href="/invest">View readiness ↗</Link></div></div>
+    <div className="command-grid"><section className="card command-chart" aria-labelledby="overview-chart-title"><div className="row between"><div><h2 id="overview-chart-title">Your cash flow, ahead.</h2><p className="small muted">45-day projection · bills, everyday spending & purchase reserves</p></div><span className="chart-legend"><i className="legend-dot" />Projected cash</span></div><BalanceChart series={f.dailyBalances} buffer={persona.buffer} events={events} activeIndex={day} />
+      <div className="command-chart-readout"><div><span className="small muted">{fmtDate(selected?.date)} · projected</span><strong>{selected ? money(selected.balance) : "Unavailable"}</strong></div><label>Explore a day<input type="range" aria-label="Explore dashboard forecast day" min={0} max={Math.max(0,f.dailyBalances.length-1)} value={day} onChange={event => setDay(Number(event.target.value))} /></label></div>
+      <details><summary>Forecast assumptions & sources</summary><p className="small muted">Manual demo checking: {money(persona.checkingBalance)}. After recorded purchase reserves: {money(f.startBalance)}. Cash buffer: {money(persona.buffer)}. Recurring fixtures and everyday spending are included. Income is delayed a week for the stress check; its minimum is {money(f.stressMinBalance)}. Risk evaluation extends through {fmtDate(f.evaluatedThrough)}.</p><p className="small muted">Balances are fictional inputs, captures are recorded payment facts, and chart balances are predictions. They are different data types.</p></details>
+    </section><aside className="command-agenda"><div className="row between"><h2>Coming up</h2><span className="small muted">Next 45 days</span></div>{events.length ? <ol className="agenda-list">{events.slice(0,6).map((item,index) => <li key={`${item.date}-${index}`}><span className="agenda-date">{fmtDate(item.date)}</span><div><strong>{item.label}</strong><span>{item.source}</span></div><strong>{money(item.amount)}</strong></li>)}</ol> : <div className="empty-state"><Icon name="check" /><p>No scheduled bills or purchase reserves in this window.</p></div>}{events.length>6 && <details><summary>{events.length-6} more scheduled items</summary><ul className="commitment-list">{events.slice(6).map((item,index) => <li key={index}><div><strong>{item.label}</strong><span>{fmtDate(item.date)} · {item.source}</span></div><strong>{money(item.amount)}</strong></li>)}</ul></details>}<p className="small muted">Bills are fixture schedules. Recorded reserves do not confirm the consumer&apos;s funding method.</p></aside></div>
+    <div className="command-insights"><section className="insight-card"><div className="row"><Icon name="shield" /><h2>{f.risk === "red" ? "Your buffer needs attention." : f.risk === "yellow" ? "Leave room for late income." : "Your buffer holds in both checks."}</h2></div><p className="insight-copy">{f.bufferGap < 0 ? `The projected minimum is ${money(Math.abs(f.bufferGap))} below your buffer.` : `Your projected minimum leaves ${money(f.bufferGap)} above the buffer.`} If income arrives a week late, projected cash bottoms at {money(f.stressMinBalance)}.</p><Link href="/shop" className="small">Check a purchase before adding a commitment →</Link><p className="small muted">Engine facts · not an online AI response</p></section><section className="goal-brief"><div className="row between"><h2>Goals in focus</h2><Link href="/goals">View goals ↗</Link></div>{allocation.goals.length ? allocation.goals.slice(0,3).map(goal => <div className="goal-brief-row" key={goal.goalId}><span>{goal.name}</span><strong>{goal.status === "paused" ? "Paused" : goal.status === "done" ? "Complete" : goal.eta ? `Est. ${fmtDate(goal.eta)}` : "No completion projected"}</strong></div>) : <p>No goals yet. <Link href="/goals">Create your first goal.</Link></p>}</section></div>
+    <section className="activity-section"><div className="row between"><h2>Recent confirmed activity</h2><span className="small muted">Payment records · not bank transactions</span></div>{recent.length ? <ul className="activity-list">{recent.map(item => <li key={item.id}><span className="activity-icon"><Icon name="bag" /></span><div><strong>{item.productName}</strong><span>{fmtDate(item.capturedAt)} · {item.simulated ? "Local simulation" : "Verified Sandbox capture"} · funding unconfirmed</span></div><strong>{money(item.amount)}</strong><Link href={`/checkout/review?order=${encodeURIComponent(item.orderId)}`}>View record ↗</Link></li>)}</ul> : <div className="activity-empty"><Icon name="wallet" /><div><strong>No confirmed purchases yet.</strong><p>Verified Sandbox captures and local simulations appear here with their source labels.</p></div></div>}</section>
+    <ContextCopilot page="Financial overview" questions={[
+      {id:"expense",label:"What is my biggest upcoming expense?",answer:largest ? <p>The largest listed commitment is {largest.label}: {money(largest.amount)} on {fmtDate(largest.date)}. Source: {largest.source.toLowerCase()}.</p> : <p>No upcoming scheduled bills or purchase reserves were returned.</p>},
+      {id:"decline",label:"Why is my balance expected to decline?",answer:<p>The forecast includes your recurring bills, everyday spending and recorded purchase reserves. Its minimum is {money(f.minBalance)} on {fmtDate(f.minBalanceDate)}. Open the assumptions and scheduled items to inspect inputs; a per-expense causal breakdown has not been calculated.</p>},
+    ]} />
+  </div>;
 }

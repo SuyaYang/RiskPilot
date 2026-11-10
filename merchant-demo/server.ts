@@ -1,22 +1,22 @@
-/** Independent, loopback-only merchant harness. This is NOT the RiskPilot website or a real store. */
+/** Independent, allowlisted Sandbox merchant harness. This is NOT the RiskPilot website or a real store. */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, renameSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { createOrder, getOrder, captureOrder, readCapture, paypalConfigured, type PayPalOrder } from "../lib/paypal";
-import { MERCHANT_ID, localOrigin, merchantKey, riskpilotOrigin, readBridgeRequest, signEnvelope, type MerchantQuote, type MerchantRef } from "../lib/merchantBridge";
+import { MERCHANT_ID, bridgeOrigin, merchantOrigin, merchantKey, riskpilotOrigin, readBridgeRequest, signEnvelope, type MerchantQuote, type MerchantRef } from "../lib/merchantBridge";
 
 type MerchantGateway = { configured: typeof paypalConfigured; create: typeof createOrder; get: typeof getOrder; capture: typeof captureOrder };
-export function createMerchantServer(options: { port?: number; ledgerPath?: string; gateway?: MerchantGateway; bridgeKey?: string; reviewOrigin?: string } = {}) {
+export function createMerchantServer(options: { port?: number; origin?: string; ledgerPath?: string; gateway?: MerchantGateway; bridgeKey?: string; reviewOrigin?: string } = {}) {
   const api = options.gateway ?? { configured: paypalConfigured, create: createOrder, get: getOrder, capture: captureOrder };
   const port = options.port ?? Number(process.env.MERCHANT_PORT || 3200);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Invalid MERCHANT_PORT");
-  const origin = `http://localhost:${port}`;
-  const reviewOrigin = localOrigin(options.reviewOrigin || riskpilotOrigin());
+  const origin = options.origin ? bridgeOrigin(options.origin) : process.env.MERCHANT_ORIGIN ? merchantOrigin() : `http://localhost:${port}`;
+  const reviewOrigin = bridgeOrigin(options.reviewOrigin || riskpilotOrigin());
   const key = () => options.bridgeKey || merchantKey();
   const price = 900;
   const product = "Aero 14 Laptop";
-  const file = options.ledgerPath ?? path.join(process.cwd(), "data", "merchant-demo.json");
+  const file = options.ledgerPath ?? process.env.MERCHANT_STORE_PATH ?? path.join(process.cwd(), "data", "merchant-demo.json");
   type Record = { requestId: string; customId: string; checkoutId?: string; orderId?: string; state: "CREATING" | "CREATED" | "UNKNOWN" | "CAPTURED"; captureId?: string; reviewedHash?: string; confirmedAt?: string };
   let ledger: { sessions: { [key: string]: Record } };
   try { ledger = JSON.parse(readFileSync(file, "utf8")); if (!ledger.sessions) throw new Error("Invalid merchant ledger"); }
@@ -32,7 +32,7 @@ export function createMerchantServer(options: { port?: number; ledgerPath?: stri
     const value = req.headers.cookie?.match(/(?:^|;\s*)merchant_demo=([a-f0-9-]{36})(?:;|$)/)?.[1];
     if (value) return value;
     const id = crypto.randomUUID();
-    res.setHeader("Set-Cookie", `merchant_demo=${id}; HttpOnly; SameSite=Lax; Path=/`);
+    res.setHeader("Set-Cookie", `merchant_demo=${id}; HttpOnly; SameSite=Lax; Path=/${origin.startsWith("https:") ? "; Secure" : ""}`);
     return id;
   }
   function json(res: ServerResponse, status: number, data: unknown) { res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" }); res.end(JSON.stringify(data)); }

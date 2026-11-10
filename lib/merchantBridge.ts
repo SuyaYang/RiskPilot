@@ -1,7 +1,8 @@
-/** Local cooperating-merchant protocol. No merchant credentials or signing key enter the browser. */
+/** Cooperating-merchant Sandbox protocol. No merchant credentials or signing key enter the browser. */
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { isIP } from "node:net";
 
 export const MERCHANT_ID = "northstar-demo" as const;
 export type MerchantRef = { merchantId: typeof MERCHANT_ID; checkoutId: string; orderId: string };
@@ -19,13 +20,22 @@ export function localOrigin(value: string): string {
   }
   return url.origin;
 }
-export const merchantOrigin = () => localOrigin(process.env.MERCHANT_ORIGIN || `http://localhost:${process.env.MERCHANT_PORT || 3200}`);
-export const riskpilotOrigin = () => localOrigin(process.env.RISKPILOT_ORIGIN || process.env.APP_ORIGIN || "http://localhost:3100");
+/** HTTPS deployments require an exact server-configured allowlist, never a request-provided URL. */
+export function bridgeOrigin(value: string, allowed = process.env.MERCHANT_BRIDGE_ALLOWED_ORIGINS || ""): string {
+  const url = new URL(value);
+  if (url.protocol === "http:") return localOrigin(value);
+  if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash || isIP(url.hostname) || !url.hostname.includes(".") || url.hostname.endsWith(".localhost") || url.hostname.endsWith(".local")) throw new Error("Bridge origin must be loopback HTTP or an explicitly allowed public HTTPS origin");
+  const allowlist = allowed.split(",").map(item => item.trim()).filter(Boolean);
+  if (!allowlist.includes(url.origin)) throw new Error("HTTPS bridge origin is not in MERCHANT_BRIDGE_ALLOWED_ORIGINS");
+  return url.origin;
+}
+export const merchantOrigin = () => bridgeOrigin(process.env.MERCHANT_ORIGIN || `http://localhost:${process.env.MERCHANT_PORT || 3200}`);
+export const riskpilotOrigin = () => bridgeOrigin(process.env.RISKPILOT_ORIGIN || process.env.APP_ORIGIN || "http://localhost:3100");
 
 export function merchantKey() {
   const configured = process.env.MERCHANT_BRIDGE_SECRET;
   if (configured) { if (configured.length < 32) throw new Error("MERCHANT_BRIDGE_SECRET must have at least 32 characters"); return configured; }
-  if (process.env.NODE_ENV === "production" && process.env.APP_ENV !== "local") throw new Error("Merchant bridge demo disabled outside local mode");
+  if ((process.env.NODE_ENV === "production" && process.env.APP_ENV !== "local") || [process.env.MERCHANT_ORIGIN,process.env.RISKPILOT_ORIGIN].some(value => value?.startsWith("https:"))) throw new Error("Configure the same MERCHANT_BRIDGE_SECRET on both deployed services");
   const file = process.env.MERCHANT_BRIDGE_KEY_FILE || path.join(process.cwd(), "data", "merchant-bridge.key");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   try { fs.writeFileSync(file, crypto.randomBytes(32).toString("hex"), { flag: "wx", mode: 0o600 }); }

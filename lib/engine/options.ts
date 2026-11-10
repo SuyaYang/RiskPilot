@@ -56,7 +56,8 @@ export function buildOptions(
   alternative?: Product,
 ): { baselineAlloc: Allocation; options: OptionResult[]; recommended: MethodId } {
   const t = today();
-  const futureExisting = existing.filter((x) => x.date >= iso(t));
+  // Payments on or before today already reduce forecast.startBalance. Do not allocate them twice.
+  const futureExisting = existing.filter((x) => x.date > iso(t));
   const baseF = forecast(p, existing);
   const baselineAlloc = allocateGoals(p, goals, futureExisting, Math.max(0, -baseF.bufferGap));
 

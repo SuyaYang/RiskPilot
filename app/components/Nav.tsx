@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import Icon from "./Icon";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -50,23 +51,27 @@ export default function Nav() {
   }
 
   return (
-    <nav className="nav">
+    <nav className="nav" aria-label="Main navigation">
       <div className="nav-inner">
-        <span className="brand">RiskPilot Checkout</span>
+        <Link href="/" className="brand" aria-label="RiskPilot home"><span className="brand-mark"><Icon name="chart" size={23} /></span>RiskPilot<span className="brand-period">.</span></Link>
+        <div className="nav-links">
         {LINKS.map((l) => (
-          <Link key={l.href} href={l.href} className={path === l.href ? "active" : ""}>
+          <Link key={l.href} href={l.href} className={path === l.href ? "active" : ""} aria-current={path === l.href ? "page" : undefined}>
             {l.label}
           </Link>
         ))}
+        </div>
         <span className="spacer" />
-        <select disabled={busy} aria-label="Demo persona" value={active} onChange={(e) => choose(e.target.value)}>
+        <div className="persona-control"><span className="avatar" aria-hidden="true">{active.slice(0, 1).toUpperCase()}</span><label className="sr-only" htmlFor="demo-persona">Demo persona</label>
+        <select id="demo-persona" disabled={busy} aria-label="Demo persona" value={active} onChange={(e) => choose(e.target.value)}>
           {personas.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name} · {p.tagline}
+              {p.name} · Demo profile
             </option>
           ))}
         </select>
-        <button disabled={busy} onClick={resetDemo} className="small">
+        </div>
+        <button disabled={busy} onClick={resetDemo} className="small reset-button">
           Reset demo
         </button>
         {error && <span className="error" role="alert">{error}</span>}

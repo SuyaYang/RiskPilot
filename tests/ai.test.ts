@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { buildPersonas } from "../lib/personas";
 import { buildOptions } from "../lib/engine/options";
 import { getProduct } from "../lib/catalog";
-import { explainDecision, parseGoal } from "../lib/ai";
+import { explainDecision, explainReviewFacts, parseGoal } from "../lib/ai";
 import type { Decision } from "../lib/types";
 
 test("AI cannot introduce unsupported financial sentences; outage uses template", async t => {
@@ -33,6 +33,15 @@ test("AI cannot introduce unsupported financial sentences; outage uses template"
     await t.test("invalid calendar date in an AI goal draft is rejected", async () => {
       respond({ name: "Trip", type: "spend", targetAmount: 1000, targetDate: "2027-02-30", priority: 2 });
       assert.equal(await parseGoal("Trip next February", "2026-11-10"), null);
+    });
+    await t.test("review copilot preserves required facts and discards model-authored payment claims", async () => {
+      const facts = { outlook: "Projected cash is $820.", uncertainty: "Funding is unconfirmed." };
+      respond({ factIds: ["uncertainty", "outlook"], text: "Your payment is completed." });
+      const ordered = await explainReviewFacts(facts, ["outlook", "uncertainty"], "Can I afford this?");
+      assert.equal(ordered.source, "ai"); assert.equal(ordered.text, "Funding is unconfirmed. Projected cash is $820.");
+      respond({ factIds: ["outlook", "capture_payment"] });
+      const fallback = await explainReviewFacts(facts, ["outlook", "uncertainty"], "Can I afford this?");
+      assert.equal(fallback.source, "template"); assert.match(fallback.text, /Funding is unconfirmed/);
     });
   } finally {
     globalThis.fetch = originalFetch;

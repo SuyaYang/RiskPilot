@@ -139,3 +139,15 @@ idempotency key. Commands older than the bounded recovery window require manual 
 
 Supabase SQL migrations, production Auth/RLS, Python engine service, background sync/reconciliation,
 Render deployment and the public submission video are still required before all README gates pass.
+
+## Gemini and optional HTTPS deployment
+
+Configure `GEMINI_API_KEY` in the ignored `.env`, with `GEMINI_MODEL=gemini-3.6-flash`, then restart.
+`bash scripts/set-keys.sh gemini` accepts hidden input. Ask RiskPilot now accepts free-text questions
+on main pages and order review; the key stays server-only. The model selects verified fact sentences,
+not new financial calculations. AI goal drafts require confirmation. Missing-key and provider errors
+are explicit; suggested read-only page facts remain available without Gemini.
+
+For a public Sandbox demo, use [the HTTPS deployment guide](docs/DEPLOYMENT.md) and `render.yaml`.
+The Blueprint supplies two single-instance services with separate persistent ledgers. Do not replace
+safe origin checks with arbitrary URLs or assume a GitHub push has deployed or configured Webhooks.
