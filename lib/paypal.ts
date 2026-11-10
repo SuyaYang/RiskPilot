@@ -47,7 +47,10 @@ async function call(pathname: string, init: RequestInit & { requestId?: string }
   }
 }
 
-export async function createOrder(opts: { amount: number; name: string; customId: string; requestId: string }) {
+export async function createOrder(opts: {
+  amount: number; name: string; customId: string; requestId: string;
+  experience?: { origin: string; brandName: string; userAction: "CONTINUE" | "PAY_NOW" };
+}) {
   const value = opts.amount.toFixed(2);
   return call("/v2/checkout/orders", {
     method: "POST",
@@ -67,10 +70,10 @@ export async function createOrder(opts: { amount: number; name: string; customId
       payment_source: {
         paypal: {
           experience_context: {
-            return_url: `${ORIGIN}/checkout/return`,
-            cancel_url: `${ORIGIN}/checkout/return?cancelled=1`,
-            user_action: "CONTINUE",
-            brand_name: "RiskPilot Demo Store",
+            return_url: `${opts.experience?.origin ?? ORIGIN}/checkout/return`,
+            cancel_url: `${opts.experience?.origin ?? ORIGIN}/checkout/return?cancelled=1`,
+            user_action: opts.experience?.userAction ?? "CONTINUE",
+            brand_name: opts.experience?.brandName ?? "RiskPilot Demo Store",
           },
         },
       },

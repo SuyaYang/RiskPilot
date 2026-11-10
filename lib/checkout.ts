@@ -83,6 +83,7 @@ function completed(o: OrderRecord, remote: PayPalOrder) {
 }
 export async function captureCheckout(owner: string, id: string, api = gateway, reviewedHash?: string) {
   const o = ownedOrder(id, owner);
+  if (o.merchant) throw new CheckoutError("MERCHANT_CONFIRMATION_REQUIRED", "This order must be captured by its merchant after RiskPilot confirmation.", 400);
   if (o.status === "CAPTURED") return { status: "CAPTURED", captureId: o.captureId, duplicate: true, snapshotId: o.snapshotId };
   if (o.simulated) throw new CheckoutError("SIMULATED_ORDER", "Use the explicitly labeled simulation action", 400);
   // Preflight avoids sending an unapproved payment to the capture endpoint.

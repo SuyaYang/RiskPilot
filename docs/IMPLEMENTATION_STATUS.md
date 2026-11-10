@@ -1,103 +1,76 @@
 # Implementation and acceptance status
 
-Checked on 2026-11-10 against the local `feature/checkout-mvp` base commit `6189343` and repository
-README. Remote HEAD/PR state could not be refreshed: the connected GitHub API returned 404 and shell
-network access could not resolve github.com. Do not infer this branch has been pushed or merged.
+Updated 2026-11-10. Base: feature/checkout-mvp at 6189343. Local work continues on
+fix/checkout-recovery; the intended publication target is the existing feature/checkout-mvp branch.
+See [the complete update record](CHANGELOG_2026-11-10.md) and
+[merchant checkout walkthrough](MERCHANT_CHECKOUT.md).
 
-## Implemented in this branch
+## Current implemented experience
 
-- Four navigable pages: Dashboard, Goals, Shop/comparison/checkout, Invest/educational scenarios.
-- SDK v6 client-ID initialization, amount/currency eligibility checks, and separate actual payment
-  buttons. Pay Later comparisons remain hypothetical; eligibility is never inferred from price alone.
-- Server-catalog price and product freezing; stale-input hash/date/expiry checks; same scoped create
-  request key on recovery; capture commands recorded before provider calls.
-- Provider status/identity/custom-ID/currency/amount checks before capture. Unapproved orders return
-  an actionable incomplete response without a capture request. OAuth and REST requests are bounded.
-- Capture timeout lookup, duplicate capture protection, and recovery after a local persistence failure.
-- Capture + full-price conservative commitment + immutable versioned forecast snapshot in one local
-  store transaction. No assumed loan schedule is committed as fact.
-- Verified, durable webhook inbox with replayable failures, duplicate/out-of-order safety, and
-  settlement-review flags for refund/reversal. No made-up bank credit is created.
-- Separate opaque-cookie demo workspaces; scoped read/write/reset checks; reset refuses real Sandbox
-  order ledgers. These checks are demo isolation, not completed production authentication.
-- Forecast daily arithmetic in integer cents; checks extend through the last payment while the chart
-  remains 45 days. Allocate-today capacity also protects the late-income scenario and initial cash.
-- Confirmed goal CRUD, version conflicts, finite amounts, valid calendar dates, and cent precision.
-- Gemini selects server-approved fact sentences so a valid dollar amount cannot be attached to a
-  fabricated claim. Unavailable/invalid Gemini output falls back to the deterministic explanation.
-- Environment template, reproducible dependency lock, running/reset instructions, MIT license, CI
-  workflow, finance/payment/route regression tests. Canonical checkout/dashboard/reset API aliases
-  preserve the earlier route names for teammates.
+**Independent store → PayPal Continue / Review Order → RiskPilot purchase impact →
+explicit Confirm and pay → merchant capture → store receipt.** No browser extension is required.
+The separate Northstar Electronics demo store has integrated RiskPilot. Other stores must integrate
+it; this is not an automatic feature for every PayPal merchant.
 
-## README acceptance gates
+The merchant owns its quote, PayPal credentials and capture. A signed expiring link binds the
+server-verified quote to the current fictional demo workspace. The impact uses that workspace's
+goals and commitments. Explicit confirmation with the current input hash sends a signed request
+back to the merchant. The merchant verifies identity, amount, currency and approval before
+idempotent capture. RiskPilot records the verified capture, conservative full-price commitment and
+versioned forecast once, then returns the buyer to a provider-verified merchant receipt.
 
-| Gate | Current evidence | Remaining work |
-|---|---|---|
-| Real Sandbox create → approve → capture updates versioned forecast | Mocked provider/service recovery and route-level simulation pass; smoke script exists | Real buyer/browser run with credentials and reachable local/public origin |
-| Pay Later eligibility and hypothetical schedules | SDK integration and explicit labels implemented | Browser confirmation against the real Sandbox SDK; actual consumer terms/source confirmation flow |
-| No double charge/count on retries, out-of-order callbacks, local write failure and bank debit | Payment/webhook/local failure regression tests pass | Plaid debit reconciliation and durable background worker are absent |
-| User A cannot access user B data, including server-secret queries | Two independent demo workspaces pass order/decision/goal/reset checks | Supabase Auth, SQL migrations, RLS and service-secret tenant-isolation tests are absent |
-| Deterministic engine facts + constrained AI + fallback | TypeScript kernel and guarded fact selection tested | Required private Python service, versioned JSON contracts, full input snapshot/replay and all protected-goal capacity invariants |
-| Tested startup/reset, migrations, license, public repository/video | Build, type checks, local tests, instructions and license; CI file added | Listener/browser startup blocked by execution permissions; migrations, real Render deployment, remote publication and video unverified |
+## Implemented and checked
 
-## Verification limits
+- Dashboard, goal create/edit/pause/resume/delete, Shop reference flow and educational Invest page.
+- SDK v6 client-ID initialization, eligibility-gated PayPal and Pay Later buttons, full-price orders.
+- Payment approval is distinct from capture; returning to an impact page never submits payment.
+- Unknown outcomes, capture timeouts, local-write failures, duplicate/out-of-order callbacks and
+  replayable verified webhooks preserve payment facts and prevent double counting.
+- Signed merchant handoff, quote checks, request/response nonce binding, expiry, fixed destinations,
+  browser-workspace ownership and stale-review rejection.
+- Change payment method in PayPal sits beside final confirmation. Forecast comparison buttons do
+  not change actual funding. Unknown capture outcomes disable the change-method action.
+- Forecast checks cover all evaluated payment dates, including beyond the visible 45-day chart;
+  available allocation also protects the delayed-income scenario and protected goals.
+- Gemini may select only supported fact sentences; invalid output or an outage uses templates.
+- Native date-input synchronization, bounded provider calls and no silent legacy-store resets.
+- Development uses .next-dev; production uses .next. Both generated outputs are ignored.
 
-`npm run typecheck`, `npm test` and `npm run build` exercise real source code; provider responses in
-automated tests are fixtures, not evidence of a real PayPal payment. Route integration tests run
-Next request-local handlers and middleware without a TCP listener. They do not prove visual layout,
-SDK popup behavior, real loan eligibility, signature verification against PayPal, or Render startup.
+## Evidence
 
-Starting `next dev --hostname 127.0.0.1 --port 3100` returned `listen EPERM`, including after the user
-authorized full permissions. The execution sandbox did not change. No browser or real Sandbox
-payment is marked passed. A clean remote `npm ci` and CI run also remain unverified in this network
-restricted environment; the local build uses the pre-existing pinned dependencies.
+| Check | Evidence |
+|---|---|
+| Automated suite | 56 tests pass: finance, AI constraints/fallback, payment recovery, routes, merchant handoff/capture/receipt and optional extension parsing |
+| TypeScript | npm run typecheck passes, including the final change-method control |
+| Production | npm run build passes; reloading the active development checkout afterward still renders correctly |
+| UI | Dashboard, Goals, Shop, Invest, Sandbox SDK eligibility and pre-capture impact comparison were exercised in Chrome |
+| Merchant payment | The integrated Northstar order was observed completed in the merchant receipt; the local capture and versioned forecast are saved |
+| Change method | A different, unpaid reference order reopened in PayPal; bank funding was changed to Sandbox Visa; Review Order returned to impact review; no capture was recorded for this test |
+| Startup | The user can run npm run demo to start/check both sites. This agent cannot start new local listeners: listen EPERM |
+| GitHub | The logged-in Chrome session can access the private repository and existing branch. The connector still returns 404; shell Git cannot resolve github.com. Local publication preparation does not imply a completed remote push |
 
-## Architecture still required
+The merchant receipt was observed after the user completed Sandbox payment; the agent did not
+click its final payment confirmation. Automated provider responses are fixtures and do not prove
+every real PayPal error path. The change-method browser test used the reference order, not a new
+merchant loan application. Actual loan terms, consumer funding details and bank reconciliation are
+not inferred from capture.
 
-Keep README's production target unchanged: Supabase Auth/Postgres/RLS and real migrations;
-`services/engine` Python service and integer-minor-unit contracts; durable worker/jobs; optional
-Plaid Sandbox Link/sync/reconciliation; funding-plan confirmation; deployment to Render; public
-submission assets. This branch intentionally documents these as incomplete instead of relabeling
-the local JSON demo as the finished architecture.
+## Runtime fix
 
-## Official integration reference
+The missing-module error Cannot find module './855.js' resulted from production chunks under
+.next/server/chunks being mixed with the running development runtime. Phase-based output isolation
+in next.config.mjs fixes the collision. With development still running, a production build passed
+and a reload of the same review succeeded. Purchase records were preserved.
 
-Implementation checked against PayPal's [SDK v6 setup](https://developer.paypal.com/sdk/js/set-up/)
-and [Orders integration](https://developer.paypal.com/api/rest/integration/orders-api). These sources
-specify eligibility-gated payment methods, server capture after approval, and the v6 order promise
-shape `{ orderId }`. The real SDK/Sandbox smoke test remains a release gate.
+## Remaining target architecture
 
-## Local browser follow-up
+- Supabase Auth, Postgres migrations, RLS and production tenant-isolation validation.
+- Private Python financial engine and versioned integer-minor-unit contracts.
+- Durable background jobs, Plaid Sandbox connection/sync/reconciliation and confirmed funding plans.
+- Production merchant onboarding, separate merchant keys, HTTPS and real customer identity.
+- Render deployment, clean remote CI run, public submission access and final demo video.
+- Real Pay Later eligibility/loan-term confirmation and full provider failure acceptance.
 
-The user started the repaired checkout at `http://localhost:3100`. Chrome browser access now works,
-although direct shell requests to the listener remain blocked. Dashboard loaded with the expected
-fixture forecast, Goals creation and pause were exercised, Shop produced the expected comparison,
-and Invest loaded cash capacity and educational templates. A native date-input synchronization issue
-was found during form entry and fixed by handling input events as well as change events; creation
-succeeded after filling the date and changing priority. The test goal was paused afterward.
-
-The real Sandbox SDK initialized, checked eligibility, and showed PayPal and Pay Later controls.
-A full-price $900 Sandbox merchant order was created and opened in PayPal Checkout. Buyer sign-in
-and approval are awaiting the user; capture, return/recovery and the post-payment forecast are not
-yet marked passed. No real-money payment or bank synchronization was performed.
-
-## Purchase impact before final payment
-
-The checkout now uses PayPal's supported Continue flow in both adapters: Orders
-`experience_context.user_action=CONTINUE` and SDK v6 session `commit=false`. The Sandbox displayed
-**Review Order**. The browser returned to RiskPilot's final review page with a purchase-impact
-overview above **Make payment**. PayPal approval and redirect callbacks do not invoke capture.
-The final capture route requires explicit review confirmation and the current input hash, with an
-additional stale-input check immediately before the capture command is persisted.
-
-Browser verification exercised the real Sandbox SDK through Review Order and back to the new
-page. Full-price and hypothetical Pay in 4 selections changed the cash/buffer/goal overview. The
-new order remained locally CREATED with no capture command after this browser review; the final
-Make payment button was intentionally left untouched. The original, earlier $900 Sandbox test did
-complete a verified capture and save its forecast; this does not substitute for final capture testing
-of the new review flow. Thirty-nine automated tests pass, including explicit-review and stale-input
-checks. A production build passed in an isolated copy without disturbing the active dev server.
-
-This overview is on RiskPilot's merchant confirmation page, not injected into PayPal's hosted UI.
-Scenario selection does not change PayPal's selected funding method, and assumed installments are
-not presented as confirmed PayPal loan terms.
+Local JSON storage and opaque cookies are fictional-demo infrastructure, not completed production
+banking or identity. Investment views do not transfer funds or place trades. The optional extension
+directory preserves an earlier placement experiment and is not part of the accepted checkout flow.

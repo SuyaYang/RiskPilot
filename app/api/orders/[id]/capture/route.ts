@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { currentPersonaId, inputHash } from "@/lib/state";
 import { captureCheckout, ownedOrder, CheckoutError } from "@/lib/checkout";
 import { apiError } from "@/lib/http";
+import { confirmMerchantCheckout } from "@/lib/merchantCheckout";
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const owner = await currentPersonaId(), { id } = await ctx.params;
@@ -11,6 +12,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (order.status !== "CAPTURED" && body.inputHash !== inputHash(owner)) {
       throw new CheckoutError("STALE_REVIEW", "Your finances changed. Refresh the purchase overview before paying.");
     }
-    return NextResponse.json(await captureCheckout(owner, id, undefined, body.inputHash));
+    return NextResponse.json(order.merchant
+      ? await confirmMerchantCheckout(owner, id, body.inputHash)
+      : await captureCheckout(owner, id, undefined, body.inputHash));
   } catch (e) { return apiError(e); }
 }

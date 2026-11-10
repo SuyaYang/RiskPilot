@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Northstar Electronics · Sandbox merchant</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:#10253a;background:#f4f3ee;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}header{padding:20px 7%;border-bottom:1px solid #d7d9d8;background:white;display:flex;justify-content:space-between;gap:12px}main{max-width:1000px;margin:70px auto;padding:24px}.eyebrow{color:#526e7a;font-size:12px;letter-spacing:.12em;text-transform:uppercase}h1{font-size:44px;line-height:1.1;margin:12px 0 20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}.product{border-radius:24px;background:#dce5e9;padding:60px 24px;text-align:center}.screen{border:12px solid #314655;border-bottom-width:20px;border-radius:14px;margin:auto;max-width:340px;aspect-ratio:1.5;background:linear-gradient(140deg,#a7c0d1,#3b718c)}.base{height:10px;background:#7e919e;border-radius:0 0 25px 25px;margin:auto;width:95%}.price{font-size:30px;font-weight:700}button{font:inherit;cursor:pointer;border:1px solid #c4cfd6;border-radius:9px;padding:12px 22px;background:white;color:#143e57}button.primary{background:#003087;color:white;border:none;width:100%;font-weight:650}button:disabled{opacity:.6;cursor:wait}.small{font-size:12px;color:#5d6c73}.box{padding:20px;border:1px solid #d4dcdf;border-radius:14px;background:white;margin-top:24px}#status{white-space:pre-wrap}#error{color:#982f24}#status:empty,#error:empty{display:none}footer{padding:24px 7%;font-size:12px;color:#5d6c73}.badge{font-size:12px;color:#65796c}@media(max-width:700px){.grid{grid-template-columns:1fr}main{margin:20px auto}.product{padding:35px}h1{font-size:34px}}
+</style></head><body>
+<header><strong>NORTHSTAR / ELECTRONICS</strong><span class="badge">Sandbox demonstration store</span></header>
+<main><div class="grid"><div class="product" role="img" aria-label="Aero laptop illustration"><div class="screen"></div><div class="base"></div></div><div><div class="eyebrow">Work anywhere</div><h1>Aero 14 Laptop</h1><p>14-inch display. 16 GB memory. 512 GB storage.<br>A lighter way to get things done.</p><div class="price">$900.00 <span class="small">USD · demo total</span></div><div class="box"><button id="checkout" class="primary" disabled>Loading PayPal Sandbox…</button><p class="small">Choose a payment method in PayPal, review the impact in RiskPilot, then confirm payment. No extension is required. No real goods are sold or shipped.</p><p id="status" role="status"></p><p id="error" role="alert"></p><button id="check-status">Check order status</button><a id="reopen" href="/review" hidden>Reopen purchase impact review</a></div></div></div></main>
+<footer>This independent merchant demonstrates a store that has integrated RiskPilot. Sandbox funds and fictional financial data only. Other stores must integrate RiskPilot to offer this flow.</footer>
+<script>
+const buy = document.getElementById('checkout'), status = document.getElementById('status'), error = document.getElementById('error'), reopen = document.getElementById('reopen');
+let sdk, busy = false;
+async function call(url, method = 'GET') {
+  const response = await fetch(url, { method, headers: method === 'POST' ? {'Content-Type':'application/json'} : {}, ...(method === 'POST' ? {body:'{}'} : {}) });
+  const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Request failed'); return data;
+}
+function show(data) {
+  const expected = new URLSearchParams(location.search).get('order');
+  if (expected && data.id !== expected) throw new Error('The receipt does not match this store session.');
+  status.textContent = data.status === 'CAPTURED' ? 'Sandbox payment completed.\nOrder: ' + data.id + '\nCapture: ' + data.captureId : 'Order status: ' + data.status + (data.id ? '\n' + data.id : '');
+  reopen.hidden = !['APPROVED','COMPLETED'].includes(data.status);
+}
+buy.addEventListener('click', async () => {
+  if (!sdk || busy) return; busy = true; buy.disabled = true; error.textContent = '';
+  const done = () => { busy = false; buy.disabled = false; };
+  try {
+    const session = sdk.createPayPalOneTimePaymentSession({ commit:false,
+      onApprove: async () => { window.location.assign('/review'); },
+      onCancel: () => { status.textContent = 'Checkout cancelled. No capture requested.'; done(); },
+      onError: () => { error.textContent = 'PayPal could not confirm checkout. Check this order before retrying.'; done(); }
+    });
+    status.textContent = 'Choose a method in PayPal and select Continue / Review Order. You will review the impact in RiskPilot before payment.';
+    await session.start({presentationMode:'auto'}, call('/api/order','POST'));
+  } catch(e) { error.textContent = e.message; done(); }
+});
+document.getElementById('check-status').addEventListener('click', async () => { try { error.textContent = ''; const data = await call('/api/status'); show(data); if (data.status === 'CAPTURED') buy.disabled = true; } catch(e) { error.textContent = e.message; } });
+(async () => {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (location.pathname === '/receipt') {
+      buy.hidden = true;
+      document.querySelector('h1').textContent = 'Your order';
+      show(await call('/api/status'));
+      return;
+    }
+    const config = await call('/api/config');
+    if (!config.configured) throw new Error('PayPal Sandbox credentials are missing.');
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://www.sandbox.paypal.com/web-sdk/v6/core';
+      const timer = setTimeout(() => reject(new Error('PayPal could not load. Reload this store to retry.')), 15000);
+      script.onload = () => { clearTimeout(timer); resolve(); };
+      script.onerror = () => { clearTimeout(timer); reject(new Error('PayPal Sandbox could not load.')); };
+      document.head.append(script);
+    });
+    sdk = await window.paypal.createInstance({ clientId:config.clientId, components:['paypal-payments'], pageType:'checkout', locale:'en-US' });
+    const methods = await sdk.findEligibleMethods({ currencyCode:'USD', amount:'900.00' });
+    if (!methods.isEligible('paypal')) throw new Error('PayPal is not eligible for this checkout.');
+    buy.textContent = 'Check out with PayPal Sandbox'; buy.disabled = false;
+    if (params.get('cancelled')) status.textContent = 'Checkout cancelled.';
+    const current = await call('/api/status');
+    if (current.status === 'CAPTURED') { show(current); buy.disabled = true; }
+    else if (current.status === 'APPROVED') reopen.hidden = false;
+  } catch(e) { error.textContent = e.message; }
+})();
+</script></body></html>

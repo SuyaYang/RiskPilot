@@ -1,5 +1,6 @@
 node_modules
 .next
+.next-dev
 .env
 .env.local
 data/store.json
@@ -13,3 +14,5 @@ data/*.json
 data/*.lock
 data/*.tmp
 next-env.d.ts
+extension/dist/
+data/*.key

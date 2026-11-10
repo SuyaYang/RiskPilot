@@ -17,6 +17,7 @@ export interface OrderRecord {
   captureRequestId: string; captureCommand?: "STARTED" | "UNKNOWN" | "COMPLETED"; captureStartedAt?: number;
   approvalUrl?: string; projectionStatus?: "PENDING" | "UPDATED"; snapshotId?: string;
   settlementReview?: string;
+  merchant?: { id: "northstar-demo"; checkoutId: string; name: string };
 }
 export interface CreateCommand {
   requestId: string; personaId: string; decisionId: string; method: MethodId;

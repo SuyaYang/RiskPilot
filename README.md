@@ -2,11 +2,40 @@
 
 **Assess a purchase before paying, then update the forecast from a verified PayPal payment.**
 
+## Buyer checkout experience
+
+The current flow is **another merchant's website → PayPal Continue / Review Order → RiskPilot
+purchase-impact review → explicit Confirm and pay → merchant receipt**. Users do not install an
+extension or shop on RiskPilot. The shopping website must integrate RiskPilot; this does not
+automatically intercept payments at stores that have not integrated it.
+
+Run `npm run demo` to start/check the independent **Northstar Electronics** merchant on port 3200
+and RiskPilot on port 3100. It is a simulated separate shopping website with a real PayPal Sandbox
+order, not a claim of integration with an existing retailer. [Walkthrough](docs/MERCHANT_CHECKOUT.md).
+
+The merchant creates a server-priced order with `CONTINUE`; SDK v6 uses `commit: false`. Buyer
+approval redirects to an expiring, signed RiskPilot checkout link and never captures funds. RiskPilot
+binds the quote to one fictional browser workspace, calculates impact from that workspace's current
+goals/commitments, and requires explicit confirmation with the current input hash. A signed
+server-to-server request asks the merchant to verify and capture its own order. RiskPilot records
+the returned capture and updates a versioned forecast once, then returns the buyer to the store.
+
+The merchant retains its PayPal credentials. Browser links cannot change the amount, invoke direct
+capture or choose arbitrary return destinations. The local demo uses a server-only shared key and
+loopback allowlist; production merchant onboarding and customer authentication remain future work.
+The `extension/` directory is an optional earlier placement experiment and is not used by this flow.
+
 RiskPilot compares a cart with upcoming bills, cash reserves, and savings goals. The customer chooses an option and approves checkout through PayPal. RiskPilot records the confirmed merchant payment, updates its own cash-flow projection, and later reconciles bank activity without counting the expense twice.
 
-> **Status:** local fictional-data Checkout MVP in progress. Dashboard, Goals, Shop and Invest are implemented; payment recovery, versioned snapshots and regression tests are available. The architecture below remains the target, not a claim that Supabase/Python/worker/deployment are complete. Start with [RUNNING.md](RUNNING.md) and the [acceptance status](docs/IMPLEMENTATION_STATUS.md). Real Sandbox payment and public deployment remain unverified.
+> **Status:** local fictional-data Checkout MVP. Dashboard, Goals, Shop, Invest, payment recovery and the cooperating-merchant review flow are implemented. A completed merchant Sandbox receipt and saved forecast have been observed; 56 automated tests pass. Supabase/Python/worker/deployment remain unfinished. Start with [RUNNING.md](RUNNING.md), [acceptance status](docs/IMPLEMENTATION_STATUS.md) and the [complete update record](docs/CHANGELOG_2026-11-10.md).
 
-**Hackathon scope:** US, USD, one RiskPilot demo store, one PayPal Sandbox merchant, and Plaid Sandbox or clearly marked manual financial data. Investment views show cash capacity and educational scenarios; they do not transfer funds or place trades. Pay Later scenarios are hypothetical until PayPal confirms eligibility and the buyer confirms actual loan terms.
+**Hackathon scope:** US, USD, an independent simulated cooperating merchant, one PayPal Sandbox
+merchant account, and Plaid Sandbox or clearly marked manual financial data. The merchant flow uses
+the same fictional profile/goals and purchase ledger as the dashboard. No live bank is connected.
+Investment views show cash capacity and educational scenarios; they do not transfer funds or place
+trades. Pay Later scenarios are hypothetical until PayPal confirms eligibility and the buyer confirms
+actual loan terms. Browser follow-up observed the new merchant receipt and a reference-order
+change-method round trip; remaining acceptance limits are recorded in the status document.
 
 ## 1. Architecture
 
@@ -102,6 +131,7 @@ These are **RiskPilot routes**, not vendor endpoints. Except webhooks and health
 | Catalog/cart | `GET /api/products`; `POST /api/carts`; `PATCH /api/carts/{id}` | Server catalog and total; client sends SKU/quantity, never price |
 | Decisions | `POST /api/decisions`; `GET /api/decisions/{id}`; `POST /api/decisions/{id}/select` | Versioned option/risk/fact IDs; selection creates checkout session |
 | Checkout | `POST /api/paypal/orders`; `POST /api/paypal/orders/{id}/capture`; `GET /api/orders/{id}` | Frozen amount; capture request has no amount field; separate payment/projection/funding statuses |
+| Merchant handoff | `POST /api/merchant/claim` | Verify an expiring integrated-merchant link; bind its server-verified order to the current demo workspace. Existing capture route sends merchant orders through the signed merchant bridge. |
 | Funding | `PUT /api/orders/{id}/funding-plan` | User-confirmed source and dated schedule; never inferred from merchant capture |
 | Investment | `GET /api/investment-capacity`; `PUT /api/investment-preferences` | Educational cash limit and assumptions; no trade execution |
 | Notifications/privacy | `GET /api/notifications`; `PATCH /api/notifications/{id}`; `DELETE /api/me/data` | Read status; deletion requires reauthentication and retention handling |

@@ -22,6 +22,7 @@ export function middleware(req: NextRequest) {
     httpOnly: true, sameSite: "lax", secure: req.nextUrl.protocol === "https:", path: "/", maxAge: 604800,
   });
   if (req.nextUrl.pathname.startsWith("/api/")) res.headers.set("Cache-Control", "no-store");
+  if (req.nextUrl.pathname.startsWith("/checkout/")) { res.headers.set("Referrer-Policy", "no-referrer"); res.headers.set("Cache-Control", "no-store"); }
   return res;
 }
 

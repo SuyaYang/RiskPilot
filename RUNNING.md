@@ -1,5 +1,23 @@
 # Run RiskPilot Checkout
 
+## Current buyer experience: independent store and impact review
+
+**Northstar store → PayPal Continue → RiskPilot review → Confirm and pay → store receipt**.
+Users do not install a browser extension. The simulated merchant has integrated RiskPilot.
+
+```bash
+npm run demo
+```
+
+This starts/checks RiskPilot on port 3100 and the independent merchant on port 3200, opens the
+merchant, and never captures or resets anything. Keep its terminal open. Existing processes are
+reused, and Ctrl+C stops only processes that the launcher started. Both servers must run from this
+same working copy so they share the local server-only bridge key. [Full walkthrough](docs/MERCHANT_CHECKOUT.md).
+
+`npm run demo -- --check` checks both sites without starting or opening anything.
+`npm run demo -- --no-open` starts/checks both without opening a browser.
+`npm run merchant-demo` starts only the merchant when RiskPilot is already running on port 3100.
+
 This branch implements a **local fictional-data demo** with Dashboard, Goals, Shop and Invest.
 The [README target architecture](README.md) remains the requirement; see
 [implementation / acceptance status](docs/IMPLEMENTATION_STATUS.md) for gaps. This is not a production
@@ -26,6 +44,36 @@ client IDs must belong to the same Sandbox app. Live PayPal endpoints are delibe
 Keep `STORE_PATH=./data/demo-v2.json`. Existing `data/store.json` from the earlier branch uses an
 incompatible format; preserve it for reconciliation. The app fails closed on legacy/corrupt data
 instead of silently deleting verified payments. Do not use real financial data with this demo.
+
+## Development/build cache isolation
+
+Development uses `.next-dev`; production build/start and type generation use `.next`. These must
+remain separate. Building into a running dev server's output caused the checkout error
+`Cannot find module './855.js'`. The phase-aware `next.config.mjs` prevents production validation
+from replacing development chunks. Both directories contain generated code, not purchase records.
+If an old process still reports the missing-chunk error after the config reload, stop that demo
+terminal with Ctrl+C and rerun `npm run demo` so it picks up the isolated development directory.
+
+## Earlier Shop-based regression demo
+
+```bash
+npm run demo:shop
+```
+
+This opens `http://localhost:3100/shop` from the beginning of the visual flow. It starts the local dev
+server if one is not running and verifies Sandbox configuration. Choose **Sam**, assess the $900
+laptop, continue to PayPal, choose **Review Order**, then inspect the RiskPilot purchase-impact page.
+Stop at **Make payment** for a preview. Capture is always an explicit final action. Existing payment
+records are preserved. The script never invokes capture or resets demo data.
+
+```bash
+npm run demo:shop -- --check       # check an existing app without opening it
+npm run demo:shop -- --no-open     # start/check and print the URL
+BASE=http://localhost:3300 npm run demo:shop
+```
+
+If the script started the dev server, keep its terminal open and press Ctrl+C to stop it. If the app
+was already running, its process is left alone.
 
 ## Walk through
 

@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "RiskPilot — Sandbox purchase impact",
+  "version": "0.1.0",
+  "description": "Shows fictional financial impact inside PayPal Sandbox checkout before payment. Independent hackathon prototype.",
+  "content_scripts": [{
+    "matches": [
+      "https://www.sandbox.paypal.com/pay/checkout*",
+      "https://www.sandbox.paypal.com/checkoutnow*"
+    ],
+    "js": ["content.js"],
+    "run_at": "document_idle",
+    "all_frames": false,
+    "world": "ISOLATED"
+  }]
+}
