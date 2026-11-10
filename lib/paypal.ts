@@ -1,4 +1,5 @@
 const BASE = process.env.PAYPAL_API_BASE || "https://api-m.sandbox.paypal.com";
+const ORIGIN = process.env.APP_ORIGIN || "http://localhost:3000";
 
 export function paypalConfigured(): boolean {
   return Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
@@ -58,6 +59,18 @@ export async function createOrder(opts: { amount: number; name: string; customId
           items: [{ name: opts.name, quantity: "1", unit_amount: { currency_code: "USD", value }, category: "PHYSICAL_GOODS" }],
         },
       ],
+      // Where PayPal sends the buyer after approving or cancelling. Without these, approving from a
+      // plain checkout link spins forever because PayPal has nowhere to return.
+      payment_source: {
+        paypal: {
+          experience_context: {
+            return_url: `${ORIGIN}/checkout/return`,
+            cancel_url: `${ORIGIN}/checkout/return?cancelled=1`,
+            user_action: "PAY_NOW",
+            brand_name: "RiskPilot Demo Store",
+          },
+        },
+      },
     }),
   });
 }
