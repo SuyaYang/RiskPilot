@@ -80,3 +80,28 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; }
 .bar > span { display: block; height: 100%; background: var(--accent); }
 .check { display: flex; gap: 8px; align-items: baseline; }
 footer { max-width: 1080px; margin: 0 auto; padding: 0 16px 32px; color: var(--muted); font-size: 12px; }
+
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--accent); }
+.impact-review { padding: 22px; border: 1px solid #c8d9ee; border-radius: 16px; background: var(--card); }
+.impact-review h2 { margin: 4px 0 0; font-size: 23px; }
+.impact-methods { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 18px 0; }
+.impact-method { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; text-align: left; border: 2px solid var(--line); border-radius: 14px; }
+.impact-method.selected { border-color: var(--accent); background: var(--accent-soft); }
+.method-dot { display: inline-flex; width: 20px; height: 20px; justify-content: center; align-items: center; border: 1px solid var(--muted); border-radius: 50%; font-size: 12px; }
+.selected .method-dot { background: var(--accent); border-color: var(--accent); color: white; }
+.impact-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; padding: 20px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.impact-metrics > div { display: flex; flex-direction: column; gap: 5px; }
+.impact-metrics strong { font-size: 26px; line-height: 1.2; }
+.impact-goals { padding-top: 14px; }
+.impact-goals > div { padding: 6px 0; }
+.positive { color: var(--green); }
+.negative { color: var(--red); }
+.checkout-shell { max-width: 850px; margin: 0 auto; }
+.payment-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.payment-actions > .primary { padding: 14px 28px; min-width: 240px; border-radius: 999px; font-weight: 650; }
+@media (max-width: 620px) {
+  .impact-methods { grid-template-columns: 1fr; }
+  .impact-metrics { grid-template-columns: 1fr; }
+  .impact-review { padding: 16px; }
+  .payment-actions { display: grid; }
+}

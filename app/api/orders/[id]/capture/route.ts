@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
-import { currentPersonaId } from "@/lib/state";
-import { captureCheckout } from "@/lib/checkout";
+import { currentPersonaId, inputHash } from "@/lib/state";
+import { captureCheckout, ownedOrder, CheckoutError } from "@/lib/checkout";
 import { apiError } from "@/lib/http";
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  try { return NextResponse.json(await captureCheckout(await currentPersonaId(), (await ctx.params).id)); }
-  catch (e) { return apiError(e); }
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const owner = await currentPersonaId(), { id } = await ctx.params;
+    const order = ownedOrder(id, owner);
+    const body = await req.json().catch(() => ({}));
+    if (body.reviewConfirmed !== true) throw new CheckoutError("REVIEW_REQUIRED", "Review the purchase impact and select Make payment to confirm.", 400);
+    if (order.status !== "CAPTURED" && body.inputHash !== inputHash(owner)) {
+      throw new CheckoutError("STALE_REVIEW", "Your finances changed. Refresh the purchase overview before paying.");
+    }
+    return NextResponse.json(await captureCheckout(owner, id, undefined, body.inputHash));
+  } catch (e) { return apiError(e); }
 }

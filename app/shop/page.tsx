@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { Decision, MethodId } from "@/lib/types";
 import type { Product } from "@/lib/catalog";
 import { BalanceChart, fmtDate, money, postJson, RiskBadge, useApi } from "../components/ui";
+import PurchaseImpact from "../components/PurchaseImpact";
 import Checkout from "../components/Checkout";
 
 export default function Shop() {
@@ -51,7 +52,7 @@ export default function Shop() {
         <button disabled={!o.eligible || paid} aria-pressed={selected === o.method} onClick={() => setSelected(o.method)}>{!o.eligible ? o.ineligibleReason : selected === o.method ? "Selected" : "View scenario"}</button>
       </div>)}</div>
       {option && <div className="card stack">
-        <h2>{option.label}</h2>
+        <PurchaseImpact decision={decision} option={option} buffer={buffer} onSelect={setSelected} locked={paid} />
         <BalanceChart series={option.forecast.dailyBalances} compare={decision.baseline.dailyBalances} buffer={buffer} />
         <p className="small muted">Solid: selected scenario · dashed: without this purchase · visible chart: 45 days.</p>
         {option.payments.length > 0 && <details><summary>{option.hypothetical ? "Hypothetical" : "Projected"} payment dates</summary><table><tbody>{option.payments.map(p => <tr key={p.date}><td>{fmtDate(p.date)}</td><td>{p.label}</td><td>{money(p.amount)}</td></tr>)}</tbody></table></details>}

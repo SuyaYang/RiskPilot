@@ -5,7 +5,7 @@ import { postJson, useApi } from "./ui";
 import type { MethodId } from "@/lib/types";
 
 type Session = { start: (opts: { presentationMode: "auto" }, order: Promise<{ orderId: string }>) => Promise<void> };
-type Callbacks = { onApprove: (data: { orderId: string }) => Promise<void>; onCancel: () => void; onError: () => void };
+type Callbacks = { commit: false; onApprove: (data: { orderId: string }) => Promise<void>; onCancel: () => void; onError: () => void };
 type SDK = {
   findEligibleMethods: (opts: { currencyCode: "USD"; amount: string }) => Promise<{ isEligible: (method: string) => boolean; getDetails: (method: string) => { productCode?: string; countryCode?: string } }>;
   createPayPalOneTimePaymentSession: (options: Callbacks) => Session;
@@ -63,9 +63,11 @@ export default function Checkout({ decisionId, method, price, onComplete }: { de
     lock.current = true; setBusy(true); setError("");
     const done = () => { lock.current = false; setBusy(false); };
     const callbacks: Callbacks = {
+      commit: false,
       onApprove: async ({ orderId: id }) => {
-        setOrderId(id);
-        try { await capture(id); } catch (e) { setError((e as Error).message); } finally { done(); }
+        setOrderId(id); done();
+        // Buyer approval chooses funding; only the explicit review page action captures.
+        window.location.assign(`/checkout/review?order=${encodeURIComponent(id)}`);
       },
       onCancel: () => { setError("Checkout cancelled. Check the order status before starting another purchase."); done(); },
       onError: () => { setError("Checkout could not be confirmed. Check this order again."); done(); },
@@ -83,18 +85,18 @@ export default function Checkout({ decisionId, method, price, onComplete }: { de
     finally { lock.current = false; setBusy(false); }
   }
   return <div className="stack">
-    <p className="small muted">PayPal receives the full product price. Your comparison does not select or confirm a loan. Funding remains unconfirmed after capture, so the forecast reserves the full price.</p>
+    <p className="small muted">PayPal receives the full product price. Your comparison does not select or confirm a loan. You will review the impact once more before the final Make payment action. Funding remains unconfirmed after capture, so the forecast reserves the full price.</p>
     {config?.paypal && <Script src="https://www.sandbox.paypal.com/web-sdk/v6/core" strategy="afterInteractive" onReady={() => setLoaded(true)} onError={() => setError("PayPal could not load. Reload to retry.")} />}
     {!captured && !orderId && <>
       {config?.simulation && <div className="warn"><p>Simulation only · no PayPal payment will occur.</p><button disabled={busy} onClick={simulate}>Simulate purchase</button></div>}
       {config?.paypal && !eligibility && !error && <p role="status">Checking PayPal eligibility…</p>}
-      {eligibility?.paypal && <button className="primary" disabled={busy} onClick={() => start(false)}>Pay with PayPal Sandbox</button>}
+      {eligibility?.paypal && <button className="primary" disabled={busy} onClick={() => start(false)}>Continue with PayPal Sandbox</button>}
       {eligibility?.paylater && createElement("paypal-pay-later-button", { ref: payLaterButton, onClick: () => { if (!busy) void start(true); }, disabled: busy || undefined, "aria-label": "Pay Later with PayPal Sandbox" })}
       {eligibility && !eligibility.paypal && !eligibility.paylater && <p className="warn">No eligible PayPal method is available for this checkout.</p>}
       {config && !config.paypal && !config.simulation && <p className="warn">Checkout is unavailable until PayPal Sandbox is configured.</p>}
     </>}
-    {busy && <p role="status">Complete approval in PayPal. Your forecast updates after server confirmation.</p>}
-    {orderId && !captured && <div className="note stack"><p>Order {orderId}</p><button disabled={busy} onClick={async () => { setBusy(true); try { await capture(orderId, Boolean(config?.simulation)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}>Check this order again</button></div>}
+    {busy && <p role="status">Choose a payment method in PayPal, then return here to review the impact before making a payment.</p>}
+    {orderId && !captured && <div className="note stack"><p>Order {orderId}</p><a className="btn primary" href={`/checkout/review?order=${encodeURIComponent(orderId)}`}>Review impact before payment</a></div>}
     {captured && <p className="note" role="status">{captured === "simulation" ? "Simulation recorded" : "Payment confirmed"}. A versioned forecast was saved. <a href="/">View dashboard →</a></p>}
     {(error || configError) && <p className="error" role="alert">{error || configError}</p>}
   </div>;

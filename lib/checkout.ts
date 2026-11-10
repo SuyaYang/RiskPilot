@@ -81,7 +81,7 @@ function completed(o: OrderRecord, remote: PayPalOrder) {
   const result = recordCapture(o.orderId, cap.id, cap.amount, cap.currency);
   return { status: "CAPTURED", captureId: cap.id, duplicate: result.duplicate, snapshotId: result.order.snapshotId };
 }
-export async function captureCheckout(owner: string, id: string, api = gateway) {
+export async function captureCheckout(owner: string, id: string, api = gateway, reviewedHash?: string) {
   const o = ownedOrder(id, owner);
   if (o.status === "CAPTURED") return { status: "CAPTURED", captureId: o.captureId, duplicate: true, snapshotId: o.snapshotId };
   if (o.simulated) throw new CheckoutError("SIMULATED_ORDER", "Use the explicitly labeled simulation action", 400);
@@ -97,6 +97,7 @@ export async function captureCheckout(owner: string, id: string, api = gateway) 
       remote.status === "COMPLETED" ? "Payment is still pending confirmation. Check again later." : "Payment not completed. Approve it in PayPal, then try again.");
   }
   update(s => {
+    if (reviewedHash && inputHash(owner, s) !== reviewedHash) throw new CheckoutError("STALE_REVIEW", "Your finances changed. Refresh the purchase overview before paying.");
     if (s.orders[id].captureCommand === "STARTED" && Date.now() - (s.orders[id].captureStartedAt || 0) < 30000) throw new CheckoutError("CAPTURE_IN_PROGRESS", "Payment is already processing. Check status shortly.", 202);
     s.orders[id].captureCommand = "STARTED";
     s.orders[id].captureStartedAt = Date.now();

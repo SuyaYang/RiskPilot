@@ -22,6 +22,7 @@ test("middleware and API integration without opening a network listener", async 
   const goal = await import("../app/api/goals/[id]/route");
   const orders = await import("../app/api/orders/route");
   const order = await import("../app/api/orders/[id]/route");
+  const capture = await import("../app/api/orders/[id]/capture/route");
   const simulate = await import("../app/api/orders/[id]/simulate/route");
   const snap = await import("../app/api/snapshot/route");
   const reset = await import("../app/api/reset/route");
@@ -63,6 +64,18 @@ test("middleware and API integration without opening a network listener", async 
     assert.equal(status.forecastSnapshot.data.forecast.startBalance, after.forecast.startBalance);
     assert.equal(status.order.amount, 900);
     await within(a, () => simulate.POST(req("/simulate", {}), params(orderId)));
+    assert.equal((await within(a, () => snap.GET()).then(r => r.json())).purchases.length, 1);
+  });
+  await t.test("purchase overview is read-only and explicit current review is required", async () => {
+    const assessment = await within(a, () => decisions.POST(req("/api/decisions", { productId: "quiet-buds" }))).then(r => r.json());
+    const created = await within(a, () => orders.POST(req("/api/orders", { decisionId: assessment.decision.id, method: "full" }))).then(r => r.json());
+    const status = await within(a, () => order.GET(new Request("http://localhost:3000"), params(created.id))).then(r => r.json());
+    assert.equal(status.order.status, "CREATED");
+    assert.equal(status.review.decision.options.find((o: { method: string }) => o.method === "full").price, 249);
+    const missing = await within(a, () => capture.POST(req("/capture", {}), params(created.id)));
+    assert.equal(missing.status, 400); assert.equal((await missing.json()).code, "REVIEW_REQUIRED");
+    const stale = await within(a, () => capture.POST(req("/capture", { reviewConfirmed: true, inputHash: "tampered" }), params(created.id)));
+    assert.equal(stale.status, 409); assert.equal((await stale.json()).code, "STALE_REVIEW");
     assert.equal((await within(a, () => snap.GET()).then(r => r.json())).purchases.length, 1);
   });
   await t.test("a second browser cannot read, capture or change the first browser's order", async () => {

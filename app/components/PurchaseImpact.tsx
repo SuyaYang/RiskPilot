@@ -1,0 +1,33 @@
+"use client";
+import type { Decision, MethodId, OptionResult } from "@/lib/types";
+import { fmtDate, money, RiskBadge } from "./ui";
+
+const labels: Record<string, string> = { full: "Pay in full", pay_in_4: "Pay in 4", pay_monthly: "Pay Monthly" };
+export default function PurchaseImpact({ decision, option, buffer, onSelect, locked = false }: {
+  decision: Decision; option: OptionResult; buffer: number; onSelect?: (method: MethodId) => void; locked?: boolean;
+}) {
+  const delays = option.goalImpact.filter(g => g.delayDays > 0);
+  const first = option.payments[0];
+  return <section className="impact-review" aria-label="Purchase impact overview">
+    <div className="row between"><div><span className="eyebrow">RISKPILOT · BEFORE YOU PAY</span><h2>Check purchase impact</h2></div><RiskBadge risk={option.forecast.risk} /></div>
+    <p className="small muted">{option.productName} · {money(option.price)} · Compare the effect on your cash and goals before making a payment.</p>
+    {onSelect && <div className="impact-methods" role="group" aria-label="Payment forecast scenario">
+      {decision.options.filter(o => ["full", "pay_in_4", "pay_monthly"].includes(o.method)).map(o => <button
+        type="button" key={o.method} className={`impact-method ${option.method === o.method ? "selected" : ""}`}
+        aria-pressed={option.method === o.method} disabled={locked || !o.eligible} onClick={() => onSelect(o.method)}>
+        <span className="row"><span className="method-dot" aria-hidden="true">{option.method === o.method ? "✓" : ""}</span><strong>{labels[o.method]}</strong></span>
+        <span className="small">{o.hypothetical ? "Hypothetical schedule" : "Full-price forecast"}</span>
+        <span className="small muted">{o.payments[0] ? `${money(o.payments[0].amount)} first · ${fmtDate(o.payments[0].date)}` : "No payments"}</span>
+      </button>)}
+    </div>}
+    <div className="impact-metrics">
+      <div><span className="small muted">Lowest projected cash</span><strong>{money(option.forecast.minBalance)}</strong><span className="small muted">on {fmtDate(option.forecast.minBalanceDate)}</span></div>
+      <div><span className="small muted">{option.forecast.bufferGap < 0 ? "Below your safety buffer" : "Above your safety buffer"}</span><strong className={option.forecast.bufferGap < 0 ? "negative" : "positive"}>{money(Math.abs(option.forecast.bufferGap))}</strong><span className="small muted">Protected buffer {money(buffer)}</span></div>
+      <div><span className="small muted">Effect on your goals</span><strong>{delays.length ? `${delays.length} delayed` : "No extra delay"}</strong><span className="small muted">Versus skipping this purchase</span></div>
+    </div>
+    <div className="impact-goals">{delays.length ? delays.map(g => <div className="row between small" key={g.goalId}><span>{g.name}</span><strong>+{g.delayDays} days</strong></div>) : <p className="small">This scenario adds no projected delay to your goals.</p>}</div>
+    <p className="small muted">If income arrives a week late, lowest cash is {money(option.forecast.stressMinBalance)}. Evaluated through {fmtDate(option.forecast.evaluatedThrough)}.</p>
+    {option.hypothetical && <p className="warn small">Hypothetical estimate · Actual eligibility, APR and payment dates are set by PayPal. Estimated extra cost: {money(option.extraCost)}. Changing this forecast does not change the payment method selected in PayPal.</p>}
+    {first && <details><summary className="small">View {option.hypothetical ? "estimated" : "projected"} payment dates</summary><table><tbody>{option.payments.map(p => <tr key={p.date}><td>{fmtDate(p.date)}</td><td>{p.label}</td><td>{money(p.amount)}</td></tr>)}</tbody></table></details>}
+  </section>;
+}

@@ -158,6 +158,14 @@ test("checkout recovery, durable facts and isolated demo workspaces", async t =>
     await assert.rejects(captureCheckout(owner, m.id, m.api), /does not match/);
     assert.equal(m.captures(), 0);
   });
+  await t.test("financial changes during provider lookup require a fresh final review", async () => {
+    const d = assess(), m = mock(d);
+    await createCheckout(owner, d.id, "pay_in_4", m.api);
+    const reviewed = inputHash(owner);
+    m.api.get = async () => { update(s => { s.personas[owner].goals[0].targetAmount += 20; }); return remote(m.id, d, "pay_in_4"); };
+    await assert.rejects(captureCheckout(owner, m.id, m.api, reviewed), /finances changed/);
+    assert.equal(m.captures(), 0);
+  });
   await t.test("corrupt store fails closed instead of silently resetting payment facts", () => {
     const content = fs.readFileSync(process.env.STORE_PATH!, "utf8");
     fs.writeFileSync(process.env.STORE_PATH!, "{broken");

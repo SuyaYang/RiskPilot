@@ -22,13 +22,17 @@ if [ -z "$URL" ]; then URL="https://www.sandbox.paypal.com/checkoutnow?token=$OI
 echo '3) Approve in PayPal as the Sandbox PERSONAL buyer:'
 echo "   $URL"
 command -v open >/dev/null && open "$URL" || true
-read -r -p '   Press Enter after approval (early Enter reports payment incomplete)... '
+echo '   After PayPal Continue, review the purchase impact before final capture.'
+REVIEW=$(curl --max-time 15 -fsS -b "$JAR" "$BASE/api/orders/$OID")
+echo "$REVIEW" | py "d=j['review']['decision']; o=next(o for o in d['options'] if o['method']=='full'); print('   Full-price scenario: lowest cash',o['forecast']['minBalance'],'| buffer gap',o['forecast']['bufferGap'])"
+HASH=$(echo "$REVIEW" | py "print(j['review']['decision']['inputHash'])")
+read -r -p '   Press Enter to confirm this reviewed Sandbox payment... '
 
 echo '4) Capturing (unapproved orders return immediately after status lookup)...'
-CAP=$(curl --max-time 40 -sS -c "$JAR" -b "$JAR" -X POST "$BASE/api/paypal/orders/$OID/capture")
+CAP=$(curl --max-time 40 -sS -c "$JAR" -b "$JAR" -X POST "$BASE/api/paypal/orders/$OID/capture" -H 'content-type: application/json' -d "{\"reviewConfirmed\":true,\"inputHash\":\"$HASH\"}")
 echo "$CAP" | py "print('   status:',j.get('status'),j.get('error','')); assert j.get('status')=='CAPTURED', 'Payment not completed. Finish PayPal approval, then check this same order.'"
 echo '5) Duplicate capture must remain idempotent...'
-curl --max-time 40 -fsS -b "$JAR" -X POST "$BASE/api/paypal/orders/$OID/capture" | py "assert j['status']=='CAPTURED' and j['duplicate']; print('   duplicate confirmed')"
+curl --max-time 40 -fsS -b "$JAR" -X POST "$BASE/api/paypal/orders/$OID/capture" -H 'content-type: application/json' -d "{\"reviewConfirmed\":true,\"inputHash\":\"$HASH\"}" | py "assert j['status']=='CAPTURED' and j['duplicate']; print('   duplicate confirmed')"
 echo '6) Confirming saved forecast, capture count, and full merchant price...'
 curl --max-time 10 -fsS -b "$JAR" "$BASE/api/orders/$OID" | py "assert j['order']['amount']==900; assert j['order']['projectionStatus']=='UPDATED'; assert j['forecastSnapshot']['schemaVersion']=='rp-v1'; print('   versioned forecast saved')"
 curl --max-time 10 -fsS -b "$JAR" "$BASE/api/dashboard" | py "assert len(j['purchases'])==1; print('   one purchase recorded; funding:',j['purchases'][0]['fundingStatus']); print('   lowest projection:',j['forecast']['minBalance'])"

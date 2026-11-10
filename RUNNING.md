@@ -34,12 +34,17 @@ instead of silently deleting verified payments. Do not use real financial data w
    AI drafting is optional and always requires confirmation; without Gemini, use the manual form.
 3. Open Shop and compare a product. The visible chart is 45 days, but minimum balance/risk checks run
    through the last evaluated payment date. Pay Later comparison schedules are hypothetical.
-4. Without PayPal keys, choose **Simulate purchase**. No PayPal request or money movement occurs.
+4. Review the **Check purchase impact** overview next to checkout. Switch forecast scenarios to see
+   projected cash, buffer headroom and goal delays together. Without PayPal keys, choose **Simulate purchase**. No PayPal request or money movement occurs.
    With keys, SDK v6 checks eligibility before showing actual payment buttons; approve as the
    **Sandbox personal buyer**, not the merchant. PayPal receives the full server-catalog price.
-5. Capture is verified on the server. Return from a redirect or use **Check this order again**.
-   Unapproved payments are reported as incomplete. Unknown outcomes must be recovered on the same
-   order, not by starting another purchase.
+5. With PayPal, select **Continue with PayPal Sandbox**. The SDK and Orders API both use the
+   Continue flow (`commit=false`, `user_action=CONTINUE`). PayPal returns the buyer to
+   `/checkout/review?order=...` after **Review Order**. Approval and return never trigger capture.
+   The buyer sees the current purchase overview and selects **Make payment** to capture explicitly.
+   The request must contain `reviewConfirmed: true` and the current overview `inputHash`; stale
+   finances require refreshing the overview. Unapproved payments are reported as incomplete.
+   Recover unknown outcomes on the same order rather than starting another purchase.
 6. Return to Dashboard. The verified capture, conservative full-price reserve, and versioned
    forecast snapshot are saved together. Merchant capture does not identify the consumer's funding
    account or confirm a loan schedule. Manual fixture balances remain distinct from projections.
@@ -59,8 +64,10 @@ bash scripts/smoke-paypal.sh
 BASE=http://localhost:3100 bash scripts/smoke-paypal.sh
 ```
 
-Approve in the opened PayPal window before pressing Enter. Early Enter reports an incomplete payment
-and does not send a capture request for an unapproved order. A failed smoke test is never printed as
+Select Review Order / Continue in the opened PayPal window, review the impact printed in the terminal,
+then press Enter to confirm capture. Early Enter reports an incomplete payment and does not send a
+capture request for an unapproved order. The CLI uses its own isolated cookie workspace; use the
+web UI when validating the browser return/review page. A failed smoke test is never printed as
 success. This script tests redirect checkout; SDK eligibility/buttons still need a browser smoke test.
 
 For verified inbound events, register a public HTTPS listener at `/api/webhooks/paypal` and configure

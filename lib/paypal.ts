@@ -69,7 +69,7 @@ export async function createOrder(opts: { amount: number; name: string; customId
           experience_context: {
             return_url: `${ORIGIN}/checkout/return`,
             cancel_url: `${ORIGIN}/checkout/return?cancelled=1`,
-            user_action: "PAY_NOW",
+            user_action: "CONTINUE",
             brand_name: "RiskPilot Demo Store",
           },
         },
