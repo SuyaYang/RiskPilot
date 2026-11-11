@@ -1,9 +1,12 @@
 # Run RiskPilot Checkout
 
-## Current buyer experience: independent store and impact review
+## Current buyer experiences: merchant review and Shop Pay Now
 
 **Northstar store → PayPal Continue → RiskPilot review → Confirm and pay → store receipt**.
 Users do not install a browser extension. The simulated merchant has integrated RiskPilot.
+
+**RiskPilot Shop → Explore purchase impact → PayPal Checkout → final Pay Now in PayPal → verified capture → success page**. This path does not repeat Quick Review when the assessment is unchanged.
+Exploration itself creates no payment. Changed/expired assessments pause for review; uncertain payments retain same-order recovery.
 
 ```bash
 npm run demo
@@ -19,7 +22,7 @@ same working copy so they share the local server-only bridge key. [Full walkthro
 `npm run merchant-demo` starts only the merchant when RiskPilot is already running on port 3100.
 
 This branch implements a **local fictional-data demo** with Dashboard, Goals, Shop and Invest.
-The [README target architecture](README.md) remains the requirement; see
+See the [current implementation overview](README.md) and [original proposed architecture](docs/ARCHITECTURE_ROADMAP.md); see
 [implementation / acceptance status](docs/IMPLEMENTATION_STATUS.md) for gaps. This is not a production
 financial application and does not connect a bank or authenticate a Supabase user.
 
@@ -54,17 +57,18 @@ from replacing development chunks. Both directories contain generated code, not 
 If an old process still reports the missing-chunk error after the config reload, stop that demo
 terminal with Ctrl+C and rerun `npm run demo` so it picks up the isolated development directory.
 
-## Earlier Shop-based regression demo
+## Shop purchase demo
 
 ```bash
 npm run demo:shop
 ```
 
 This opens `http://localhost:3100/shop` from the beginning of the visual flow. It starts the local dev
-server if one is not running and verifies Sandbox configuration. Choose **Sam**, assess the $900
-laptop, continue to PayPal, choose **Review Order**, then inspect the RiskPilot purchase-impact page.
-Stop at **Make payment** for a preview. Capture is always an explicit final action. Existing payment
-records are preserved. The script never invokes capture or resets demo data.
+server if one is not running and verifies Sandbox configuration. Sign in with a fixed demo account,
+assess the $900 laptop, then use the single **PayPal Checkout** button below the risk conclusion.
+New Shop orders use **Pay Now** in PayPal as the explicit final confirmation, then verify capture and
+show the success page. For a read-only walkthrough, stop before PayPal’s final payment confirmation.
+Existing records are preserved; the launcher itself never invokes capture or resets data.
 
 ```bash
 npm run demo:shop -- --check       # check an existing app without opening it
@@ -77,29 +81,31 @@ was already running, its process is left alone.
 
 ## Walk through
 
-1. Choose Alex, Sam or Jordan. The balances, bills and goals are explicitly fictional manual fixtures.
+1. Sign in at `/login` using a fixed fictional account (for example `alex@riskpilot.demo`).
+   Each account has one financial profile; balances, bills and goals are explicitly fictional.
 2. Open Goals. Add/edit/pause/resume/delete a goal and review the recalculated expected completion.
    AI drafting is optional and always requires confirmation; without Gemini, use the manual form.
 3. Open Shop and compare a product. The visible chart is 45 days, but minimum balance/risk checks run
    through the last evaluated payment date. Pay Later comparison schedules are hypothetical.
-4. Review the **Check purchase impact** overview next to checkout. Switch forecast scenarios to see
-   projected cash, buffer headroom and goal delays together. Without PayPal keys, choose **Simulate purchase**. No PayPal request or money movement occurs.
-   With keys, SDK v6 checks eligibility before showing actual payment buttons; approve as the
-   **Sandbox personal buyer**, not the merchant. PayPal receives the full server-catalog price.
-5. With PayPal, select **Continue with PayPal Sandbox**. The SDK and Orders API both use the
-   Continue flow (`commit=false`, `user_action=CONTINUE`). PayPal returns the buyer to
-   `/checkout/review?order=...` after **Review Order**. Approval and return never trigger capture.
-   The buyer sees the current purchase overview and selects **Make payment** to capture explicitly.
-   The request must contain `reviewConfirmed: true` and the current overview `inputHash`; stale
-   finances require refreshing the overview. Unapproved payments are reported as incomplete.
-   Recover unknown outcomes on the same order rather than starting another purchase.
+4. Read the risk conclusion, then use **PayPal Checkout** directly beneath it. There is one payment
+   entry with no expandable checkout. Scenario comparisons do not choose a real PayPal loan.
+   Without PayPal keys, the available **Simulate purchase** action is explicitly labeled and makes no
+   PayPal request. No-purchase and future-date scenarios do not submit payment.
+5. New Shop orders use SDK `commit:true` and Orders `user_action=PAY_NOW`. Confirm as the **Sandbox
+   personal buyer**, not the merchant. The final PayPal confirmation starts server-verified capture
+   using the trusted Shop assessment and current input hash; unchanged assessments do not repeat
+   Quick Review. Changed/expired assessments pause for a refreshed review. Legacy Continue orders
+   retain explicit RiskPilot confirmation. Recover unknown outcomes on the same order.
+   **External Northstar orders still use Continue → RiskPilot review → explicit Confirm and pay**;
+   buyer approval alone never captures those orders. In that review, Skip enters Dashboard while
+   the separate bottom Cancel link returns to the merchant.
 6. Return to Dashboard. The verified capture, conservative full-price reserve, and versioned
    forecast snapshot are saved together. Merchant capture does not identify the consumer's funding
    account or confirm a loan schedule. Manual fixture balances remain distinct from projections.
 7. Invest shows educational allocation templates and conservative cash capacity; it performs no trades.
 
-Browsers get independent opaque demo-workspace cookies. Switching personas changes only that
-workspace's fixture. This is **not Supabase authentication or a verified production tenant boundary**.
+Browsers get independent opaque demo-workspace cookies. Signing in to a different demo account
+changes the fixed fictional profile within that workspace. This is **not Supabase authentication or a verified production tenant boundary**.
 A changed goal/purchase/date invalidates an unstarted assessment. Existing order recovery remains valid.
 
 ## Real Sandbox smoke test
@@ -112,14 +118,15 @@ bash scripts/smoke-paypal.sh
 BASE=http://localhost:3100 bash scripts/smoke-paypal.sh
 ```
 
-Select Review Order / Continue in the opened PayPal window, review the impact printed in the terminal,
-then press Enter to confirm capture. Early Enter reports an incomplete payment and does not send a
+This is a separate manual API diagnostic, not the current Shop SDK walkthrough. Complete the
+Sandbox buyer step in PayPal, review the terminal output, then press Enter for its capture request. Early Enter reports an incomplete payment and does not send a
 capture request for an unapproved order. The CLI uses its own isolated cookie workspace; use the
 web UI when validating the browser return/review page. A failed smoke test is never printed as
 success. This script tests redirect checkout; SDK eligibility/buttons still need a browser smoke test.
 
 For verified inbound events, register a public HTTPS listener at `/api/webhooks/paypal` and configure
-`PAYPAL_WEBHOOK_ID`. Subscribe to the five capture event types listed in README. Unsigned events are
+`PAYPAL_WEBHOOK_ID`. Subscribe to `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.PENDING`,
+`PAYMENT.CAPTURE.DECLINED`, `PAYMENT.CAPTURE.REFUNDED` and `PAYMENT.CAPTURE.REVERSED`. Unsigned events are
 rejected. Valid received events remain replayable on processing failure. Unknown orders return 503
 so PayPal can redeliver. Late pending/declined events do not undo a completed capture. Refund/reversal
 events flag settlement review; they do not fabricate an observed bank credit.
@@ -137,8 +144,9 @@ holding `STORE_PATH.lock`, stop every process using that store and verify the re
 longer active before removing the stale lock. Retrying an unknown provider command preserves its
 idempotency key. Commands older than the bounded recovery window require manual reconciliation.
 
-Supabase SQL migrations, production Auth/RLS, Python engine service, background sync/reconciliation,
-Render deployment and the public submission video are still required before all README gates pass.
+Supabase/Postgres, production Auth/RLS, a Python engine service and background bank reconciliation
+remain proposed architecture work. Public hosting, real-device acceptance and final submission
+artifacts are separate unfinished demo-delivery tasks; see the current README checklist.
 
 ## Gemini and optional HTTPS deployment
 

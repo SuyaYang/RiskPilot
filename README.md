@@ -1,267 +1,159 @@
 # RiskPilot Checkout
 
-**Assess a purchase before paying, then update the forecast from a verified PayPal payment.**
+**Understand a purchase before paying. Update your forecast from a verified PayPal Sandbox capture.**
 
-## Buyer checkout experience
+RiskPilot is a hackathon demo with compact Dashboard, Goals, Shop and Invest pages, a shared deterministic financial assessment engine, spending insights and an AI Financial Profile. All personal finances are fictional. No live bank is connected and no real-money functionality is enabled.
 
-The current flow is **another merchant's website → PayPal Continue / Review Order → RiskPilot
-purchase-impact review → explicit Confirm and pay → merchant receipt**. Users can also proactively explore purchases in RiskPilot Shop without paying. Neither flow requires an
-extension. The shopping website must integrate RiskPilot; this does not
-automatically intercept payments at stores that have not integrated it.
+## Built on Sheryl’s MVP
 
-Run `npm run demo` to start/check the independent **Northstar Electronics** merchant on port 3200
-and RiskPilot on port 3100. It is a simulated separate shopping website with a real PayPal Sandbox
-order, not a claim of integration with an existing retailer. [Walkthrough](docs/MERCHANT_CHECKOUT.md).
+Sheryl’s baseline [`3d1543e`](https://github.com/SuyaYang/RiskPilot/commit/3d1543e) established the financial engine, core pages, PayPal Sandbox checkout/recovery and the integrated Northstar merchant flow. Cynthia’s follow-up builds on that implementation rather than replacing it.
 
-The merchant creates a server-priced order with `CONTINUE`; SDK v6 uses `commit: false`. Buyer
-approval redirects to an expiring, signed RiskPilot checkout link and never captures funds. RiskPilot
-binds the quote to one fictional browser workspace, calculates impact from that workspace's current
-goals/commitments, and requires explicit confirmation with the current input hash. A signed
-server-to-server request asks the merchant to verify and capture its own order. RiskPilot records
-the returned capture and updates a versioned forecast once, then returns the buyer to the store.
+| Area | Baseline | Added or refined |
+| --- | --- | --- |
+| Financial experience | Cash flow, cash buffer, goals, investment capacity | Compact mobile UI, clearer risk conclusions, income-date What-if and before/after purchase comparisons |
+| Purchases | Server-priced Sandbox orders, signed merchant handoff, capture and recovery | Separate Shop and merchant experiences, verified reassessment, payment/forecast/funding status, duplicate-capture and reset protection |
+| Spending | Manual financial fixtures and schedules | Deterministic fictional transaction history, monthly/category insights and recurring-pattern confirmation/edit/rejection |
+| AI | Engine-grounded explanation and goal drafting | Simplified Financial Profile, fact sources, planning preferences and personalized purchase explanations with labeled fallback |
+| Demo accounts | Fictional personas | One fixed financial profile per demo account; no in-account persona switch or subscription tiers |
+| Demo reliability | Local startup and payment tests | Responsive checks, failure/recovery tests, repeat merchant sessions that preserve payment records, and deployment preparation |
 
-The merchant retains its PayPal credentials. Browser links cannot change the amount, invoke direct
-capture or choose arbitrary return destinations. The local demo uses a server-only shared key and
-loopback allowlist; production merchant onboarding and customer authentication remain future work.
-The `extension/` directory is an optional earlier placement experiment and is not used by this flow.
+See [PR #1](https://github.com/SuyaYang/RiskPilot/pull/1) for attribution and the complete change summary. The [original architecture roadmap](docs/ARCHITECTURE_ROADMAP.md) is retained as a historical proposal; its planned services are not all implemented.
 
-RiskPilot compares a cart with upcoming bills, cash reserves, and savings goals. The customer chooses an option and approves checkout through PayPal. RiskPilot records the confirmed merchant payment and updates its own cash-flow projection. Plaid bank-activity reconciliation and debit matching remain planned; the local demo does not connect a bank or claim to have reconciled a payment.
+## Two complementary purchase flows
 
-> **Status:** local fictional-data Checkout MVP. Dashboard, Goals, Shop, Invest, payment recovery and the cooperating-merchant review flow are implemented. A completed merchant Sandbox receipt and saved forecast have been observed; 147 automated tests pass. Supabase/Python/worker/deployment remain unfinished. Start with [RUNNING.md](RUNNING.md), [acceptance status](docs/IMPLEMENTATION_STATUS.md) and the [complete update record](docs/CHANGELOG_2026-11-10.md).
+### Explore in RiskPilot, then optionally buy
 
-**Hackathon scope:** US, USD, an independent simulated cooperating merchant, one PayPal Sandbox
-merchant account, and Plaid Sandbox or clearly marked manual financial data. The merchant flow uses
-the same fictional profile/goals and purchase ledger as the dashboard. No live bank is connected.
-Investment views show cash capacity and educational scenarios; they do not transfer funds or place
-trades. Pay Later scenarios are hypothetical until PayPal confirms eligibility and the buyer confirms
-actual loan terms. Browser follow-up observed the new merchant receipt and a reference-order
-change-method round trip; remaining acceptance limits are recorded in the status document.
+**Shop → Explore purchase impact → compare scenarios → PayPal Checkout → final Pay Now in PayPal → verified capture → saved forecast and success page.**
 
-## Spending Intelligence MVP
+- Exploration needs no PayPal authorization and creates no payment or order.
+- The assessment starts with the current full-price purchase. Engine suggestions, scenario comparisons and income-date What-if remain available. Choosing no purchase or a future-date preview does not submit payment.
+- A single **PayPal Checkout** button appears directly below the essential risk conclusion, with no expandable checkout section.
+- New Shop orders use PayPal `PAY_NOW` and SDK `commit:true`: the buyer explicitly confirms payment in PayPal. There is no repeated Quick Review when the trusted assessment is unchanged.
+- Before capture, the server checks the original assessment and current financial facts. Changed, expired or unverifiable assessments pause for review; uncertain outcomes use recovery on the same order. Legacy Continue orders retain their original review confirmation.
+- Verified capture saves the conservative purchase reserve and forecast once. Merely returning from PayPal is not evidence that capture succeeded.
 
-Dashboard includes monthly spending trends, category totals and recurring-pattern review using
-**clearly labeled deterministic local Sandbox-style histories**. Plaid is not connected. Confirm,
-Edit and Not recurring save informational pattern reviews; they do not silently add forecast expenses.
-Existing manual schedules and verified purchase reserves remain authoritative. See
-[the feature, demo and validation guide](docs/SPENDING_INTELLIGENCE.md).
+### Buy directly from an integrated merchant
 
-## 1. Architecture
+**Northstar → merchant-priced PayPal order → buyer approval → automatic signed RiskPilot review → explicit Confirm and pay → verified capture → updated forecast → merchant receipt.**
+
+- Start at **Northstar Electronics**, the independent demo storefront. A prior Shop visit or Explore step is not required.
+- This path retains `CONTINUE` / SDK `commit:false`. Buyer approval does **not** capture payment; the buyer confirms in RiskPilot afterward.
+- The signed, expiring handoff binds the server-verified order to the current fictional workspace. The merchant retains its own PayPal credentials and captures through the signed server-to-server bridge.
+- Amount, cash-buffer risk, late-income stress and goal impact remain visible first. Full analysis starts collapsed: checkout sits horizontally below it; expanding restores desktop analysis/checkout columns.
+- **Skip and enter RiskPilot** skips payment and opens Dashboard. The separate **Cancel and back to store** link returns to Northstar. PayPal cancellation and uncertain payments have their own status/recovery paths.
+- Northstar must explicitly integrate RiskPilot. This does not intercept arbitrary third-party PayPal transactions; no browser extension is required.
+
+Both paths use the same financial engine, provider-order verification, stable capture keys and exactly-once forecast saving. Comparison scenarios never select a real PayPal loan or change its terms.
+
+[Detailed purchase experience](docs/FINAL_PURCHASE_EXPERIENCE.md) · [Merchant walkthrough](docs/MERCHANT_CHECKOUT.md)
+
+## Run the local demo
+
+Requires Node.js 20+ (CI uses Node 22) and npm.
+
+```bash
+npm ci
+cp .env.example .env
+# Configure your own Sandbox credentials in .env, then:
+npm run demo
+```
+
+| Entry | Local URL |
+| --- | --- |
+| Northstar external merchant | http://localhost:3200 |
+| RiskPilot Dashboard | http://localhost:3100 |
+| Proactive purchase exploration | http://localhost:3100/shop |
+| Fixed fictional account sign-in | http://localhost:3100/login |
+
+The launcher starts/checks both services and opens Northstar. Keep its terminal running; Ctrl+C stops only processes it started. Both services must run from the same working copy with matching bridge configuration.
+
+```bash
+npm run demo -- --check     # Read-only readiness check
+npm run demo -- --no-open   # Start/check without opening a browser
+npm run demo:shop           # Open the Shop entry instead
+```
+
+For RiskPilot alone, `npm run dev` defaults to port 3000; set `APP_ORIGIN` to its exact URL. The demo launcher configures port 3100. Restart services after editing environment values.
+
+### Configuration
+
+Use [.env.example](.env.example); never commit keys or payment ledgers.
+
+| Setting | Purpose |
+| --- | --- |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Sandbox server credentials; required for actual Sandbox checkout |
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | Optional browser override; must match the server’s Sandbox app |
+| `PAYPAL_API_BASE` | Sandbox only: `https://api-m.sandbox.paypal.com`; live endpoints are rejected |
+| `PAYPAL_WEBHOOK_ID` | Registered listener ID for verified PayPal webhook delivery |
+| `APP_ORIGIN`, `RISKPILOT_ORIGIN`, `MERCHANT_ORIGIN` | Exact application/merchant URLs; launcher uses 3100/3200 locally |
+| `MERCHANT_BRIDGE_SECRET` | Shared server-only key; local demo generates a key if blank |
+| `STORE_PATH`, `MERCHANT_STORE_PATH` | Separate persistent RiskPilot and merchant JSON ledgers |
+| `DEMO_SEED_ENABLED=true`, `DEMO_TODAY=2026-11-10` | Reproducible fictional fixtures and an optional fixed scenario date |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Optional AI; unavailable/invalid results fall back to labeled deterministic facts |
+
+Without PayPal credentials, supported local simulation is explicitly labeled; it is not a verified Sandbox payment. No Plaid, Supabase or Python service setup is required for the current demo.
+
+Demo accounts include `alex@riskpilot.demo`, `sam@riskpilot.demo` and `jordan@riskpilot.demo`. Each has one fixed fictional financial situation, isolated by browser workspace; these are not real inboxes or production authentication. PayPal’s Sandbox buyer login is separate.
+
+## Current implementation
 
 ```mermaid
 flowchart LR
-  Browser["Browser: Next.js UI"]
-  SDK["PayPal JS SDK v6"]
-  Link["Plaid Link"]
-  Web["Next.js API<br/>Auth · Catalog · Decision · Data · Payment · AI"]
-  Auth["Supabase Auth"]
-  DB[("Supabase Postgres<br/>facts · commands · jobs · forecasts")]
-  Engine["Private Python financial engine"]
-  Worker["Background worker<br/>sync · reconcile · recompute"]
-  PayPal["PayPal Orders / Payments"]
-  Plaid["Plaid APIs"]
-  Gemini["Gemini API"]
-
-  Browser --> Web
-  Browser --> SDK --> PayPal
-  Browser --> Link
-  Web --> Auth
-  Web --> DB
-  Web --> Engine
+  Browser[RiskPilot UI] --> Web[Next.js API]
+  Browser --> SDK[PayPal SDK v6]
+  SDK --> PayPal[PayPal Sandbox]
+  Web --> Engine[TypeScript financial engine]
+  Web --> Ledger[Local JSON ledger and snapshots]
   Web --> PayPal
-  Web --> Plaid
-  Web --> Gemini
-  PayPal -->|verified webhook| Web
-  Plaid -->|verified webhook| Web
-  Web -->|durable inbox| DB
-  DB -->|queued job| Worker
-  Worker --> Plaid
-  Worker --> PayPal
-  Worker --> Engine
-  Worker --> DB
+  Web --> Gemini[Optional Gemini fact selection]
+  Northstar[Independent Northstar merchant] <-->|Signed bridge| Web
+  Northstar --> PayPal
+  PayPal -->|Verified webhook| Web
 ```
 
-The Web API is **one TypeScript application** with internal modules; the diagram does not imply a microservice per adapter. The only separate compute service is the deterministic Python engine. A Postgres-backed job table is sufficient initially; add a queue broker only if measured load requires one.
+- **Finance:** the engine computes forecasts, risk, goal effects and educational investment capacity. AI cannot change authoritative figures or submit payments. Invest does not place trades.
+- **Spending:** deterministic fictional histories power trends, categories and recurring detection. Confirm/edit/reject saves informational patterns; it does not automatically add a bill or double-count an existing obligation. [Feature guide](docs/SPENDING_INTELLIGENCE.md).
+- **Financial Profile:** summaries and personalized purchase explanations use available server facts and confirmed preferences. Sources and uncertainty remain inspectable; preferences do not overwrite financial calculations.
+- **Payments:** ownership, frozen product/amount/currency, approval and capture results are checked on the server. Pending/unknown/local-save-failure states retain same-order recovery. Merchant capture does not identify a consumer funding account or confirm an installment schedule.
+- **Demo data:** reset is for disposable fictional state. Verified/uncertain payment records are protected. Northstar’s **Start another demo checkout** rotates a completed merchant session only after verification and preserves earlier records.
 
-| Component | Responsibility | Boundary |
-|---|---|---|
-| Browser / Next.js UI | Onboarding, goals, store, comparisons, checkout, order status | Sends user intent; never supplies authoritative prices or payment status |
-| Next.js API | Session/ownership checks, server catalog, decision orchestration, provider adapters, webhook intake | Owns commands and external credentials; calls the engine for numbers |
-| Python engine | Daily cash flow, stress cases, goal allocation, risk, allocatable cash | Pure versioned input → output; no database writes or provider secrets |
-| Worker | Per-Item Plaid sync, payment reconciliation, versioned recomputation, reminders | Replays durable jobs; only owner of sync cursors |
-| Supabase Auth / Postgres | Identity, RLS, immutable provider facts, commands, snapshots, jobs, projections | Source of record; service-secret queries enforce `user_id` themselves |
-| PayPal | Buyer approval, merchant order/capture, payment events | Capture proves merchant payment, not the consumer's funding account |
-| Plaid | User-authorized account balances and transactions | Read-only financial observation; Sandbox transaction injection is test-only |
-| Gemini adapter | Goal drafting, constrained read/simulation tools, fact-checked explanation | Cannot calculate final balances, set prices, execute capture, or run arbitrary SQL |
+Actual code lives in `app/`, `lib/`, `merchant-demo/` and `tests/`. Development uses `.next-dev` so production builds do not overwrite running development chunks.
 
-**Proposed repository layout**
+## Validation and remaining work
 
-```text
-apps/web/               Next.js UI, API routes, provider adapters
-apps/worker/            durable jobs, sync, reconciliation, reminders
-services/engine/        Python cash-flow kernel and private HTTP wrapper
-packages/contracts/    versioned JSON Schema/OpenAPI and generated types
-packages/domain/       money, date, state, and idempotency rules
-supabase/migrations/   tables, RLS, indexes, uniqueness constraints
-fixtures/              resettable demo users, accounts, transactions, catalog
-tests/                 financial invariants, payment failures, tenant isolation
-docs/                  detailed design, source audit, demo instructions
-render.yaml            deployment declaration after service setup is tested
+```bash
+npm run typecheck
+npm test
+npm run build
 ```
 
-## 2. Data and payment contract
+At the latest functional change (`675fbe9`), **155 automated tests passed**, with type checking and production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
 
-| Layer | Examples | Rule |
-|---|---|---|
-| Observed | Plaid balance or transaction | Keep source and `observed_at`; do not overwrite with a forecast |
-| Committed | Verified PayPal capture, bill, user-confirmed installment | Count each economic obligation once |
-| Predicted | Daily balance, goal date, risk, allocatable cash | Derive from a versioned snapshot; never present as a bank balance |
+Browser checks cover desktop/mobile layouts, default collapsed review, Skip navigation and the single visible Shop PayPal button. These responsive viewport checks are not physical iOS/Android acceptance.
 
-Core persisted entities: `profiles`, `plaid_items`, `accounts`, `transactions`, `balance_snapshots`, `scheduled_events`, `goals`, `products`, `carts`, `financial_snapshots`, `forecasts`, `decisions`, `checkout_sessions`, `order_commands`, `orders`, `captures`, `webhook_inbox`, `cashflow_commitments`, `installment_plans`, `reconciliation_links`, `jobs`, and `audit_log`. Provider IDs have unique constraints in their proper merchant/Item scope; user-editable records carry versions.
+A real Northstar Sandbox capture, merchant receipt and saved forecast were observed in Phase 2; see [the evidence and limits](docs/DEMO_RELIABILITY_PHASE_2.md). **The latest Shop Pay Now path has been tested with deterministic provider mocks, but still needs a new actual Sandbox end-to-end payment.** Prior merchant payments do not count as live validation of this new path.
 
-1. **Assess.** The API prices the cart from its own catalog and freezes user, cart/goal/snapshot/policy versions, currency, and selected option. The engine returns comparable scenarios, lowest projected cash, goal delay, risk, and fact IDs. A stale input requires reassessment.
-2. **Create.** The API creates a PayPal order for the **full cart amount**. A $900 item stays a $900 merchant order even if the buyer chooses Pay Later; a $600 alternative is a different product/order. The browser starts an eligible PayPal SDK session.
-3. **Capture.** Buyer approval returns to a RiskPilot purchase-impact overview. Only an explicit final `Make payment` confirmation with the current input hash starts capture. The API verifies ownership and the frozen order, then captures with a stable `PayPal-Request-Id`. Browser `onApprove` alone is not payment proof. Persist the capture fact, conservative unallocated consumer commitment, and recompute job in one database transaction.
-4. **Recover.** Record the order and capture command before the provider call. If the call times out or PayPal succeeds while the local write fails, mark the command `UNKNOWN` and recover through provider lookup or a verified webhook. Never retry with a new idempotency key.
-5. **Reconcile.** The worker applies Plaid added/modified/removed transactions once per Item cursor, matches observed debits to commitments, and resolves only the matched amount. Ambiguous funding requires customer confirmation. PayPal Sandbox does not automatically alter Plaid Sandbox balances.
+Before the final demonstration:
 
-The forecast protects cash needed for future bills and goals. It checks the visible 45-day horizon **and all evaluated installment dates**. Missing data or unknown loan terms yield `UNKNOWN`, not a safe verdict. “Available to allocate today” means cash removable today without violating covered future obligations, buffers, or protected goals. [PayPal Orders](https://developer.paypal.com/api/orders/v2/), [Pay Later](https://developer.paypal.com/pay-later/overview), [Plaid Transactions](https://plaid.com/docs/api/products/transactions/)
+- [ ] Complete a real Sandbox Shop Pay Now → verified capture → saved forecast walkthrough, including cancellation and same-order recovery.
+- [ ] Recheck Northstar’s direct review/confirm, Skip-to-Dashboard and Cancel-to-store paths in the final environment.
+- [ ] Verify PayPal popup/redirect behavior on physical mobile devices.
+- [ ] Configure and validate public HTTPS hosting, callback origins, persistent ledgers and webhook delivery if an external demo URL is required.
 
-## 3. Internal APIs
+**Not implemented:** Plaid connection/bank reconciliation, Supabase Auth/RLS/Postgres, a Python engine service/background worker, production identity or multi-instance storage, actual Pay Later eligibility/loan schedules, and live-money payments. Historical spending is fictional rather than fetched from a bank. Only cooperating Northstar is integrated.
 
-These are **RiskPilot routes**, not vendor endpoints. Except webhooks and health checks, each requires an authenticated session; the server derives `user_id`. Writes use expected versions and, where repeatable, scoped idempotency keys. Sensitive responses use `Cache-Control: no-store`.
+The repository includes [Render deployment preparation](render.yaml) and [deployment instructions](docs/DEPLOYMENT.md), but no public deployment was created or accepted in this work. `autoDeploy` is disabled. CI success and Git push do not publish the demo or update an existing external service.
 
-| Area | Routes | Contract |
-|---|---|---|
-| Bank connection | `POST /api/bank/link-token`; `POST /api/bank/exchange`; `DELETE /api/bank/connections/{id}` | Create Link token, exchange public token, disconnect owned Item |
-| Accounts/profile | `GET /api/accounts`; `PATCH /api/accounts/{id}`; `PUT /api/financial-profile` | Account purposes or manual balances, bills, income, timezone, buffer |
-| Dashboard/sync | `GET /api/dashboard`; `POST /api/refresh`; `GET /api/jobs/{id}` | Timestamped data/forecast; asynchronous refresh status |
-| Goals | `GET /api/goals`; `POST /api/goals/parse`; `POST /api/goals`; `PATCH /api/goals/{id}`; `DELETE /api/goals/{id}` | AI draft requires user confirmation; edits version and recompute |
-| Catalog/cart | `GET /api/products`; `POST /api/carts`; `PATCH /api/carts/{id}` | Server catalog and total; client sends SKU/quantity, never price |
-| Decisions | `POST /api/decisions`; `GET /api/decisions/{id}`; `POST /api/decisions/{id}/select` | Versioned option/risk/fact IDs; selection creates checkout session |
-| Checkout | `POST /api/paypal/orders`; `POST /api/paypal/orders/{id}/capture`; `GET /api/orders/{id}` | Frozen amount; capture request has no amount field; separate payment/projection/funding statuses |
-| Merchant handoff | `POST /api/merchant/claim` | Verify an expiring integrated-merchant link; bind its server-verified order to the current demo workspace. Existing capture route sends merchant orders through the signed merchant bridge. |
-| Funding | `PUT /api/orders/{id}/funding-plan` | User-confirmed source and dated schedule; never inferred from merchant capture |
-| Investment | `GET /api/investment-capacity`; `PUT /api/investment-preferences` | Educational cash limit and assumptions; no trade execution |
-| Notifications/privacy | `GET /api/notifications`; `PATCH /api/notifications/{id}`; `DELETE /api/me/data` | Read status; deletion requires reauthentication and retention handling |
-| Inbound/ops | `POST /api/webhooks/paypal`; `POST /api/webhooks/plaid`; `GET /api/health` | Verify raw event, persist inbox, then acknowledge; health exposes no secrets |
-| Demo-only | `POST /api/demo/reset` | Authorized reset of one demo user's scenario; absent in production |
+Existing Sandbox purchases remain in the forecast and may leave even the no-purchase baseline below the buffer. Preserve these records; do not change risk calculations to make a demo green.
 
-The private engine exposes `POST /v1/forecast`, `POST /v1/allocate-goals`, `POST /v1/evaluate-purchase`, and `POST /v1/investment-capacity`. All accept `schema_version`, `policy_version`, `as_of`, timezone, currency, and an input hash; money uses integer minor units. The latter three reuse one cash-flow kernel. Errors include stable `code`, `retryable`, and `trace_id`. [Implementation and contract gaps](docs/IMPLEMENTATION_STATUS.md)
+## Documentation
 
-## 4. External APIs and SDKs
+- [Running, reset and recovery](RUNNING.md)
+- [Final purchase experience and implementation notes](docs/FINAL_PURCHASE_EXPERIENCE.md)
+- [Merchant integration](docs/MERCHANT_CHECKOUT.md)
+- [Spending Intelligence](docs/SPENDING_INTELLIGENCE.md)
+- [Implementation and acceptance gaps](docs/IMPLEMENTATION_STATUS.md)
+- [Original architecture roadmap — planned, not current runtime](docs/ARCHITECTURE_ROADMAP.md)
+- [Historical update record](docs/CHANGELOG_2026-11-10.md)
 
-**Core** means required for the purchase demo. **Bank** is required when automatic Plaid connection is enabled; a manual profile remains possible. **Conditional** calls support an enabled feature or recovery. All REST calls below are server-side unless marked browser SDK.
-
-| Provider | Exact endpoint or SDK method | Used for | Scope |
-|---|---|---|---|
-| PayPal | `POST /v1/oauth2/token` | Merchant access token | Core |
-| PayPal | `POST /v2/checkout/orders` | Full-price order | Core |
-| PayPal | `GET /v2/checkout/orders/{id}` | Validate/recover order | Core |
-| PayPal | `POST /v2/checkout/orders/{id}/capture` | Capture approved order | Core |
-| PayPal | `GET /v2/payments/captures/{id}` | Confirm capture/recovery | Core recovery |
-| PayPal | `POST /v1/notifications/verify-webhook-signature` | Verify inbound PayPal event | Core |
-| PayPal | `POST /v1/notifications/webhooks` or Dashboard | Register HTTPS listener/event types | One-time setup |
-| PayPal JS SDK v6 | `createInstance({ clientId })`; `findEligibleMethods()` | Initialize buyer checkout and eligibility | Browser/core |
-| PayPal JS SDK v6 | `createPayPalOneTimePaymentSession()` | Standard buyer approval | Browser/core |
-| PayPal JS SDK v6 | `createPayLaterOneTimePaymentSession()` | Pay Later approval when eligible | Browser/conditional |
-| Plaid Link | Link token + `onSuccess(public_token)` | User-authorized bank connection | Browser/bank |
-| Plaid | `POST /link/token/create`; `POST /item/public_token/exchange` | Start Link; store encrypted Item token | Bank |
-| Plaid | `POST /accounts/balance/get`; `POST /transactions/sync` | Dated balance; incremental transactions | Bank |
-| Plaid | `POST /webhook_verification_key/get`; `POST /item/remove` | Verify webhook JWT; disconnect Item | Bank |
-| Gemini | `POST /v1beta/models/{model}:generateContent` or SDK equivalent | Parse goals and explain engine facts via constrained tools | Core AI |
-| Supabase | Auth SDK `signInWithPassword`, `signOut`, `getClaims`/`getUser`; Postgres SQL/RLS | Identity, session, durable records | Core |
-| PayPal | `POST /v2/payments/captures/{id}/refund`; `GET /v2/payments/refunds/{id}` | Merchant refund and status, if built | Conditional |
-| Plaid | `POST /accounts/get`; `POST /transactions/recurring/get`; `POST /transactions/refresh` | Cached metadata, recurring hints, explicit refresh | Conditional |
-| Plaid Sandbox | `POST /sandbox/public_token/create`; `POST /sandbox/transactions/create`; `POST /sandbox/item/fire_webhook` | Repeatable test Items, later bank debit, webhook tests | Test only |
-
-PayPal Sandbox REST base: `https://api-m.sandbox.paypal.com`. Plaid Sandbox base: `https://sandbox.plaid.com`. Subscribe to `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.DECLINED`, `PAYMENT.CAPTURE.REFUNDED`, and `PAYMENT.CAPTURE.REVERSED`. Plaid webhook intake triggers cursor sync; the webhook itself is not treated as a transaction ledger. [PayPal REST](https://developer.paypal.com/api/rest/), [Orders](https://developer.paypal.com/api/orders/v2/), [Payments](https://developer.paypal.com/api/payments/v2/), [JS SDK v6](https://developer.paypal.com/sdk/js/set-up), [Webhook events](https://developer.paypal.com/api/rest/webhooks/event-names), [Plaid Link](https://plaid.com/docs/api/link/), [Transactions](https://plaid.com/docs/api/products/transactions/), [Webhook verification](https://plaid.com/docs/api/webhooks/webhook-verification/), [Gemini generateContent](https://aistudio.google.com/api-reference/generate-content)
-
-PayPal Agent Toolkit, MCP Server, Postman, and Webhook Simulator are **development aids**, not extra runtime dependencies. The payment adapter calls Orders/Payments directly so amount, ownership, and idempotency remain enforced by application code. The v6 setup documentation contains conflicting client-ID/client-token examples; choose one path only after a real Sandbox smoke test. [Toolkit](https://developer.paypal.com/ai-tools/toolkit/), [MCP Server](https://developer.paypal.com/ai-tools/mcp-server), [Postman](https://www.postman.com/paypal)
-
-## 5. Environments, deployment, and credentials
-
-| Environment | Web / engine / worker | Data and providers | Purpose |
-|---|---|---|---|
-| Local | Local processes; Web `:3000`, engine `:8000` | Isolated dev database; PayPal/Plaid Sandbox; fixed AI fixtures by default | Fast development, no production data |
-| CI | Temporary processes and database | Deterministic provider/AI fixtures | Contract, finance, idempotency, and isolation tests |
-| Staging | Separate Render services | Separate Supabase project and Sandbox credentials | Real provider smoke tests and migrations |
-| Demo | Pinned Render release | Separate demo database, Sandbox merchant/buyer, controlled AI budget | Public judging and resettable scenarios |
-| Production later | Independently provisioned | Live credentials, backups, access review | Out of hackathon scope |
-
-Deploy Next.js as a **Render Web Service** (server API requires Node), the engine as a **Render Private Service**, and the job runner as a **Render Background Worker**. Supabase hosts Auth and Postgres. Use a GitHub repository for versioned source, CI, an open-source license, and the hackathon submission. Do not deploy from an untested local-only copy. [Render Next.js](https://render.com/docs/deploy-nextjs-app), [Private services](https://render.com/docs/private-services), [Background workers](https://render.com/docs/background-workers), [Hackathon rules](https://paypalaihackathon.devpost.com/rules)
-
-**Environment variable contract** (names only; values belong in local secrets or Render/Supabase configuration):
-
-```dotenv
-APP_ENV=local
-APP_ORIGIN=http://localhost:3000
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-DATABASE_URL=
-SUPABASE_SERVER_SECRET_KEY=
-NEXT_PUBLIC_PAYPAL_CLIENT_ID=
-PAYPAL_CLIENT_ID=
-PAYPAL_CLIENT_SECRET=
-PAYPAL_API_BASE=https://api-m.sandbox.paypal.com
-PAYPAL_WEBHOOK_ID=
-PLAID_CLIENT_ID=
-PLAID_SECRET=
-PLAID_API_BASE=https://sandbox.plaid.com
-PLAID_WEBHOOK_URL=
-GEMINI_API_KEY=
-GEMINI_MODEL=
-ENGINE_BASE_URL=http://localhost:8000
-ENGINE_SERVICE_TOKEN=
-DATA_ENCRYPTION_KEY=
-FORECAST_POLICY_VERSION=rp-v1
-DEMO_SEED_ENABLED=true
-```
-
-Only `NEXT_PUBLIC_*` variables may enter the browser. The PayPal browser and server client IDs must belong to the same Sandbox app. OAuth tokens, Plaid Item tokens, merchant/Plaid/Gemini secrets, database server keys, and the engine service token stay server-side; encrypt stored Plaid access tokens. Supabase service-secret queries bypass RLS, so every such order, forecast, and Item operation must enforce user ownership. [Supabase keys](https://supabase.com/docs/guides/getting-started/api-keys), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
-
-| Service | Official site to obtain/configure access | Needed |
-|---|---|---|
-| PayPal | [Developer Dashboard → Apps & Credentials / Sandbox Accounts](https://developer.paypal.com/dashboard/) | Sandbox app client ID/secret, business merchant, personal buyer, webhook ID |
-| Plaid | [Plaid Dashboard → Team → Keys](https://dashboard.plaid.com/) | Client ID, Sandbox secret, test institution/user and Item |
-| Gemini | [Google AI Studio API keys](https://aistudio.google.com/apikey) | Server API key and an available model |
-| Supabase | [Supabase Dashboard](https://supabase.com/dashboard) | Project URL, publishable/server keys, Postgres connection |
-| Render | [Render Dashboard](https://dashboard.render.com/) | Web/private/worker services and secret settings; no runtime API key |
-| GitHub | [GitHub](https://github.com/) | Public repository, license, CI; no app runtime API key |
-
-## 6. Acceptance gates
-
-- A real Sandbox buyer completes create → approve → capture for the server-priced cart; the verified capture changes a versioned forecast.
-- Pay Later is shown as an actual buyer choice only when eligible; any pre-checkout payment schedule remains labeled hypothetical until its terms are confirmed.
-- Repeated/out-of-order webhooks, capture timeouts, a failed local write after capture, and a later Plaid debit cannot double-charge or double-count the obligation.
-- User A cannot read or change user B's bank Items, goals, decisions, orders, or forecasts; server-secret paths are included in this test.
-- Financial numbers come from the deterministic engine; AI explanations show only current verified facts and fall back to templates when unavailable.
-- The demo has tested startup/reset instructions, migrations, `.env.example`, a license, and a public video/repository before submission.
-
-Implementation details and verification: [acceptance status](docs/IMPLEMENTATION_STATUS.md) · [local demo instructions](RUNNING.md).
-
-## AI Financial Profile MVP
-
-Dashboard's compact profile combines verified spending aggregates, goals and engine constraints.
-Gemini selects validated facts; a deterministic fallback handles unavailable or invalid responses.
-Users can inspect evidence, dismiss observations, and confirm editable planning preferences.
-Shop and merchant review explain the selected engine scenario using those preferences without
-changing calculations or executing payments. See [Phase 4 details](docs/FINANCIAL_PROFILE.md).
-
-## Two complementary purchase experiences
-
-RiskPilot preserves both proactive **Explore purchase impact** in Shop (no PayPal authorization or
-payment required) and direct integrated merchant checkout (**merchant → PayPal approval → automatic
-RiskPilot review → explicit confirmation → verified capture → merchant receipt**). Merchant buyers
-never have to start in Shop. Both use the same financial engine. Regression in either blocks release.
-See [flow boundaries and acceptance tests](docs/PURCHASE_FLOWS.md).
-
-Sequential implementation, phase commits, complete modified-file inventory, current verification and demo configuration: [optimization roadmap report](docs/OPTIMIZATION_ROADMAP.md).
-
-## Final purchase journeys
-
-Direct Northstar checkout always opens the full RiskPilot impact review after PayPal approval.
-Shop exploration remains payment-free, with optional checkout. A server-verified **Smart Recheck**
-recognizes an explicitly associated prior assessment, highlights changes and avoids repeating
-unchanged analysis. Invalid/expired associations receive a fresh full review. All demo accounts
-have the same feature access; no subscription tiers, Protection toggle or upgrade lock remains.
-See [final flows, matching contract, file inventory and verification](docs/FINAL_PURCHASE_EXPERIENCE.md).
+Earlier phase documents record their validation at that time. The two flows above describe the current product behavior.
