@@ -39,22 +39,23 @@ export async function createCheckout(owner: string, decisionId: string, method: 
   if (!prior && Date.now() - Date.parse(d.createdAt) > ASSESSMENT_MAX_AGE_MS) throw new CheckoutError("STALE_DECISION", "This assessment expired. Assess again.");
   if (!api.configured() && !demoEnabled()) throw new CheckoutError("PAYPAL_UNAVAILABLE", "PayPal Sandbox is not configured", 503);
   const alternative = method === "cheaper" ? getProduct(d.productId)?.alternativeId : undefined;
+  const shopPayNow = prior ? prior.shopPayNow === true : d.origin === "shop" && d.currency === "USD";
   const product = prior ? { id: alternative || d.productId, name: option.productName, price: option.price } : getProduct(alternative || d.productId);
   if (!product || product.price !== option.price) throw new CheckoutError("STALE_CATALOG", "Product changed. Assess again.");
   update(s => {
     const command = s.commands[key];
     if (command?.state === "STARTED" && Date.now() - command.startedAt < 30000) throw new CheckoutError("CREATE_IN_PROGRESS", "Order creation is already running. Check again shortly.", 202);
-    s.commands[key] = { requestId: key, personaId: owner, decisionId, method, state: "STARTED", startedAt: Date.now(), firstAttemptAt: command?.firstAttemptAt ?? Date.now(), simulated: command?.simulated ?? !api.configured() };
+    s.commands[key] = { requestId: key, personaId: owner, decisionId, method, state: "STARTED", startedAt: Date.now(), firstAttemptAt: command?.firstAttemptAt ?? Date.now(), shopPayNow, simulated: command?.simulated ?? !api.configured() };
   });
   try {
     const simulated = !api.configured();
     const result: PayPalOrder = simulated ? { id: `SIM-${crypto.randomUUID()}`, status: "CREATED" } :
-      await api.create({ amount: product.price, name: product.name, customId: `${d.id}:${method}`, requestId: key });
+      await api.create({ amount: product.price, name: product.name, customId: `${d.id}:${method}`, requestId: key, experience: { origin: process.env.APP_ORIGIN || "http://localhost:3000", brandName: "RiskPilot Demo Store", userAction: shopPayNow ? "PAY_NOW" : "CONTINUE" } });
     if (!result.id) throw new Error("PayPal did not return an order id");
     const approvalUrl = result.links?.find(l => ["approve", "payer-action"].includes(l.rel))?.href;
     const order: OrderRecord = {
       orderId: result.id, personaId: owner, decisionId, productId: product.id, productName: product.name, method,
-      amount: product.price, currency: "USD", status: "CREATED", createdAt: new Date().toISOString(), simulated,
+      amount: product.price, currency: "USD", status: "CREATED", createdAt: new Date().toISOString(), simulated, shopPayNow,
       captureRequestId: `capture-${result.id}`, approvalUrl, projectionStatus: "PENDING",
     };
     update(s => {

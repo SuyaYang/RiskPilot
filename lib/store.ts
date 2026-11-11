@@ -17,7 +17,7 @@ export interface PersonaState {
 export interface OrderRecord {
   orderId: string; personaId: string; decisionId: string; productId: string; productName: string;
   method: MethodId; amount: number; currency: "USD"; status: "CREATED" | "CAPTURED" | "FAILED" | "UNKNOWN";
-  captureId?: string; createdAt: string; simulated?: boolean;
+  captureId?: string; createdAt: string; simulated?: boolean; shopPayNow?: boolean;
   captureRequestId: string; captureCommand?: "STARTED" | "UNKNOWN" | "COMPLETED"; captureStartedAt?: number;
   approvalUrl?: string; projectionStatus?: "PENDING" | "UPDATED"; snapshotId?: string;
   settlementReview?: string;
@@ -26,7 +26,7 @@ export interface OrderRecord {
 }
 export interface CreateCommand {
   requestId: string; personaId: string; decisionId: string; method: MethodId;
-  state: "STARTED" | "UNKNOWN" | "COMPLETED"; orderId?: string; simulated?: boolean; startedAt: number; firstAttemptAt: number;
+  state: "STARTED" | "UNKNOWN" | "COMPLETED"; orderId?: string; simulated?: boolean; shopPayNow?: boolean; startedAt: number; firstAttemptAt: number;
 }
 export interface WebhookRecord { type: string; state: "RECEIVED" | "PROCESSED" | "IGNORED"; raw: string }
 export interface ReviewIntent { owner:string; decisionId:string; merchantId:"northstar-demo"; productId:"northstar:aero-14"; currency:"USD"; expiresAt:number }

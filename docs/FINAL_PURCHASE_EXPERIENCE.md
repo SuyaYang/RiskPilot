@@ -1,14 +1,14 @@
 # Final purchase experience — November 10, 2026
 
-RiskPilot has two purchase entry points and one review mechanism. There are no subscription tiers, Protection toggles, locked dashboards or upgrade prompts. Every fixed demo account receives the full purchase-impact review. Earlier Basic/Premium checkout restrictions have been removed.
+RiskPilot has two purchase entry points. Direct merchant checkout reviews impact after PayPal approval; Shop displays the assessment before PayPal and uses PayPal’s final Pay Now confirmation. There are no subscription tiers, Protection toggles, locked dashboards or upgrade prompts. Every fixed demo account receives the full purchase-impact review. Earlier Basic/Premium checkout restrictions have been removed.
 
 ## User journeys
 
 **A — Direct merchant checkout:** Northstar → server-priced PayPal order → buyer approval → automatic signed RiskPilot handoff → normal full impact review → explicit Confirm and pay → verified capture, one saved forecast → merchant receipt. No Shop visit, prior exploration or chat interaction is required. Key risk/buffer/stress/goal facts are visible first; cash-flow charts, timing comparisons and hypothetical scenarios are expandable.
 
-**B — Explore without buying:** RiskPilot Shop → select a catalog product → Explore purchase impact → compare available scenarios or fixed-date after-income What-if → leave freely. Assessment and scenario changes never create or capture a provider payment. Optional existing PayPal checkout controls remain available in an expandable section.
+**B — Explore without buying:** RiskPilot Shop → select a catalog product → Explore purchase impact → compare available scenarios or fixed-date after-income What-if → leave freely. Assessment and scenario changes never create or capture a provider payment. A single, always-visible PayPal Checkout section sits immediately below the essential risk assessment; there is no expandable checkout or duplicate Quick Review. PayPal uses `commit:true` / `PAY_NOW`; its final confirmation triggers the existing verified, idempotent capture and then the success receipt. Merely exploring or selecting a scenario never submits payment.
 
-**C — Smart Recheck (behavior, not a tier):** Shop assessment → Continue at Northstar (supported Aero 14 only) → optional merchant PayPal checkout → approval → the same RiskPilot review, with a validated comparison to the earlier assessment. Existing in-app checkout also uses its server-bound original decision. The three outcomes are:
+**C — Merchant Smart Recheck (behavior, not a tier):** Shop assessment → Continue at Northstar (supported Aero 14 only) → optional merchant PayPal checkout → approval → the same RiskPilot review, with a validated comparison to the earlier assessment. In-app Shop checkout checks its server-bound original decision before capture without showing a second review when unchanged. The three outcomes are:
 
 | Result | Review behavior |
 | --- | --- |
@@ -88,3 +88,11 @@ Keep matching PayPal Sandbox server/browser credentials and the existing shared 
 - `tests/merchant-flow.test.ts`
 - `tests/routes.test.ts`
 - `tests/smart-recheck.test.ts`
+
+## Shop checkout follow-up
+
+- The Shop entry starts on the current full-price scenario and offers one PayPal Checkout button directly below the risk conclusion. Engine suggestions remain visible; explicitly choosing no purchase or a future-date preview does not offer payment. Separate Pay Later and Continue at Northstar checkout buttons were removed from this page; the external Northstar storefront and signed merchant handoff remain operational.
+- Newly created Shop orders persist `shopPayNow: true` and use PayPal `PAY_NOW` with SDK `commit: true`. Capture runs only after PayPal’s final confirmation, including the redirect-return path. Existing legacy `CONTINUE` orders and merchant orders retain their review confirmation.
+- Server validation recomputes the assessment, requires an unchanged trusted Shop decision and matching financial input hash, then reuses provider verification, the capture request key and exactly-once forecast saving. Expired/changed/unavailable assessments and uncertain capture outcomes lead to explicit review or recovery on the same order.
+- PayPal SDK semantics: [official v6 SDK reference](https://github.com/paypal/paypal-js/blob/main/docs/readmes/web-sdk-v6-reference.md). Buyer approval remains distinct from capture; PayPal’s final Pay Now is the explicit confirmation for this Shop path.
+- Validation: 155 automated tests, including approved Shop capture, duplicate capture, changed inputs, expired assessment, missing approval, legacy orders and merchant isolation. No new real PayPal Sandbox payment was submitted during this follow-up; provider transitions were tested with deterministic mocks.

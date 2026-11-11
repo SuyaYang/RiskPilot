@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentPersonaId, inputHash } from "@/lib/state";
 import { captureCheckout, ownedOrder, CheckoutError } from "@/lib/checkout";
+import { captureShopCheckout } from "@/lib/shopCheckout";
 import { apiError } from "@/lib/http";
 import { confirmMerchantCheckout } from "@/lib/merchantCheckout";
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -15,6 +16,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
     return NextResponse.json(order.merchant
       ? await confirmMerchantCheckout(owner, id, body.inputHash)
-      : await captureCheckout(owner, id, undefined, body.inputHash));
+      : body.checkoutSource === "shop" ? await captureShopCheckout(owner, id, body.inputHash) : await captureCheckout(owner, id, undefined, body.inputHash));
   } catch (e) { return apiError(e); }
 }

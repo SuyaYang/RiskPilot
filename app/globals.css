@@ -1174,3 +1174,5 @@ summary { font-size:14px; }
   .review-layout:not(:has(> .review-analysis[open])) > .confirm-card { grid-template-columns:minmax(0,1fr);gap:12px;padding:16px; }
   .review-analysis > summary { font-size:16px; }
 }
+
+.shop-payment .paypal-checkout-actions { grid-template-columns:minmax(0,1fr); }
