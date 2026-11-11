@@ -8,7 +8,7 @@ const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/goals", label: "Goals" },
   { href: "/shop", label: "Shop" },
-  { href: "/invest", label: "Invest" },
+  { href: "/money", label: "Money" },
 ];
 
 export default function Nav() {
