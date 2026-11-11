@@ -162,3 +162,17 @@ Budget state is isolated from authoritative forecasts, cash capacity, goals and 
 177 automated tests, TypeScript and production build pass; Chrome rendering/screenshots and
 interactions were checked at 375/390/768/1280px. No payment or existing-workspace reset was performed.
 See [data model, rules, verification and limits](SPENDING_BUDGETS.md). Steps 4 and 5 are not implemented.
+
+## Step 4 — expected income and three-month planning (November 11, 2026)
+
+Money now includes calendar-aware monthly, 14-day, three-calendar-month and one-time income
+expectations with explicit confirmation, editing, pause/resume and removal. The current-month
+remainder and two full months show expected income, modeled outgoings and separately estimated
+confirmed budgets. Uncertain or potentially duplicate income is excluded from expected totals;
+budget-to-bill/daily-spending overlaps remain separate. Existing 45-day calculations and checkout
+input hashes are unchanged. The Step 3 editor is reused behind “Adjust your plan.”
+
+202 automated tests, TypeScript and production build pass. Chrome rendering/screenshots and
+interactions were checked at 375/390/768/1280px. No PayPal payment or existing-workspace reset was
+performed. See [models, recurrence, financial boundaries and verification](MONEY_PLANNING.md).
+Step 5 authoritative integration remains unimplemented.

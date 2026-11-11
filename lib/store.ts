@@ -5,6 +5,7 @@ import type { Decision, Goal, MethodId, Purchase } from "./types";
 import type { FinancialProfileState } from "./financialProfile/types";
 import type { SpendingPreferences } from "./spending/types";
 import type { PlanningBudgetState } from "./planning/types";
+import type { PlanningIncomeState } from "./planning/incomeTypes";
 import type { snapshot } from "./state";
 import { buildPersonas } from "./personas";
 
@@ -13,6 +14,7 @@ export interface PersonaState {
   goals: Goal[]; goalHistory: GoalChange[]; purchases: Purchase[];
   spending?: SpendingPreferences;
   planningBudget?: PlanningBudgetState;
+  planningIncome?: PlanningIncomeState;
   financialProfile?: FinancialProfileState;
   prefs: { horizon: "short" | "medium" | "long"; risk: "conservative" | "balanced" | "growth"; custom?: { cash: number; bonds: number; index: number } };
 }

@@ -9,7 +9,7 @@ type Category = PlanningBudgetView["categories"][number];
 const decimal = (cents: number | null) => cents === null ? "" : `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
 const period = (months: string[]) => months.length ? months.map(month => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })).join(", ") : "No complete observed months";
 
-export default function SpendingPlan() {
+export default function SpendingPlan({ onSaved }: { onSaved?: () => void } = {}) {
   const { data: loaded, error, reload } = useApi<PlanningBudgetView>("/api/planning-budget");
   const [saved, setSaved] = useState<PlanningBudgetView | null>(null);
   const data = saved || loaded;
@@ -35,7 +35,7 @@ export default function SpendingPlan() {
     try {
       const result = await postJson("/api/planning-budget", { action, categoryId: row.categoryId, version: data.version, epoch: data.epoch, basisHash: data.basisHash, ...(action === "revert" ? {} : { monthlyCents }) }, "PATCH");
       if (version !== generation.current) return;
-      setSaved(result.budget); setEditing(null); setMessage(result.message);
+      setSaved(result.budget); setEditing(null); setMessage(result.message); onSaved?.();
     } catch (error) { if (version === generation.current) setSaveError((error as Error).message); }
     finally { if (version === generation.current) { lock.current = false; setBusy(false); } }
   }
