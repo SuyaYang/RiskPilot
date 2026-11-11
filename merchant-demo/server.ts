@@ -28,11 +28,14 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
     const p = fn(); pending.set(id, p);
     try { return await p; } finally { pending.delete(id); }
   }
+  function setSessionCookie(res: ServerResponse, id: string) {
+    res.setHeader("Set-Cookie", `merchant_demo=${id}; HttpOnly; SameSite=Lax; Path=/${origin.startsWith("https:") ? "; Secure" : ""}`);
+  }
   function session(req: IncomingMessage, res: ServerResponse) {
     const value = req.headers.cookie?.match(/(?:^|;\s*)merchant_demo=([a-f0-9-]{36})(?:;|$)/)?.[1];
     if (value) return value;
     const id = crypto.randomUUID();
-    res.setHeader("Set-Cookie", `merchant_demo=${id}; HttpOnly; SameSite=Lax; Path=/${origin.startsWith("https:") ? "; Secure" : ""}`);
+    setSessionCookie(res,id);
     return id;
   }
   function json(res: ServerResponse, status: number, data: unknown) { res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" }); res.end(JSON.stringify(data)); }
@@ -112,6 +115,18 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
         const remote = await api.get(record.orderId); validateOrder(remote, record); applyCapture(remote, record);
         json(res, 200, { id: record.orderId, status: record.state === "CAPTURED" ? "CAPTURED" : remote.status, captureId: record.captureId, captureStatus: readCapture(remote)?.status ?? null }); return;
       }
+      if (req.method === "POST" && url.pathname === "/api/new-checkout") {
+        if (req.headers.origin !== origin) { json(res,403,{error:"Unsupported request origin"});return; }
+        await locked(id,async()=>{
+          const record=ledger.sessions[id];
+          if (record?.state !== "CAPTURED" || !record.orderId) throw new Error("Check or recover this same order before starting another checkout.");
+          const remote=await api.get(record.orderId);
+          if (!applyCapture(remote,record)) throw new Error("Payment completion must be verified before starting another checkout.");
+          // Rotate only the store-session cookie. Keep the paid record and RiskPilot history intact.
+          setSessionCookie(res,crypto.randomUUID());
+        });
+        json(res,200,{ok:true,createsPayment:false});return;
+      }
       if (url.pathname === "/api/capture") { json(res, 403, { error: "Review and explicitly confirm this purchase in RiskPilot first." }); return; }
       if (req.method !== "POST" || req.headers.origin !== origin || url.pathname !== "/api/order") {
         json(res, 403, { error: "Unsupported request or origin" }); return;
@@ -120,7 +135,7 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
       const result = await locked(id, async () => {
         if (url.pathname === "/api/order") {
           let record = ledger.sessions[id];
-          if (record?.state === "CAPTURED") throw new Error("This demo purchase is already paid. Use a fresh browser session for another purchase.");
+          if (record?.state === "CAPTURED") throw new Error("This demo purchase is already paid. Use Start another demo checkout to keep its records and begin again.");
           if (record?.orderId) return { orderId: record.orderId };
           // Never use a new idempotency key after an uncertain create, including after restart.
           if (record) throw new Error("Order creation is uncertain. Preserve this session for manual recovery; do not create a second order.");

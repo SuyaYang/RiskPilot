@@ -161,6 +161,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     assert.equal((await within(otherWorkspace, () => claim.POST(req({ ticket })))).status, 404);
     assert.equal((await within(otherWorkspace, () => orderRoute.GET(new Request("http://localhost:3100"), params()))).status, 404);
     assert.equal((await merchantRequest("/api/capture", { cookie: merchantCookie })).status, 403);
+    assert.equal((await merchantRequest("/api/new-checkout", { cookie:merchantCookie })).status,409);
     assert.equal((await merchantRequest("/api/riskpilot")).status, 401);
     await assert.rejects(() => captureCheckout(owner, id), /captured by its merchant/);
     assert.equal((await confirm({ inputHash: reviewedHash })).status, 400);
@@ -202,6 +203,19 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     const persisted = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
     assert.equal(Object.values(persisted.sessions as { [id: string]: { reviewedHash: string } }).find(record => record.reviewedHash)?.reviewedHash, reviewedHash);
   });
+  await t.test("completed store checkout can start a fresh session without deleting history or creating payment",async()=>{
+    const before=snapshot(owner),ledgerBefore=JSON.parse(fs.readFileSync(ledgerPath,"utf8")),createdCount=creates,capturedCount=captures;
+    assert.equal((await merchantRequest("/api/new-checkout",{cookie:merchantCookie,origin:"https://evil.example"})).status,403);
+    remoteOrders.get(id)!.purchase_units![0].payments!.captures![0].status="PENDING";
+    assert.equal((await merchantRequest("/api/new-checkout",{cookie:merchantCookie})).status,409);
+    remoteOrders.get(id)!.purchase_units![0].payments!.captures![0].status="COMPLETED";
+    const fresh=await merchantRequest("/api/new-checkout",{cookie:merchantCookie});
+    assert.equal(fresh.status,200);assert.equal(fresh.data.createsPayment,false);assert.notEqual(fresh.cookie,merchantCookie);
+    assert.equal((await merchantRequest("/api/status",{method:"GET",cookie:fresh.cookie})).data.status,"NONE");
+    assert.equal((await merchantRequest("/api/status",{method:"GET",cookie:merchantCookie})).data.status,"CAPTURED");
+    assert.equal(creates,createdCount);assert.equal(captures,capturedCount);assert.deepEqual(snapshot(owner),before);
+    assert.deepEqual(JSON.parse(fs.readFileSync(ledgerPath,"utf8")),ledgerBefore);
+  });
   await t.test("signatures are purpose-bound, requests expire, and destinations cannot redirect off-site", () => {
     const ref = readMerchantTicket(ticket);
     const payload = { ...ref, action: "capture", issuedAt: Date.now(), nonce: crypto.randomUUID(), reviewHash: reviewedHash };
@@ -231,6 +245,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     assert.equal(first.status, 202); assert.equal((await first.json()).code, "PAYMENT_PENDING");
     assert.equal(captures, captureCount + 1);
     const pendingReview = await view(); assert.equal(pendingReview.payment.state, "PENDING");
+    assert.equal((await merchantRequest("/api/new-checkout",{cookie:merchantCookie})).status,409);
     assert.equal(pendingReview.payment.forecast, "Awaiting confirmed capture");
     const again = await confirm({ reviewConfirmed: true, inputHash: reviewedHash });
     assert.equal(again.status, 202); assert.equal(captures, captureCount + 1);

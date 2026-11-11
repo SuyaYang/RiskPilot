@@ -105,3 +105,16 @@ intent before its own server-priced order creation and returns its ID in the sig
 RiskPilot verifies ownership/SKU/currency/policy/expiry and recomputes current finances before
 showing Smart Recheck. Missing/invalid/expired associations show a fresh full review. Direct
 merchant buyers need no Shop visit or intent. See [contract and repeatable demos](FINAL_PURCHASE_EXPERIENCE.md).
+
+## Repeat checkout after a completed payment
+
+A verified completed order disables its old checkout button. The store now offers **Start another
+demo checkout** only after capture completion is verified. This rotates only the merchant-session
+cookie: the old merchant record, RiskPilot workspace, purchases and saved forecasts remain intact.
+It creates no payment order or capture. Unpaid, pending, unknown and in-progress orders must be
+checked/recovered on the same session; they cannot use this action to discard recovery evidence.
+Prior purchases still affect the same RiskPilot account's next financial assessment.
+
+If localhost:3200 refuses connection, the merchant process is not listening. Start `npm run demo`
+and keep that terminal running. The RiskPilot server on 3100 and merchant on 3200 are separate
+processes; one being available does not prove the other is running.
