@@ -20,34 +20,39 @@ async function gemini(prompt: string, system: string, json = false): Promise<str
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 25000);
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1024, ...(json ? { responseMimeType: "application/json" } : {}) },
-        }),
-        signal: ctrl.signal,
-      },
-    );
-    if (!res.ok) {
-      console.warn("Gemini request rejected", res.status);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 25000);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 1024, ...(json ? { responseMimeType: "application/json" } : {}) },
+          }),
+          signal: ctrl.signal,
+        },
+      );
+      if (!res.ok) {
+        if (attempt === 0 && [429, 502, 503].includes(res.status)) continue;
+        console.warn("Gemini request rejected", res.status);
+        return null;
+      }
+      const body = await res.json();
+      return body?.candidates?.[0]?.content?.parts?.filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text ?? "").join("") ?? null;
+    } catch (e) {
+      if (attempt === 0) continue;
+      console.warn("Gemini request failed", (e as Error).message);
       return null;
+    } finally {
+      clearTimeout(timer);
     }
-    const body = await res.json();
-    return body?.candidates?.[0]?.content?.parts?.filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text ?? "").join("") ?? null;
-  } catch (e) {
-    console.warn("Gemini request failed", (e as Error).message);
-    return null;
-  } finally {
-    clearTimeout(timer);
   }
+  return null;
 }
 
 /** Every number in the text must match a number the engine produced (or a small known constant). */

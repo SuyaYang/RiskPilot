@@ -30,6 +30,9 @@ export function paymentStatusView(order: OrderRecord, observation?: PaymentObser
   };
   return {
     state, label: labels[state], lookupFailed,
+    providerChecked: !order.simulated && !!observation && !lookupFailed,
+    amountVerified: !order.simulated && !!observation && !lookupFailed,
+    currencyVerified: !order.simulated && !!observation && !lookupFailed,
     forecast: order.projectionStatus === "UPDATED" && hasSnapshot ? "Updated & saved"
       : state === "CAPTURED" || state === "CAPTURED_UNSAVED" ? "Update not saved · recovery required" : "Awaiting confirmed capture",
     bank: "Not connected · reconciliation unavailable",

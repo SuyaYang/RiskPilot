@@ -11,10 +11,14 @@ import ReviewInsights from "../app/components/ReviewInsights";
 import {reviewFacts} from "../lib/reviewInsights";
 import type {PurchaseReview} from "../lib/orderReview";
 import CaptureComparison from "../app/components/CaptureComparison";
+import CheckoutVerification from "../app/components/CheckoutVerification";
+import CheckoutSuccess,{type CheckoutSuccessData} from "../app/components/CheckoutSuccess";
 import {buildPersonas} from "../lib/personas";
 import {buildOptions} from "../lib/engine/options";
 import {getProduct} from "../lib/catalog";
 import type {Decision} from "../lib/types";
+import {paymentStatusView} from "../lib/paymentStatus";
+import type {OrderRecord} from "../lib/store";
 process.env.DEMO_TODAY="2026-11-10";
 function decision(id="alex"):Decision{
   const p=buildPersonas().find(p=>p.id===id)!,result=buildOptions(p,p.goals,[],getProduct("aero-14")!);
@@ -41,6 +45,7 @@ test("compact merchant review preserves critical risk and gives one concise grou
   assert.doesNotMatch(critical,/Compare buying on/);
   const explanation=renderToStaticMarkup(createElement(ReviewInsights,{orderId:"fixture",inputHash:"ui",method:"full",compact:true,fallback:facts.facts.checkout_summary}));
   assert.match(explanation,/Before you confirm/);assert.match(explanation,/current and late-income forecasts/);assert.match(explanation,/Funding and loan terms remain unconfirmed/);
+  assert.match(explanation,/AI can only select and explain verified engine facts/);
   assert.doesNotMatch(explanation,/copilot-launcher/);
   const future=reviewFacts({decision:current,buffer:1000} as PurchaseReview,"full","overview","after_income");assert.match(future.facts.checkout_summary,/cannot schedule payment/);
 });
@@ -48,4 +53,28 @@ test("compact merchant review preserves critical risk and gives one concise grou
 test("unchanged Smart Recheck never turns an existing risk warning into a safety claim",()=>{
   const html=renderToStaticMarkup(createElement(SmartRecheckSummary,{recheck:{status:"unchanged",reason:"No material changes.",currentAmountCents:90000,previousAmountCents:90000,reviewedAt:"2026-11-10T17:00:00Z",comparison:"full_price",checks:[]}}));
   assert.match(html,/No material changes/);assert.match(html,/risk warning below still applies/);assert.match(html,/does not confirm PayPal funding/);assert.doesNotMatch(html,/Guaranteed|safe to buy|Premium/);
+});
+
+test("checkout verification distinguishes provider evidence, lookup failure and simulation",()=>{
+  const base:OrderRecord={orderId:"ORDER-1",personaId:"alex",decisionId:"decision",productId:"aero-14",productName:"Aero 14 Laptop",method:"full",amount:900,currency:"USD",status:"CREATED",createdAt:"2026-11-10",captureRequestId:"capture-ORDER-1"};
+  const checked=paymentStatusView(base,{status:"APPROVED",capture:null});
+  assert.equal(checked.providerChecked,true);assert.equal(checked.amountVerified,true);assert.equal(checked.currencyVerified,true);
+  const checkedHtml=renderToStaticMarkup(createElement(CheckoutVerification,{payment:checked,order:base}));
+  assert.match(checkedHtml,/PayPal order checked/);assert.match(checkedHtml,/Amount verified/);
+  const failed=paymentStatusView(base,undefined,true);
+  assert.equal(failed.providerChecked,false);assert.equal(failed.amountVerified,false);
+  const failedHtml=renderToStaticMarkup(createElement(CheckoutVerification,{payment:failed,order:base}));
+  assert.match(failedHtml,/PayPal check unavailable/);assert.match(failedHtml,/Local amount locked/);assert.doesNotMatch(failedHtml,/Amount verified/);
+  const simulated={...base,orderId:"SIM-1",simulated:true,status:"CAPTURED" as const,projectionStatus:"UPDATED" as const,captureId:"SIMCAP-1"};
+  const simulationHtml=renderToStaticMarkup(createElement(CheckoutVerification,{payment:paymentStatusView(simulated,undefined,false,true),order:simulated}));
+  assert.match(simulationHtml,/Simulation order/);assert.match(simulationHtml,/Simulation amount/);assert.doesNotMatch(simulationHtml,/PayPal order checked/);
+});
+
+test("completed simulation uses local-record language and offers no second purchase action",()=>{
+  const d=decision();
+  const order:OrderRecord={orderId:"SIM-1",personaId:"alex",decisionId:d.id,productId:d.productId,productName:"Aero 14 Laptop",method:"full",amount:900,currency:"USD",status:"CAPTURED",captureId:"SIMCAP-1",createdAt:"2026-11-10",simulated:true,captureRequestId:"capture-SIM-1",projectionStatus:"UPDATED",snapshotId:"snapshot-1"};
+  const data:CheckoutSuccessData={comparison:{available:false,reason:"Fixture comparison unavailable."},order,returnUrl:null,forecastSnapshot:{id:"snapshot-1",createdAt:"2026-11-10",data:{forecast:d.baseline,asOf:"2026-11-10"}}};
+  const html=renderToStaticMarkup(createElement(CheckoutSuccess,{data}));
+  assert.match(html,/simulation and saved forecast are linked to the same local record/i);
+  assert.doesNotMatch(html,/same verified order|Simulate purchase/);
 });

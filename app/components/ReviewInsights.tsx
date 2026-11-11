@@ -47,7 +47,7 @@ export default function ReviewInsights({ orderId, inputHash, method, timing="now
   return <>
     <section className={`insight-card${compact ? " checkout-explanation" : ""}`} aria-labelledby="insight-title"><div className="row between"><div className="row"><span className="insight-icon"><Icon name="spark" /></span><h2 id="insight-title">{compact ? "Before you confirm" : "RiskPilot insights"}</h2></div><span className="badge blue">{overview?.source === "ai" ? "AI · grounded facts" : "Engine facts"}</span></div>
       <p className="insight-copy" role="status">{overview?.text || fallback || "Reading your forecast…"}</p>
-      <p className="small muted">{overview?.source === "template" ? "AI is unavailable; showing a deterministic engine summary. " : ""}Fictional inputs. Funding and loan terms remain unconfirmed.</p>
+      <p className="small muted">{overview?.source === "template" ? "AI is unavailable; showing a deterministic engine summary. " : ""}Grounded AI can only select and explain verified engine facts; it cannot change calculations or initiate payment. Fictional inputs. Funding and loan terms remain unconfirmed.</p>
       {overviewError&&<p className="small muted" role="status">AI explanation is unavailable. The current engine summary is shown above.</p>}
       {allowQuestions && <button className="insight-ask" onClick={() => setOpen(true)}>Explore with RiskPilot <Icon name="arrow" size={15} /></button>}
     </section>

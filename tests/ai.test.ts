@@ -27,8 +27,10 @@ test("AI cannot introduce unsupported financial sentences; outage uses template"
       assert.doesNotMatch((await explainDecision(d, p.name, p.buffer)).text, /Guaranteed/);
     });
     await t.test("provider outage falls back without changing numbers", async () => {
-      globalThis.fetch = async () => new Response("unavailable", { status: 503 });
+      let calls = 0;
+      globalThis.fetch = async () => { calls++; return new Response("unavailable", { status: 503 }); };
       const out = await explainDecision(d, p.name, p.buffer); assert.equal(out.source, "template");
+      assert.equal(calls, 2, "A transient Gemini outage gets one bounded retry");
     });
     await t.test("invalid calendar date in an AI goal draft is rejected", async () => {
       respond({ name: "Trip", type: "spend", targetAmount: 1000, targetDate: "2027-02-30", priority: 2 });

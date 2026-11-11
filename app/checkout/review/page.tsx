@@ -2,49 +2,29 @@
 import SmartRecheckSummary from "../../components/SmartRecheckSummary";
 import ProfilePurchaseInsight from "../../components/ProfilePurchaseInsight";
 import CheckoutStatus from "../../components/CheckoutStatus";
+import CheckoutVerification from "../../components/CheckoutVerification";
+import CheckoutSuccess, {type CheckoutSuccessData} from "../../components/CheckoutSuccess";
 import type { PaymentStatusView } from "@/lib/paymentStatus";
 import ResponsiveDetails from "../../components/ResponsiveDetails";
 import { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import CaptureComparison from "@/app/components/CaptureComparison";
 import TimingComparison from "@/app/components/TimingComparison";
 import PurchaseConclusion from "@/app/components/PurchaseConclusion";
-import type { CaptureComparison as SavedComparison } from "@/lib/captureComparison";
 import PurchaseImpact from "@/app/components/PurchaseImpact";
 import CashFlowExplorer from "@/app/components/CashFlowExplorer";
 import ReviewInsights from "@/app/components/ReviewInsights";
 import { fmtDate, money, postJson, RiskBadge, useApi } from "@/app/components/ui";
-import type { ForecastResult, MethodId } from "@/lib/types";
+import type { MethodId } from "@/lib/types";
 import { reviewFacts } from "@/lib/reviewInsights";
 import type { PurchaseReview } from "@/lib/orderReview";
 import type { OrderRecord } from "@/lib/store";
 import Icon from "@/app/components/Icon";
 
-type Review = {
+type Review = CheckoutSuccessData & {
   payment: PaymentStatusView;
-  comparison: SavedComparison;
-  order: OrderRecord; returnUrl?: string | null; cancelUrl?: string | null; review: PurchaseReview | null;
-  forecastSnapshot: { id: string; createdAt: string; data: { forecast: ForecastResult; asOf: string } } | null;
+  cancelUrl?: string | null; review: PurchaseReview | null;
 };
-function Success({ data }: { data: Review }) {
-  const { order, forecastSnapshot } = data;
-  const updated = order.projectionStatus === "UPDATED" && !!forecastSnapshot;
-  const f = updated ? forecastSnapshot.data.forecast : null;
-  return <section className="success-shell" aria-labelledby="success-title">
-    <div className="success-header"><span className="success-seal"><Icon name="check" size={30} /></span><span className="badge green">{order.simulated ? "Simulation" : "Verified Sandbox capture"}</span><h1 id="success-title">{order.simulated ? "Your simulation is saved." : "Payment confirmed."}</h1><p>{order.productName} · {money(order.amount)}</p></div>
-    <div className="card success-details"><div className="status-row"><span><Icon name="shield" />{order.simulated ? "Simulation status" : "PayPal payment"}</span><strong className="positive">{order.simulated ? "Recorded" : "Captured"}</strong></div>
-      <div className="status-row"><span><Icon name="chart" />Cash-flow forecast</span><strong className={updated ? "positive" : "muted"}>{updated ? "Updated & saved" : "Not confirmed updated"}</strong></div>
-      <div className="status-row"><span><Icon name="wallet" />Bank reconciliation</span><strong>Not connected</strong></div>
-      <p className="small muted">Funding remains unconfirmed. The forecast reserves the full purchase price; it does not infer a loan schedule or bank debit.</p>
-      {f && !data.comparison?.available && <div className="saved-outlook"><span className="small muted">Lowest projected cash · saved {fmtDate(forecastSnapshot!.data.asOf)}</span><div className="row between"><strong className="big">{money(f.minBalance)}</strong><RiskBadge risk={f.risk} /></div><p className="small muted">{fmtDate(f.minBalanceDate)} · {f.bufferGap < 0 ? `${money(Math.abs(f.bufferGap))} below` : `${money(f.bufferGap)} above`} your buffer.</p></div>}
-      <CaptureComparison comparison={data.comparison}/>
-      {order.settlementReview && <p className="warn">Settlement needs review: {order.settlementReview}</p>}
-      <details><summary>Payment reference</summary><p className="small reference-id">Order: {order.orderId}<br />{order.captureId && `Capture: ${order.captureId}`}</p></details>
-      <div className="success-actions">{data.returnUrl && <a className="btn primary" href={data.returnUrl}>View {order.merchant?.name || "merchant"} receipt <Icon name="arrow" size={16} /></a>}<Link className="btn" href="/">View RiskPilot dashboard</Link></div>
-    </div>
-  </section>;
-}
 function ReviewInner({id}:{id:string}) {
   const { data, error: loadError, reload } = useApi<Review>(`/api/orders/${encodeURIComponent(id || "missing")}`);
   const [selected, setSelected] = useState<MethodId>("full");
@@ -68,7 +48,7 @@ function ReviewInner({id}:{id:string}) {
   }
   if (loadError) return <div className="card stack"><h1>Review unavailable</h1><p className="error">{loadError}</p><button onClick={reload}>Check this order again</button><p className="small muted">Keep this order to recover its status before starting another purchase.</p></div>;
   if (!data) return <div className="review-loading" role="status"><span className="loading-orbit" /><h2>Preparing your purchase review</h2><p className="muted">Checking your current cash, commitments and goals.</p></div>;
-  if (data.order.status === "CAPTURED") return <Success data={data} />;
+  if (data.order.status === "CAPTURED") return <CheckoutSuccess data={data} />;
   const review = data.review;
   if (!review) return <p className="error">Purchase overview is unavailable. No new payment has been requested.</p>;
   const option = review.decision.options.find(o => o.method === selected) || review.decision.options.find(o => o.method === "full")!;
@@ -87,6 +67,7 @@ function ReviewInner({id}:{id:string}) {
   return <div className="review-workspace">
     <div className="checkout-steps" aria-label="Checkout progress"><span><i className="step-number"><Icon name="check" size={12} /></i>PayPal selection</span><i className="step-line" /><span className="current" aria-current="step"><i className="step-number">2</i>Impact review</span><i className="step-line" /><span><i className="step-number">3</i>Confirm payment</span></div>
     <header className="review-heading"><div><h1>Review before you pay.</h1><p className="sub">See how this purchase fits your cash and goals.</p></div><div className="review-merchant"><span className="metric-icon"><Icon name="bag" /></span><div><strong>{data.order.merchant?.name || "RiskPilot Demo Store"}</strong><span>{data.order.productName} · {money(data.order.amount)}</span></div><span className="badge blue">{data.order.simulated ? "Simulation" : "Sandbox"}</span></div></header>
+    <CheckoutVerification payment={data.payment} order={data.order}/>
     <SmartRecheckSummary recheck={review.recheck}/>
     <PurchaseConclusion compact decision={review.decision} buffer={review.buffer} disabled={busy || unknown || paid} onAfterIncome={()=>{setSelected("full");setAfterIncome(true);}} onSkip={()=>{setAfterIncome(false);setSelected("wait");}}/>
     {preview&&<p className="timing-preview-banner" role="status">Previewing a purchase on {fmtDate(preview.purchaseDate)}. Payment is unavailable in this preview; return to the current checkout to pay today.</p>}
