@@ -16,7 +16,7 @@ Both experiences are intentional release requirements. A regression in either bl
 
 Flow A's `/api/decisions` and Flow B's verified merchant claim/review use the existing `buildOptions` and forecast/goal engines. Merchant review uses the frozen server quote and current buyer financial inputs. It does not accept a browser-controlled amount. For equal profile, price and timing, cash forecasts and goal impacts match. Merchant quotes can have different product labels or available alternatives; only alternatives actually supported by that path are offered.
 
-Subsequent Phase 3 spending history and Phase 4 profile explanations supply context. They do not create authoritative balances, change funding, insert bills, move money, or become a prerequisite for either purchase path.
+Phase 3 spending history and Phase 4 profile explanations supply context. They do not create authoritative balances, change funding, insert bills, move money, or become a prerequisite for either purchase path.
 
 ## Flow A: exploration without payment
 
@@ -52,6 +52,12 @@ This is an explicit cooperating-merchant integration. RiskPilot cannot intercept
 | 7. Forecast updated exactly once | Duplicate confirmation, capture-timeout recovery, pending capture and receipt tests verify one provider capture, one reserve and saved forecast. Isolated HTTP check also confirmed one capture/reserve after duplicate requests. |
 | 8. Both work on mobile | Browser at 390-pixel viewport: exploration/What-if, automatic merchant handoff, collapsed optional analysis, confirmation/change-method/cancel controls and skip return; no horizontal document overflow. Phase 1 also records broader responsive checks. |
 
-**101 tests pass at this Phase 2 checkpoint**, as do TypeScript and production build. `npm test` includes both flow suites and runs in the existing CI job; neither suite is skipped or marked optional. Release requires these checks plus provider/browser acceptance appropriate to the target deployment. Local success is not proof that remote branch protection is configured.
+**132 tests pass**, as do TypeScript and production build. `npm test` includes both flow suites and runs in the existing CI job; neither suite is skipped or marked optional. Release requires these checks plus provider/browser acceptance appropriate to the target deployment. Local success is not proof that remote branch protection is configured.
 
 The new browser/HTTP merchant checks used an isolated provider fixture for approval and capture transitions; they did not log into PayPal or perform a new Sandbox capture. The real Sandbox sequence was previously verified in Phase 2. Changing methods reopens the existing verified Sandbox approval URL; no new live provider method-change acceptance is claimed here. Existing payment ledgers and running primary demo servers were preserved.
+
+## Sequential roadmap revalidation
+
+The final mobile confirmation card now precedes all optional detailed analysis. A concise explanation is visible without confirmed planning preferences, and funding/loan disclosures remain visible next to payment controls. Current and after-income exploration made zero payment orders/captures. The fixture handoff reached review automatically; cancel and refresh left capture count zero. Explicit confirmation and duplicate confirmation yielded one provider-fixture capture, one reserve and a saved forecast; merchant status agreed.
+
+A read-only PayPal Sandbox lookup also reverified the previously captured `0JE5641215704915A` / `5DV57240EB846754P`: completed, $900 USD, local projection UPDATED, one purchase and one saved snapshot. This was an existing real Sandbox capture; the new capture checks used the isolated fixture. No new live-provider payment was made.

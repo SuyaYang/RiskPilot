@@ -118,7 +118,19 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     assert.equal(captures, 0); assert.equal(snapshot(owner).purchases.length, 0);
     assert.equal((await within(workspace, () => claim.POST(req({ ticket })))).status, 200);
   });
-
+  await t.test("confirmed profile explains a signed merchant review without changing its assessment or payment", async () => {
+    const { financialProfileView, editFinancialProfile } = await import("../lib/financialProfile/service");
+    const { personalizedPurchaseFacts } = await import("../lib/financialProfile/purchase");
+    const before = snapshot(owner), hash = inputHash(owner), profile = financialProfileView(owner), orderBefore = structuredClone(load().orders[id]);
+    editFinancialProfile(owner, { version: profile.version, basisHash: profile.basisHash, action: "confirm_preferences", planningBufferCents: 200025, priorityGoalId: null, focus: "commitments" });
+    const explanation = personalizedPurchaseFacts(owner, { orderId: id, method: "full", timing: "now" });
+    assert.equal(explanation.personalized, true);
+    assert.match(explanation.facts.confirmed_context, /scheduled bill\/reserve occurrences/);
+    assert.match(explanation.facts.engine_impact, /\$7,995\.00/);
+    assert.equal(inputHash(owner), hash); assert.deepEqual(snapshot(owner), before);
+    assert.equal(captures, 0); assert.deepEqual(load().orders[id], orderBefore);
+    assert.throws(() => personalizedPurchaseFacts(`${otherWorkspace}:sam`, { orderId: id, method: "full" }), /not found/i);
+  });
   await t.test("Flow B can cancel before or after approval without capture, then reopen the same review", async () => {
     const created = await merchantRequest("/api/order");
     const cancelledId = created.data.orderId, cookie = created.cookie;

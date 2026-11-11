@@ -1,4 +1,5 @@
 "use client";
+import ProfilePurchaseInsight from "../../components/ProfilePurchaseInsight";
 import CheckoutStatus from "../../components/CheckoutStatus";
 import type { PaymentStatusView } from "@/lib/paymentStatus";
 import ResponsiveDetails from "../../components/ResponsiveDetails";
@@ -84,7 +85,7 @@ function ReviewInner({id}:{id:string}) {
     <header className="review-heading"><div><h1>Know the impact<br className="desktop-break" /> before you pay.</h1><p className="sub">See how this purchase fits your cash and goals.</p></div><div className="review-merchant"><span className="metric-icon"><Icon name="bag" /></span><div><strong>{data.order.merchant?.name || "RiskPilot Demo Store"}</strong><span>{data.order.productName} · {money(data.order.amount)}</span></div><span className="badge blue">{data.order.simulated ? "Simulation" : "Sandbox"}</span></div></header>
     <PurchaseConclusion compact decision={review.decision} buffer={review.buffer} disabled={busy || unknown || paid} onAfterIncome={()=>{setSelected("full");setAfterIncome(true);}} onSkip={()=>{setAfterIncome(false);setSelected("wait");}}/>
     {preview&&<p className="timing-preview-banner" role="status">Previewing a purchase on {fmtDate(preview.purchaseDate)}. Payment is unavailable in this preview; return to the current checkout to pay today.</p>}
-    <ReviewInsights key={`${id}:${review.decision.inputHash}:${option.method}:${!!preview}`} compact orderId={id} inputHash={review.decision.inputHash} method={preview?"full":option.method} timing={preview?"after_income":"now"} fallback={grounded.facts.checkout_summary} />
+    <ProfilePurchaseInsight orderId={id} method={option.method} timing={preview?"after_income":"now"} fallback={<ReviewInsights key={`${id}:${review.decision.inputHash}:${option.method}:${!!preview}`} compact orderId={id} inputHash={review.decision.inputHash} method={preview?"full":option.method} timing={preview?"after_income":"now"} fallback={grounded.facts.checkout_summary} />}/>
     <CheckoutStatus payment={data.payment} />
     {unknown && <p className="warn" role="status">Payment outcome is unknown. Retry confirmation on this same order to recover its status. Do not start another purchase.</p>}
     {review.inputChanged && <p className="note small">Your finances changed. This review now uses your latest goals and commitments.</p>}

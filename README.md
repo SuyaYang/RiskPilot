@@ -25,9 +25,9 @@ capture or choose arbitrary return destinations. The local demo uses a server-on
 loopback allowlist; production merchant onboarding and customer authentication remain future work.
 The `extension/` directory is an optional earlier placement experiment and is not used by this flow.
 
-RiskPilot compares a cart with upcoming bills, cash reserves, and savings goals. The customer chooses an option and approves checkout through PayPal. RiskPilot records the confirmed merchant payment, updates its own cash-flow projection, and later reconciles bank activity without counting the expense twice.
+RiskPilot compares a cart with upcoming bills, cash reserves, and savings goals. The customer chooses an option and approves checkout through PayPal. RiskPilot records the confirmed merchant payment and updates its own cash-flow projection. Plaid bank-activity reconciliation and debit matching remain planned; the local demo does not connect a bank or claim to have reconciled a payment.
 
-> **Status:** local fictional-data Checkout MVP. Dashboard, Goals, Shop, Invest, payment recovery and the cooperating-merchant review flow are implemented. A completed merchant Sandbox receipt and saved forecast have been observed; 56 automated tests pass. Supabase/Python/worker/deployment remain unfinished. Start with [RUNNING.md](RUNNING.md), [acceptance status](docs/IMPLEMENTATION_STATUS.md) and the [complete update record](docs/CHANGELOG_2026-11-10.md).
+> **Status:** local fictional-data Checkout MVP. Dashboard, Goals, Shop, Invest, payment recovery and the cooperating-merchant review flow are implemented. A completed merchant Sandbox receipt and saved forecast have been observed; 112 automated tests pass. Supabase/Python/worker/deployment remain unfinished. Start with [RUNNING.md](RUNNING.md), [acceptance status](docs/IMPLEMENTATION_STATUS.md) and the [complete update record](docs/CHANGELOG_2026-11-10.md).
 
 **Hackathon scope:** US, USD, an independent simulated cooperating merchant, one PayPal Sandbox
 merchant account, and Plaid Sandbox or clearly marked manual financial data. The merchant flow uses
@@ -36,6 +36,14 @@ Investment views show cash capacity and educational scenarios; they do not trans
 trades. Pay Later scenarios are hypothetical until PayPal confirms eligibility and the buyer confirms
 actual loan terms. Browser follow-up observed the new merchant receipt and a reference-order
 change-method round trip; remaining acceptance limits are recorded in the status document.
+
+## Spending Intelligence MVP
+
+Dashboard includes monthly spending trends, category totals and recurring-pattern review using
+**clearly labeled deterministic local Sandbox-style histories**. Plaid is not connected. Confirm,
+Edit and Not recurring save informational pattern reviews; they do not silently add forecast expenses.
+Existing manual schedules and verified purchase reserves remain authoritative. See
+[the feature, demo and validation guide](docs/SPENDING_INTELLIGENCE.md).
 
 ## 1. Architecture
 
@@ -230,3 +238,21 @@ Only `NEXT_PUBLIC_*` variables may enter the browser. The PayPal browser and ser
 - The demo has tested startup/reset instructions, migrations, `.env.example`, a license, and a public video/repository before submission.
 
 Implementation details and verification: [acceptance status](docs/IMPLEMENTATION_STATUS.md) · [local demo instructions](RUNNING.md).
+
+## AI Financial Profile MVP
+
+Dashboard's compact profile combines verified spending aggregates, goals and engine constraints.
+Gemini selects validated facts; a deterministic fallback handles unavailable or invalid responses.
+Users can inspect evidence, dismiss observations, and confirm editable planning preferences.
+Shop and merchant review explain the selected engine scenario using those preferences without
+changing calculations or executing payments. See [Phase 4 details](docs/FINANCIAL_PROFILE.md).
+
+## Two complementary purchase experiences
+
+RiskPilot preserves both proactive **Explore purchase impact** in Shop (no PayPal authorization or
+payment required) and direct integrated merchant checkout (**merchant → PayPal approval → automatic
+RiskPilot review → explicit confirmation → verified capture → merchant receipt**). Merchant buyers
+never have to start in Shop. Both use the same financial engine. Regression in either blocks release.
+See [flow boundaries and acceptance tests](docs/PURCHASE_FLOWS.md).
+
+Sequential implementation, phase commits, complete modified-file inventory, current verification and demo configuration: [optimization roadmap report](docs/OPTIMIZATION_ROADMAP.md).

@@ -28,6 +28,8 @@ test("middleware and API integration without opening a network listener", async 
   const copilot = await import("../app/api/copilot/route");
   const parse = await import("../app/api/goals/parse/route");
   const snap = await import("../app/api/snapshot/route");
+  const financialProfile = await import("../app/api/financial-profile/route");
+  const profilePurchase = await import("../app/api/financial-profile/purchase/route");
   const spending = await import("../app/api/spending/route");
   const recurringPattern = await import("../app/api/spending/recurring/[id]/route");
   const reset = await import("../app/api/reset/route");
@@ -63,6 +65,8 @@ test("middleware and API integration without opening a network listener", async 
       assert.equal(decision.afterIncome.available, true);
       assert.equal(decision.options.find((option: { method: string }) => option.method === "full").forecast.minBalance, 820);
       assert.equal(decision.afterIncome.forecast.minBalance, 1260);
+      const explained = await within(cookie, () => profilePurchase.POST(req("/api/financial-profile/purchase", { decisionId: decision.id, method: "wait", timing: "now" })));
+      assert.equal(explained.status, 200); assert.equal((await explained.json()).readOnly, true);
       assert.deepEqual(load().orders, ordersBefore);
       assert.deepEqual(await within(cookie, () => snap.GET()).then(r => r.json()), before);
       assert.equal(providerCalls, 0);
@@ -170,6 +174,9 @@ test("middleware and API integration without opening a network listener", async 
     const previewAnswer=await within(a,()=>insights.POST(req("/insights",{...body,method:"full",question:"overview",timing:"after_income"}),params(created.id))).then(r=>r.json());
     assert.equal(previewAnswer.source,"template");assert.match(previewAnswer.text,/future-date preview/);
     assert.equal((await within(a,()=>insights.POST(req("/insights",{...body,method:"pay_in_4",timing:"after_income"}),params(created.id)))).status,400);
+    const concise = await within(a, () => insights.POST(req("/insights", { ...body, question: "overview", compact: true }), params(created.id))).then(r => r.json());
+    assert.equal(concise.readOnly, true); assert.match(concise.text, /buffer/); assert.equal(concise.text.split(".").filter(Boolean).length, 1);
+    assert.equal((await within(a, () => insights.POST(req("/insights", { ...body, compact: "yes" }), params(created.id)))).status, 400);
     const answer = await within(a, () => insights.POST(req("/insights", body), params(created.id))).then(r => r.json());
     assert.equal(answer.readOnly, true); assert.equal(answer.source, "template");
     assert.equal(answer.inputHash, body.inputHash);
@@ -281,7 +288,34 @@ test("middleware and API integration without opening a network listener", async 
     assert.equal(baseline.version, 0); assert.deepEqual(baseline.analysis, view.analysis);
     assert.ok(baseline.candidates.every((c: { status: string }) => c.status === "suggested"));
   });
-
-
+  await t.test("Financial Profile API confirms preferences, falls back safely and personalizes the existing assessment", async () => {
+    const getProfile = () => within(a, () => financialProfile.GET()).then(r=>r.json());
+    const before = await within(a,()=>snap.GET()).then(r=>r.json());
+    let profile = await getProfile();
+    assert.equal(profile.status,"not_generated");
+    let response = await within(a,()=>financialProfile.PATCH(req("/api/financial-profile",{action:"confirm_preferences",version:profile.version,basisHash:profile.basisHash,planningBufferCents:200000,priorityGoalId:"a-trip",focus:"goals"},"PATCH")));
+    assert.equal(response.status,200);profile=await response.json();
+    response=await within(a,()=>financialProfile.POST(req("/api/financial-profile",{version:profile.version,basisHash:profile.basisHash})));
+    assert.equal(response.status,200);profile=await response.json();assert.equal(profile.profile.source,"template");assert.equal(profile.status,"ready");
+    assert.equal((await within(b,()=>financialProfile.GET()).then(r=>r.json())).preferences,null);
+    assert.equal((await within(a,()=>financialProfile.POST(req("/api/financial-profile",{version:0,basisHash:"stale"})))).status,409);
+    const assessed=await within(a,()=>decisions.POST(req("/api/decisions",{productId:"aero-14"}))).then(r=>r.json());
+    const explanation=await within(a,()=>profilePurchase.POST(req("/api/financial-profile/purchase",{decisionId:assessed.decision.id,method:"full"})));
+    assert.equal(explanation.status,200);const result=await explanation.json();assert.equal(result.personalized,true);assert.equal(result.readOnly,true);assert.match(result.text,/Japan trip/);
+    assert.equal((await within(b,()=>profilePurchase.POST(req("/api/financial-profile/purchase",{decisionId:assessed.decision.id,method:"full"})))).status,404);
+    const created=await within(a,()=>orders.POST(req("/api/orders",{decisionId:assessed.decision.id,method:"full"}))).then(r=>r.json());
+    const merchantStyleReview=await within(a,()=>profilePurchase.POST(req("/api/financial-profile/purchase",{orderId:created.id,method:"full"})));
+    assert.equal(merchantStyleReview.status,200);assert.equal((await merchantStyleReview.json()).readOnly,true);
+    assert.equal((await within(a,()=>order.GET(new Request("http://localhost:3000"),params(created.id))).then(r=>r.json())).order.status,"CREATED");
+    assert.deepEqual(await within(a,()=>snap.GET()).then(r=>r.json()),before);
+    await within(a,()=>reset.POST());assert.equal((await getProfile()).preferences,null);assert.equal((await getProfile()).status,"not_generated");
+  });
+  await t.test("Financial Profile API rejects malformed and unsupported write commands",async()=>{
+    const profile=await within(a,()=>financialProfile.GET()).then(r=>r.json());
+    assert.equal((await within(a,()=>financialProfile.POST(req("/api/financial-profile",{version:profile.version,basisHash:profile.basisHash,executePayment:true})))).status,400);
+    assert.equal((await within(a,()=>financialProfile.PATCH(req("/api/financial-profile",{version:profile.version,basisHash:profile.basisHash,action:"capture"},"PATCH")))).status,400);
+    assert.equal((await within(a,()=>profilePurchase.POST(req("/api/financial-profile/purchase",{method:"full"})))).status,400);
+    assert.equal((await within(a,()=>financialProfile.POST(new Request("http://localhost:3000/api/financial-profile",{method:"POST",body:"{"})))).status,400);
+  });
   fs.rmSync(dir, { recursive: true });
 });

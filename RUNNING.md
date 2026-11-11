@@ -156,3 +156,38 @@ A concise decision → after-income what-if → saved before/after outcome walkt
 in [the demo script](docs/DEMO_SCRIPT.md). Timing previews are read-only and cannot schedule/pay;
 new capture comparisons require newly saved before/after snapshots. Historical payments remain
 readable and explicitly report a missing before snapshot.
+
+## Reliability validation
+
+See [Phase 2 audit and live Sandbox evidence](docs/DEMO_RELIABILITY_PHASE_2.md). Review now separates
+buyer approval, capture pending/completed/unknown and saved forecast status. A read-only refresh
+never initiates capture. Pending captures must be checked on the same order; a remotely completed
+capture with an unsaved local forecast offers explicit recovery. Reset also refuses uncertain real
+provider-create commands whose order IDs have not yet been recovered. Production builds require
+explicit `DEMO_SEED_ENABLED=true` even when `APP_ENV=local`.
+
+## Spending Intelligence demonstration
+
+With `DEMO_SEED_ENABLED=true`, open Dashboard and expand Spending Intelligence's category and recurring
+sections. No Plaid credentials are required: histories are explicitly simulated. Pin `DEMO_TODAY`
+for repeatable coverage/totals. Confirm/Edit/Not recurring affect only reviewed pattern estimates;
+existing financial bills and PayPal reserves are unchanged. Switch personas to see different histories.
+Reset in a simulation-only workspace restores pattern reviews; real Sandbox payment records retain
+existing reset protection. See [Phase 3 details and sample values](docs/SPENDING_INTELLIGENCE.md).
+
+## Financial Profile demonstration
+
+On Dashboard, use **Your Financial Profile → Confirm preferences**, save an explanation focus and
+optional preferred goal, then **Generate profile**. Expand sources to inspect aggregate evidence,
+dismiss an observation, restore it, or clear preferences. Shop and checkout review use confirmed
+preferences alongside the selected engine scenario. A planning buffer preference does not change
+the engine buffer or payment behavior. Missing/invalid Gemini responses show a labeled template.
+See [Phase 4 architecture, privacy and verification](docs/FINANCIAL_PROFILE.md).
+
+## Required purchase-flow checks
+
+For proactive exploration, open `http://localhost:3100/shop` and use **Explore purchase impact**;
+scenario comparisons and What-if require no PayPal approval and create no order or capture.
+For merchant checkout, run `npm run demo` and start directly at `http://localhost:3200`: PayPal
+approval automatically opens RiskPilot review through the signed handoff. Stop/cancel before
+**Confirm and pay** to leave the approved order uncaptured. See [both release gates](docs/PURCHASE_FLOWS.md).

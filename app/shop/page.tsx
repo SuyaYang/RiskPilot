@@ -1,4 +1,5 @@
 "use client";
+import ProfilePurchaseInsight from "../components/ProfilePurchaseInsight";
 import ContextCopilot from "../components/ContextCopilot";
 import TimingComparison from "../components/TimingComparison";
 import PurchaseConclusion from "../components/PurchaseConclusion";
@@ -55,6 +56,7 @@ export default function Shop() {
     {(error || loadError) && <p className="error" role="alert">{error || loadError}</p>}
     {decision && <div className="shop-assessment" ref={resultsRef} tabIndex={-1}>
       <PurchaseConclusion decision={decision} buffer={buffer} disabled={paid} onAfterIncome={()=>{setSelected("full");setAfterIncome(true);}} onSkip={()=>{setAfterIncome(false);setSelected("wait");}}/>
+      {!paid&&<ProfilePurchaseInsight decisionId={decision.id} method={selected} timing={preview?"after_income":"now"}/>}
       <TimingComparison currentMethod={selected} decision={decision} active={!!preview} disabled={paid} onChange={active=>{setSelected("full");setAfterIncome(active);}}/>
       <div className="note"><strong>Current purchase assessment</strong> · {decision.explanation?.text}<p className="small">{decision.explanation?.source === "ai" ? "AI explanation of calculated figures" : "Calculated figures · template explanation"}</p></div>
       <p className="warn">Pay Later schedules below are hypothetical estimates. Purchase-price ranges do not prove eligibility. PayPal determines eligible methods and actual loan terms at checkout.</p>

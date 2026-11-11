@@ -3,6 +3,34 @@
 Updated November 10, 2026. Publication target: PR #1 (`feature/checkout-mvp`), with a
 matching `cynthia` branch. This document supersedes earlier local-only publication notes.
 
+## Phase 3 spending intelligence
+
+Dashboard now includes a compact monthly trend, category totals and deterministic recurring-pattern
+review for the existing personas. **112 tests**, TypeScript and the production build pass. Plaid has
+no working adapter or configured local credentials, so this uses clearly labeled local Sandbox-style
+transaction fixtures. Confirmation/edit/rejection is persisted and versioned in the existing persona
+store; patterns remain informational because observed-debit/capture matching is unavailable. Existing
+bills/reserves and purchase-impact calculations are unchanged. See
+[contracts, demo values, verification and limits](SPENDING_INTELLIGENCE.md).
+
+## Phase 2 reliability follow-up
+
+The demo audit and stabilization pass is complete. **98 automated tests**, TypeScript and the
+production build pass. A new live PayPal Sandbox merchant checkout reached approval → explicit
+RiskPilot confirmation → verified $900 USD capture → saved forecast → merchant receipt → Dashboard.
+Read-only provider verification and both ledgers agree on one purchase and one snapshot. Pending
+capture, reset preservation, stale capture races and unavailable states have focused regressions.
+See [the audit, fixes and evidence](DEMO_RELIABILITY_PHASE_2.md) for exact validation boundaries.
+Plaid/bank reconciliation, refund accounting and public webhook/deployment acceptance remain open.
+
+## Compact UI follow-up
+
+Phase 1 compact layouts are implemented and browser-checked at 375, 390, 768 and 1280px.
+All 85 tests, TypeScript and the production build pass. Local visual acceptance now includes
+all four main pages, purchase review and Northstar; an isolated explicit simulation reached
+the saved forecast result. No new PayPal capture was performed. See
+[changes, verification and remaining limits](COMPACT_UI_PHASE_1.md).
+
 ## Current experience
 
 Independent Northstar store → PayPal Continue / Review Order → RiskPilot impact review →
@@ -34,8 +62,8 @@ system. See [UI implementation](UI_REDESIGN.md) and [running instructions](../RU
 The 85-test suite includes fixed-date/stress/no-income examples, preview capture rejection,
 immutable comparison/legacy handling, stale AI assessments and server-rendered decision states.
 Live Gemini successfully selected the calculated future-date facts and identified the preview as
-read-only. TypeScript/build pass. No new Sandbox capture was performed, and browser/mobile
-acceptance remains outstanding under the saved localhost:3100 permission restriction.
+read-only. TypeScript/build pass. No new Sandbox capture was performed, and the earlier browser/mobile
+restriction is superseded by the compact UI verification above.
 See [demo walkthrough](DEMO_SCRIPT.md) for a controlled presentation sequence.
 
 ## P0 / P1 review follow-up
@@ -50,7 +78,7 @@ See [demo walkthrough](DEMO_SCRIPT.md) for a controlled presentation sequence.
 
 ## Validation
 
-- All 85 automated tests pass: finance, same-day baseline regression, goals, grounded AI,
+- All 112 automated tests pass: finance, same-day baseline regression, goals, grounded AI,
   provider failure, workspace isolation, stale review, payment recovery, merchant handoff,
   capture/receipt, HTTPS allowlist, secure callbacks and merchant-ledger restart persistence.
 - TypeScript and production build pass. CI is separately recorded in GitHub Actions after push;
@@ -58,11 +86,11 @@ See [demo walkthrough](DEMO_SCRIPT.md) for a controlled presentation sequence.
 - Live Gemini key verified with `gemini-3.6-flash`: goal extraction and free-text fact retrieval
   succeeded. The old 2.5 Flash model rejected this new account; 3.8 Flash returned overload.
   Secrets remain in ignored local environment files; remote environments need their own settings.
-- The previously completed merchant Sandbox capture was reconciled via a read-only provider lookup:
-  COMPLETED capture, capture identity, amount and currency match the saved order; the versioned
-  forecast snapshot exists. No new capture was made for this pass.
-- Main-app live visual/browser acceptance remains incomplete because the saved browser permission
-  denies localhost:3100. Automated rendering/build checks do not replace mobile interaction testing.
+- Phase 2 completed a new $900 USD merchant Sandbox capture. Provider status, capture identity,
+  amount/currency, both ledgers, one purchase and one saved before/after forecast match. The earlier
+  read-only verification is superseded by [this live evidence](DEMO_RELIABILITY_PHASE_2.md).
+- Local responsive browser acceptance is now recorded in [Phase 1 verification](COMPACT_UI_PHASE_1.md).
+  Physical-device and external-provider checkout acceptance remain separate.
 
 ## Remaining external acceptance
 
@@ -81,3 +109,31 @@ production authentication or bank reconciliation. Supabase Auth/Postgres/RLS, Pl
 migration, background reconciliation and production merchant onboarding remain future work.
 Optional deployment uses paid single-instance services and persistent disks, not replicated storage.
 See [deployment guide](DEPLOYMENT.md) for explicit prerequisites and limitations.
+
+## Phase 4 — AI Financial Profile
+
+Implemented deterministic aggregate extraction, a strict Gemini fact-ID contract with template
+fallback, a compact responsive Dashboard profile, source evidence, dismiss/restore/regenerate,
+and confirmed editable planning preferences. Shop and merchant review add read-only explanations
+using the selected engine assessment. Profile preferences never alter authoritative engine inputs,
+goal priorities, bill commitments or payments. Persistence stores selection IDs, not raw AI prose.
+
+All **129 tests**, TypeScript and production build pass. Live Gemini/profile/purchase validation,
+isolated HTTP reset/isolation checks, and 375/390/768/1280 responsive browser checks are recorded
+in [Phase 4 documentation](FINANCIAL_PROFILE.md). No new capture or real bank connection was made.
+
+## Required preservation of both purchase flows
+
+Proactive Shop exploration and the direct cooperating-merchant PayPal checkout remain operational.
+Exploration needs no PayPal authorization and creates no payment; merchant approval automatically
+opens signed RiskPilot review without visiting Shop. Both reuse the authoritative financial engine.
+New regressions cover zero-provider exploration, matching engine results, merchant entry with no
+prior decision, and cancellation before/after approval. Existing secure confirmation, verification,
+idempotency, receipt and exactly-once forecast coverage remains in place.
+
+All **131 tests**, TypeScript and production build pass. Isolated mobile/browser and HTTP acceptance
+is documented in [the two-flow release gate](PURCHASE_FLOWS.md). No new live provider payment was made.
+
+## Sequential optimization roadmap completion
+
+Baseline and separate phase commits are recorded in [the final optimization report](OPTIMIZATION_ROADMAP.md). Phase checkpoints passed 86 / 101 / 115 / 132 tests respectively, each with TypeScript and production build. Both purchase paths remain required. Final mobile merchant review moves confirmation before optional analysis, shows a concise explanation and retains critical funding disclosures. Existing real Sandbox completion was reverified read-only; new end-to-end capture checks used an isolated fixture.

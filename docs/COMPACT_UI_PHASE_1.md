@@ -61,4 +61,6 @@ AI services, PayPal SDK, merchant handoff, capture and idempotency contracts are
 
 ## Sequential roadmap acceptance
 
-Confirmation now precedes optional detailed analysis in mobile reading and keyboard order. A compact grounded AI/template explanation is visible without confirmed profile preferences. Critical amount, current/stress buffer risk and goal effects remain visible; existing funding/eligibility disclosures and explicit capture handlers are retained.
+The reviewed mobile checkout now places confirmation, supported method change and cancellation before optional detailed analysis in DOM/keyboard order. Amount, risk, current and late-income buffer checks, and goal effects stay visible. Buyers without profile preferences receive a concise grounded AI/template explanation; Phase 4 can substitute confirmed personalization. Repeated product text is reduced while funding/loan disclosures remain visible.
+
+The isolated Phase 1 checkpoint passed **86 tests**, TypeScript and production build before its commit. Final full-page overflow checks repeated at 375, 390, 768 and 1280 pixels after all phases.

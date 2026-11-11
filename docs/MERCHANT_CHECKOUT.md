@@ -79,14 +79,19 @@ review → explicit merchant capture → forecast update → merchant receipt. T
 tampering/expiry, quote/currency mismatch, other browsers, stale goals, bypass attempts, timeout
 recovery and duplicate confirmation.
 
-The 56-test suite, TypeScript checks and Next production build pass. In Chrome, a still-unpaid
-reference order was reopened at PayPal, its selected funding changed from Sandbox bank to Sandbox
-Visa, and Review Order returned to RiskPilot's impact review without capture. This verifies that
-round trip for the reference order; it does not prove Pay Later eligibility or expose actual loan
-terms. The independent merchant's completed order receipt has also been observed in Chrome.
-The agent environment rejects new local listeners with `listen EPERM`; `npm run demo` in the user's
-Terminal starts the two sites for browser acceptance.
+The current **98-test suite**, TypeScript checks and Next production build pass. Phase 2 completed a
+new live $900 USD merchant Sandbox capture after explicit confirmation, observed the merchant receipt
+and updated Dashboard, and checked provider status and both ledgers. The merchant was restarted and
+its persisted receipt remained consistent. See [the exact audit and evidence](DEMO_RELIABILITY_PHASE_2.md).
+Pending/failure/recovery scenarios additionally use automated provider fixtures; real Pay Later
+eligibility and actual loan terms remain unconfirmed.
 
 This is a local cooperating-merchant prototype. Production partner onboarding, independent keys per
 merchant, HTTPS hosting, durable database transactions, real user login and bank reconciliation remain
 outside the implemented local flow. The wider README architecture still lists unfinished services.
+
+## Complementary proactive exploration
+
+The merchant flow remains independent of RiskPilot Shop. Shop's **Explore purchase impact** is a
+separate, payment-free starting point for voluntary analysis. It is never required before merchant
+PayPal approval or the automatic signed handoff. [Both flows are release requirements](PURCHASE_FLOWS.md).
