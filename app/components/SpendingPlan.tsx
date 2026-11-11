@@ -22,6 +22,10 @@ export default function SpendingPlan({ onSaved }: { onSaved?: () => void } = {})
     window.addEventListener("rp:persona", clear); window.addEventListener("rp:refresh", clear);
     return () => { generation.current++; window.removeEventListener("rp:persona", clear); window.removeEventListener("rp:refresh", clear); };
   }, []);
+  useEffect(() => {
+    const changed = (event: Event) => { if ((event as CustomEvent<{ source?: string }>).detail?.source !== "spending-plan") reload(); };
+    window.addEventListener("rp:budget", changed); return () => window.removeEventListener("rp:budget", changed);
+  }, [reload]);
   useEffect(() => { if (editing) input.current?.focus(); }, [editing]);
   function edit(row: Category) {
     setEditing(row.categoryId); setAmount(decimal(row.draftMonthlyCents ?? row.confirmedMonthlyCents ?? row.proposedMonthlyCents)); setSaveError(""); setMessage("");
@@ -35,7 +39,7 @@ export default function SpendingPlan({ onSaved }: { onSaved?: () => void } = {})
     try {
       const result = await postJson("/api/planning-budget", { action, categoryId: row.categoryId, version: data.version, epoch: data.epoch, basisHash: data.basisHash, ...(action === "revert" ? {} : { monthlyCents }) }, "PATCH");
       if (version !== generation.current) return;
-      setSaved(result.budget); setEditing(null); setMessage(result.message); onSaved?.();
+      setSaved(result.budget); setEditing(null); setMessage(result.message); window.dispatchEvent(new CustomEvent("rp:budget", { detail: { source: "spending-plan" } })); onSaved?.();
     } catch (error) { if (version === generation.current) setSaveError((error as Error).message); }
     finally { if (version === generation.current) { lock.current = false; setBusy(false); } }
   }

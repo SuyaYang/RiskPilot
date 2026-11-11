@@ -194,3 +194,21 @@ or added. This is deliberate safe partial integration, not a claim of full budge
 checked at 375/390/768/1280px. No actual PayPal capture or existing-workspace reset was performed.
 See the [pre-change calculation audit, mappings, timing, verification and limits](FORECAST_INTEGRATION.md).
 Step 6 and Vision remain unimplemented.
+
+## Step 6 — Money What-if and grounded explanations (November 11, 2026)
+
+Money adds collapsed, read-only category-budget comparisons and on-demand, source-backed Money
+explanations. Monthly differences and calendar-prorated planning estimates are distinct from the
+authoritative 45-day forecast, which remains unchanged by unsupported category budgets. Revert
+is local; explicit confirmation reuses versioned budget storage with preview financial freshness.
+
+The coverage audit still cannot prove the categories represented by the daily-spend scalar or
+complete future expense coverage. No full-baseline replacement or inferred category mapping is
+enabled. Gemini may order only deterministic, server-authored facts; fallback remains available,
+and evidence freshness is checked before and after generation without invalidating payment inputs.
+
+239 tests, TypeScript and production build pass. Chrome rendering/screenshots and interactions were
+checked at 375/390/768/1280px. Live Gemini budget-change and capacity explanations succeeded;
+mocked outage/timeout fallback and stale-input rejection passed. No payment, order or existing-data
+reset was performed. See [the coverage audit, preview/AI contracts and verification](MONEY_WHAT_IF.md).
+Final PayPal Sandbox acceptance and demo readiness remain separate, approval-gated work.

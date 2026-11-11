@@ -5,12 +5,15 @@ import { formatCents } from "@/lib/spending/money";
 import { fullDate, useApi } from "./ui";
 import IncomePlan from "./IncomePlan";
 import SpendingPlan from "./SpendingPlan";
+import BudgetWhatIf from "./BudgetWhatIf";
+import MoneyExplanation from "./MoneyExplanation";
 
 const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 export default function MoneyPlanning() {
   const { data: loaded, error, reload } = useApi<MoneyPlanView>("/api/money-plan");
   const [saved, setSaved] = useState<MoneyPlanView | null>(null), [lastLoaded, setLastLoaded] = useState<MoneyPlanView | null>(null);
   const data = saved || loaded || lastLoaded;
+  const [selectedMonth, setSelectedMonth] = useState(0);
   const adjust = useRef<HTMLDetailsElement>(null);
   useEffect(() => { if (loaded) { setSaved(null); setLastLoaded(loaded); } }, [loaded]);
   useEffect(() => {
@@ -24,30 +27,44 @@ export default function MoneyPlanning() {
   const confirmedCount = data?.entries.filter(entry => entry.status === "confirmed" || (entry.confirmedForecast && entry.status !== "paused")).length || 0;
   const scale = Math.max(1, ...(data?.months.flatMap(month => [month.expectedIncomeCents, month.modeledOutgoingCents]) || []));
   return <section className="money-planning" aria-labelledby="three-month-title">
-    <header><span className="page-kicker">Money planning · informational</span><h2 id="three-month-title">Your next three months</h2><p className="small muted">See what&apos;s expected to come in, what&apos;s planned to go out, and what may need your attention.</p></header>
+    <header><span className="page-kicker">Money planning · informational</span><h2 id="three-month-title">Your next three months</h2><p className="small muted">See what&apos;s coming in, what&apos;s going out, and what may need attention.</p></header>
     {error ? <div><p className="error" role="alert">{error}</p><button onClick={refresh}>Retry money plan</button></div> : !data ? <p role="status" className="small muted">Loading your planning overview…</p> : <>
-      <p className="small money-plan-period">{fullDate(data.period.start)}–{fullDate(data.period.end)} · {data.months[0].partial ? "Current month remaining + two full months" : "Three full calendar months"}</p>
-      <ol className="money-months">{data.months.map(month => <li key={month.month}>
-        <h3>{monthLabel(month.month)}<span>{month.partial ? `${month.days} of ${month.calendarDays} days remaining` : "Full calendar month"}</span></h3>
-        <div className="money-comparison" role="img" aria-label={`${monthLabel(month.month)} expected income ${formatCents(month.expectedIncomeCents)}, modeled outgoings ${formatCents(month.modeledOutgoingCents)}; budgets are separate`}><span style={{ width: `${month.expectedIncomeCents / scale * 100}%` }} /><span style={{ width: `${month.modeledOutgoingCents / scale * 100}%` }} /></div>
-        <dl><div><dt><i className="income-dot" />Expected income</dt><dd>{formatCents(month.expectedIncomeCents)}</dd></div>
-          <div><dt><i className="outgoing-dot" />Modeled outgoings</dt><dd>{formatCents(month.modeledOutgoingCents)}</dd></div>
-          <div className="money-month-detail"><dt>Scheduled expenses</dt><dd>{formatCents(month.scheduledExpensesCents)}</dd></div>
-          <div className="money-month-detail"><dt>Everyday model estimate</dt><dd>{formatCents(month.everydayEstimateCents)}</dd></div>
-          {month.purchaseReservesCents > 0 && <div className="money-month-detail"><dt>Existing purchase reserves</dt><dd>{formatCents(month.purchaseReservesCents)}</dd></div>}
-          <div className="money-budget-separate"><dt>Confirmed budgets{month.partial ? " · prorated" : ""}<small>Separate; not added above</small></dt><dd>{data.confirmedBudgetCount ? formatCents(month.confirmedBudgetEstimateCents) : "None confirmed"}</dd></div>
-          {month.excludedIncomeCents > 0 && <div className="money-month-detail"><dt>Other income expectations<small>Unconfirmed / uncertain / overlap · excluded</small></dt><dd>{formatCents(month.excludedIncomeCents)}</dd></div>}
-          <div className="money-partial-difference"><dt>Income less modeled outgoings<small>Partial comparison · not spendable cash</small></dt><dd>{formatCents(month.partialDifferenceCents)}</dd></div>
+      <p className="small money-plan-period">{fullDate(data.period.start)} – {fullDate(data.period.end)}</p>
+      <div className="money-month-selector" role="group" aria-label="Choose a month">{data.months.map((month, index) => <button key={month.month} type="button" aria-pressed={selectedMonth === index} onClick={() => setSelectedMonth(index)}>{monthLabel(month.month)}</button>)}</div>
+      <ol className="money-months">{data.months.map((month, index) => <li key={month.month} className={selectedMonth === index ? "is-selected" : ""}>
+        <header><h3>{monthLabel(month.month)}</h3><p>{month.partial ? `${month.days} of ${month.calendarDays} days remaining` : "Full calendar month"}</p></header>
+        <dl><div><dt>Expected income</dt><dd>{formatCents(month.expectedIncomeCents)}</dd></div>
+          <div><dt>Modeled outgoings</dt><dd>{formatCents(month.modeledOutgoingCents)}</dd></div>
+          <div className="money-month-difference"><dt>Income less outgoings</dt><dd>{formatCents(month.partialDifferenceCents)}</dd></div>
         </dl>
       </li>)}</ol>
-      <p className="small muted">{data.policy} Modeled outgoings are a partial estimate: confirmed budgets are shown separately because they may overlap scheduled bills or everyday spending. Goals and unmodeled costs are not included.</p>
-      <p className="small money-income-summary">{data.modeledIncome.length} modeled income {data.modeledIncome.length === 1 ? "source" : "sources"} · {confirmedCount} confirmed planning {confirmedCount === 1 ? "entry" : "entries"} ({data.entries.filter(entry => entry.forecastIntegration.status === "included").length} included in 45-day forecast) · {data.confirmedBudgetCount} confirmed spending {data.confirmedBudgetCount === 1 ? "budget" : "budgets"}. Confirmation records your expectation, not a guaranteed receipt.</p>
-      <details className="money-plan-evidence"><summary>Timing, coverage & overlap notes</summary><p className="small muted">New monthly and three-month income recurs on calendar dates, clamped to the original day in shorter months. Biweekly means 14 days. Existing modeled events retain their current engine cadence (30 days for monthly items); this overview does not change it. Confirmed monthly budgets are planning estimates, prorated by remaining calendar days for a partial month, rather than future transactions.</p>
+      <figure className="money-movements" aria-labelledby="money-movements-title">
+        <figcaption><h3 id="money-movements-title">Monthly cash movements</h3><div className="money-chart-legend"><span><i className="income-dot" />Expected income</span><span><i className="outgoing-dot" />Modeled outgoings</span></div></figcaption>
+        <ul>{data.months.map(month => <li key={month.month}>
+          <div className="money-chart-month"><strong>{monthLabel(month.month)}</strong><span>{month.partial ? "Remaining days" : "Full month"}</span></div>
+          <div className="money-chart-bars" role="img" aria-label={`${monthLabel(month.month)}, ${month.partial ? `${month.days} remaining days` : "full month"}: expected income ${formatCents(month.expectedIncomeCents)}; modeled outgoings ${formatCents(month.modeledOutgoingCents)}`}>
+            <div><span className="money-bar-track"><span style={{ width: `${month.expectedIncomeCents / scale * 100}%` }} /></span><span>{formatCents(month.expectedIncomeCents)}</span></div>
+            <div><span className="money-bar-track"><span style={{ width: `${month.modeledOutgoingCents / scale * 100}%` }} /></span><span>{formatCents(month.modeledOutgoingCents)}</span></div>
+          </div>
+        </li>)}</ul>
+      </figure>
+      <p className="small muted money-planning-note">A planning comparison, not spendable cash. Income is expected, not guaranteed; category budgets stay separate from modeled outgoings.</p>
+      <details className="money-plan-evidence"><summary>Timing, coverage &amp; assumptions</summary>
+        <div className="money-breakdowns">{data.months.map(month => <section key={month.month} aria-label={`${monthLabel(month.month)} breakdown`}><h3>{monthLabel(month.month)}</h3><p className="small muted">{month.partial ? "Partial month · budgets prorated" : "Full calendar month"}</p><dl>
+          <div><dt>Scheduled expenses</dt><dd>{formatCents(month.scheduledExpensesCents)}</dd></div>
+          <div><dt>Everyday spending model</dt><dd>{formatCents(month.everydayEstimateCents)}</dd></div>
+          {month.purchaseReservesCents > 0 && <div><dt>Existing purchase reserves</dt><dd>{formatCents(month.purchaseReservesCents)}</dd></div>}
+          <div><dt>Confirmed budgets <small>Separate; not added to outgoings</small></dt><dd>{data.confirmedBudgetCount ? formatCents(month.confirmedBudgetEstimateCents) : "None confirmed"}</dd></div>
+          {month.excludedIncomeCents > 0 && <div><dt>Other income expectations <small>Unconfirmed / uncertain / overlap · excluded</small></dt><dd>{formatCents(month.excludedIncomeCents)}</dd></div>}
+        </dl></section>)}</div>
+        <p className="small muted">{data.policy} Modeled outgoings are a partial estimate; goals and unmodeled costs are not included.</p>
+        <p className="small muted">{data.modeledIncome.length} modeled income sources · {confirmedCount} confirmed planning entries ({data.entries.filter(entry => entry.forecastIntegration.status === "included").length} included in the 45-day forecast) · {data.confirmedBudgetCount} confirmed spending budgets. Confirmation records an expectation, not a guaranteed receipt.</p><p className="small muted">New monthly and three-month income recurs on calendar dates, clamped to the original day in shorter months. Biweekly means 14 days. Existing modeled events retain their current engine cadence (30 days for monthly items); this overview does not change it. Confirmed monthly budgets are planning estimates, prorated by remaining calendar days for a partial month, rather than future transactions.</p>
         <p className="small muted">Unconfirmed, uncertain, hypothetical, paused and unresolved duplicate income is excluded from expected income totals. Similarity only raises a review flag. Forecast replacement requires a specific modeled source ID. No income is added to today&apos;s balance.</p>
         {data.expenseReview.length > 0 && <p className="small muted">Budget overlap review required for {data.expenseReview.map(row => `${row.category}${row.scheduledBills.length ? ` (${row.scheduledBills.map(item => item.name).join(", ")})` : ""}`).join("; ")}. Everyday spending may also overlap these categories. No combined budget-plus-bills total is presented.</p>}
         <ul className="money-event-list">{data.events.map(event => <li key={event.id}><time dateTime={event.date}>{fullDate(event.date)}</time><span>{event.name}<small>{event.kind === "purchase_reserve" ? "Existing purchase reserve" : event.kind === "modeled" ? "Existing model" : "Planning expectation"}{!event.included && " · excluded from totals"}</small></span><strong>{event.direction === "in" ? "+" : "−"}{formatCents(event.amountCents)}</strong></li>)}</ul>
       </details>
     </>}
-    <details ref={adjust} className="adjust-money-plan"><summary>Adjust your plan · income and spending</summary><IncomePlan data={data} onSaved={setSaved} onReload={refresh} /><SpendingPlan onSaved={refresh} /></details>
+    <details ref={adjust} className="adjust-money-plan"><summary>Adjust income &amp; spending plan</summary><IncomePlan data={data} onSaved={setSaved} onReload={refresh} /><SpendingPlan onSaved={refresh} /></details>
+    {data && <><BudgetWhatIf plan={data} onConfirmed={refresh} /><details className="money-plan-insights"><summary>Understand this money plan</summary><MoneyExplanation insightBasis={data.insightBasis} onRefresh={refresh} /></details></>}
   </section>;
 }

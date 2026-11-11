@@ -4,10 +4,10 @@ import { fmtDate } from "./dates";
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** Select ordering of server-authored facts; never accept model-authored financial claims. */
-export async function explainReviewFacts(facts: Record<string, string>, required: string[], question: string) {
+export async function explainReviewFacts(facts: Record<string, string>, required: string[], question: string, timeoutMs = 25000) {
   const fallback = { text: required.map(id => facts[id]).join(" "), source: "template" as const };
   const raw = await gemini(JSON.stringify({ question, facts, required }),
-    'Arrange the required fact IDs into a clear buyer explanation. Return only JSON {"factIds":[...]}. Include each required ID exactly once. Do not calculate, write claims, or perform actions.', true);
+    'Arrange the required fact IDs into a clear buyer explanation. Return only JSON {"factIds":[...]}. Include each required ID exactly once. Do not calculate, write claims, or perform actions.', true, timeoutMs);
   if (!raw) return fallback;
   try {
     const ids: unknown = JSON.parse(raw).factIds;
@@ -16,13 +16,13 @@ export async function explainReviewFacts(facts: Record<string, string>, required
   } catch { return fallback; }
 }
 
-async function gemini(prompt: string, system: string, json = false): Promise<string | null> {
+async function gemini(prompt: string, system: string, json = false, timeoutMs = 25000): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   for (let attempt = 0; attempt < 2; attempt++) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 25000);
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,

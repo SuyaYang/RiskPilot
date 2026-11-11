@@ -1218,27 +1218,59 @@ summary { font-size:14px; }
 /* Informational planning uses the existing Money composition and restrained palette. */
 .money-planning { min-width:0; }
 .money-planning>header h2 { margin:4px 0 6px; }
-.money-plan-period { margin:12px 0;color:var(--muted); }
-.money-months { list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0;margin:16px 0; }
-.money-months>li { min-width:0;padding:0 18px;border-left:1px solid var(--line); }
-.money-months>li:first-child { padding-left:0;border-left:0; }
-.money-months>li:last-child { padding-right:0; }
-.money-months h3 { display:flex;flex-direction:column;gap:3px;margin-bottom:12px; }
-.money-months h3>span { font-size:12px;font-weight:500;color:var(--muted); }
-.money-comparison { display:flex;flex-direction:column;gap:5px;height:21px;margin-bottom:12px; }
-.money-comparison>span { display:block;height:8px;border-radius:4px;background:var(--accent); }
-.money-comparison>span+span { background:var(--ink); }
+.money-plan-period { margin:10px 0 16px;color:var(--muted); }
+.money-month-selector { display:none; }
+.money-months { list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0;margin:0 0 16px; }
+.money-months>li { min-width:0;padding:18px;background:var(--card,#fff);border:1px solid var(--line);border-radius:14px; }
+.money-months h3 { margin:0;font-size:16px; }
+.money-months header>p { margin:3px 0 16px;font-size:12px;color:var(--muted); }
 .money-months dl { margin:0; }
-.money-months dl>div { display:flex;gap:10px;justify-content:space-between;margin:7px 0;font-size:13px; }
-.money-months dt { min-width:0; }
-.money-months dd { margin:0;text-align:right;font-weight:650;overflow-wrap:anywhere; }
-.money-months small { display:block;font-size:11px;color:var(--muted); }
-.money-months .money-month-detail { color:var(--muted);font-size:12px; }
-.income-dot,.outgoing-dot { display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:5px; }
+.money-months dl>div { display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin:8px 0;font-size:13px; }
+.money-months dt { min-width:0;color:var(--muted); }
+.money-months dd { margin:0;text-align:right;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap; }
+.money-months .money-month-difference { border-top:1px solid var(--line);padding-top:12px;margin-top:12px;margin-bottom:0; }
+.money-month-difference dd { font-size:19px;letter-spacing:-.5px; }
+.money-month-difference dt { color:var(--ink);font-size:12px; }
+.income-dot,.outgoing-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:6px; }
 .outgoing-dot { background:var(--ink); }
-.money-budget-separate,.money-partial-difference { border-top:1px solid var(--line);padding-top:8px; }
-.money-plan-evidence,.adjust-money-plan { padding:0;margin-top:12px; }
-.money-plan-evidence>summary,.adjust-money-plan>summary { min-height:44px; }
+.money-movements { margin:0;padding:18px;background:#fff;border:1px solid var(--line);border-radius:14px; }
+.money-movements figcaption { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap; }
+.money-movements h3 { margin:0;font-size:14px; }
+.money-chart-legend { display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted); }
+.money-movements ul { list-style:none;padding:0;margin:14px 0 0;display:grid;gap:12px; }
+.money-movements li { display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:16px; }
+.money-chart-month strong,.money-chart-month>span { display:block;font-size:12px; }
+.money-chart-month>span { color:var(--muted);font-size:11px; }
+.money-chart-bars { display:grid;gap:4px; }
+.money-chart-bars>div { display:grid;grid-template-columns:minmax(0,1fr) 84px;gap:12px;align-items:center;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.2; }
+.money-bar-track { height:7px;background:var(--hover);border-radius:4px;overflow:hidden; }
+.money-bar-track>span { display:block;height:100%;background:var(--accent);border-radius:4px; }
+.money-chart-bars>div+div .money-bar-track>span { background:var(--ink); }
+.money-planning-note { margin:12px 0 16px; }
+.money-plan-evidence,.adjust-money-plan { padding:0;margin-top:8px; }
+.money-planning>details>summary { min-height:48px;display:list-item;align-content:center; }
+.money-breakdowns { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:12px 0; }
+.money-breakdowns>section { min-width:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px; }
+.money-breakdowns h3 { margin:0;font-size:14px; }
+.money-breakdowns p { margin:2px 0 12px; }
+.money-breakdowns dl { margin:0; }
+.money-breakdowns dl>div { display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line);font-size:12px; }
+.money-breakdowns dd { margin:0;text-align:right;font-weight:650;font-variant-numeric:tabular-nums; }
+.money-breakdowns small { display:block;color:var(--muted);font-size:11px; }
+@media(max-width:650px) {
+  .money-month-selector { display:flex;gap:4px;background:var(--hover);padding:4px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px; }
+  .money-month-selector button { flex:1;min-width:0;min-height:44px;padding:6px;font-size:12px;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:8px; }
+  .money-month-selector button[aria-pressed="true"] { background:#fff;color:var(--navy);border-color:var(--line);font-weight:650; }
+  .money-months { grid-template-columns:1fr;gap:0; }
+  .money-months>li:not(.is-selected) { display:none; }
+  .money-months>li { padding:16px; }
+  .money-movements { padding:16px; }
+  .money-movements li { grid-template-columns:76px minmax(0,1fr);gap:10px; }
+  .money-chart-bars>div { grid-template-columns:minmax(0,1fr) 72px;gap:8px;font-size:11px; }
+  .money-chart-month strong { font-size:11px; }
+  .money-chart-month>span { font-size:10px; }
+  .money-breakdowns { grid-template-columns:1fr;gap:10px; }
+}
 .money-event-list,.income-list { list-style:none;padding:0;margin:8px 0; }
 .money-event-list li { display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px; }
 .money-event-list small { display:block;color:var(--muted);font-size:12px; }
@@ -1256,16 +1288,47 @@ summary { font-size:14px; }
 .income-form-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
 .income-editor p { margin:12px 0; }
 @media(max-width:850px) {
-  .money-months { grid-template-columns:1fr;gap:16px; }
-  .money-months>li,.money-months>li:first-child,.money-months>li:last-child { padding:14px 0 0;border-left:0;border-top:1px solid var(--line); }
   .money-event-list li { grid-template-columns:minmax(0,1fr) auto;gap:4px 12px; }
   .money-event-list time { grid-column:1 / -1;color:var(--muted); }
 }
 @media(max-width:760px) {
   .income-form-grid { grid-template-columns:1fr; }
   .income-plan>.row { align-items:flex-start;flex-wrap:wrap; }
-  .money-months dl>div { font-size:13px; }
 }
 .income-mapping { margin:10px 0;padding:12px;background:var(--hover);border-radius:10px; }
 .income-mapping label { max-width:440px; }
 .income-mapping p { margin:10px 0; }
+
+/* Collapsed, read-only planning comparisons retain the existing Money density. */
+.budget-what-if,.money-plan-insights { padding:0;margin-top:12px; }
+.budget-what-if>summary,.money-plan-insights>summary { min-height:44px; }
+.budget-what-if-controls { display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;align-items:end;gap:12px;margin:12px 0; }
+.budget-preview-result { padding:12px 0; }
+.budget-preview-result dl { margin:12px 0; }
+.budget-preview-result dl>div { display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px; }
+.budget-preview-result dt { min-width:0; }
+.budget-preview-result dd { margin:0;font-weight:650;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums; }
+.budget-preview-actions { flex-wrap:wrap;gap:8px;margin:12px 0; }
+.budget-scenario-period { padding:0;margin:10px 0; }
+.budget-scenario-period summary { min-height:44px; }
+.budget-scenario-period ul { list-style:none;padding:0; }
+.budget-scenario-period li { display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;padding:8px 0;border-top:1px solid var(--line);font-size:13px; }
+.budget-scenario-period li>span:first-child { flex-basis:100%;color:var(--muted); }
+.money-explanation { padding:12px 0; }
+.money-explanation>label { max-width:440px;margin-bottom:10px; }
+.money-explanation>p { margin:8px 0; }
+.money-explanation details { padding:0;margin:10px 0; }
+.money-explanation summary { min-height:44px; }
+.money-explanation li { margin:10px 0; }
+@media(max-width:760px) {
+  .budget-what-if-controls { grid-template-columns:1fr;gap:10px; }
+  .budget-preview-result dl>div { font-size:13px;gap:12px; }
+}
+
+@media(min-width:651px) and (max-width:900px) {
+  .money-months>li { padding:14px; }
+  .money-months dl>div { display:block;margin:10px 0; }
+  .money-months dd { text-align:left;margin-top:2px; }
+  .money-months header>p { min-height:38px;margin-bottom:8px; }
+  .money-breakdowns { grid-template-columns:1fr; }
+}

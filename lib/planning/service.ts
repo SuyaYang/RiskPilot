@@ -4,6 +4,7 @@ import { load, update, type StoreData } from "../store";
 import { buildPersonas } from "../personas";
 import { spendingFixture } from "../spending/fixtures";
 import { budgetBasis, budgetSuggestions } from "./budget";
+import { inputHash } from "../state";
 import type { PlanningBudgetState } from "./types";
 
 export const BUDGET_POLICY = "Planning assumptions only. Saving or confirming a budget does not change the 45-day forecast, cash buffer, goals or purchase assessments. Scheduled-bill overlap still requires review before forecast integration.";
@@ -39,17 +40,19 @@ export function updatePlanningBudget(ownerId: string, body: unknown) {
   if (!demoEnabled()) throw new CheckoutError("DEMO_DISABLED", "Spending fixture demo is disabled", 404);
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new CheckoutError("INVALID_BUDGET", "Invalid budget request", 400);
   const input = body as Record<string, unknown>;
-  if (Object.keys(input).some(key => !["action", "categoryId", "monthlyCents", "version", "epoch", "basisHash"].includes(key)) ||
+  if (Object.keys(input).some(key => !["action", "categoryId", "monthlyCents", "version", "epoch", "basisHash", "financialInputHash"].includes(key)) ||
     !["edit", "confirm", "revert"].includes(String(input.action)) || typeof input.categoryId !== "string" ||
     !Number.isSafeInteger(input.version) || Number(input.version) < 0 || typeof input.epoch !== "string" || typeof input.basisHash !== "string") {
     throw new CheckoutError("INVALID_BUDGET", "Choose a category, explicit action and current budget version", 400);
   }
+  if (Object.hasOwn(input, "financialInputHash") && (input.action !== "confirm" || typeof input.financialInputHash !== "string")) throw new CheckoutError("INVALID_BUDGET", "Financial freshness is supported for confirmation only", 400);
   if (input.action === "revert" ? Object.hasOwn(input, "monthlyCents") : !Number.isSafeInteger(input.monthlyCents) || Number(input.monthlyCents) < 0 || Number(input.monthlyCents) > 100_000_000) {
     throw new CheckoutError("INVALID_BUDGET", "Enter a nonnegative monthly budget in integer cents, up to $1,000,000", 400);
   }
   return update(data => {
     const before = planningBudgetView(ownerId, data);
     if (before.version !== input.version || before.epoch !== input.epoch || before.basisHash !== input.basisHash) throw new CheckoutError("STALE_BUDGET", "Budget or history changed. Refresh the spending plan before saving.", 409);
+    if (input.financialInputHash !== undefined && input.financialInputHash !== inputHash(ownerId, data)) throw new CheckoutError("STALE_PREVIEW", "Financial inputs changed. Refresh the preview before confirming.", 409);
     const suggestion = before.categories.find(row => row.categoryId === input.categoryId);
     if (!suggestion) throw new CheckoutError("NOT_FOUND", "Category not found in this profile's history", 404);
     const state = data.personas[ownerId].planningBudget ??= newPlanningBudget();

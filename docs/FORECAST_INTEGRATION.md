@@ -110,3 +110,10 @@ Budget replacement is intentionally unresolved for every current category. No mo
 converted into authoritative daily debits and no supported timing policy is falsely claimed.
 Physical-device/provider acceptance and live bank reconciliation remain untested. Step 6 and Vision
 are not implemented.
+
+## Step 6 follow-up
+
+The [What-if and explanation implementation](MONEY_WHAT_IF.md) re-investigates category coverage
+and retains the unresolved baseline fallback. Monthly differences and illustrative proration are
+read-only; category confirmation still does not change authoritative forecasts or payment hashes.
+No full replacement is supported without a provable expense-coverage contract.

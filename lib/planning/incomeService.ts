@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { CheckoutError, demoEnabled } from "../checkout";
 import { inputHash } from "../state";
+import { planningEvidenceHash } from "./evidence";
 import { compilePlanning, modeledIncomeSignature } from "./integration";
 import { iso, today, addDays } from "../dates";
 import { validDate } from "../spending/analysis";
@@ -20,9 +21,11 @@ export function moneyPlanView(ownerId: string, data: StoreData = load()) {
   const basisHash = crypto.createHash("sha256").update(JSON.stringify({ ownerId, asOf, recurring: persona.recurring })).digest("hex");
   const budget = planningBudgetView(ownerId, data);
   const integration = compilePlanning(persona, saved);
+  const financialInputHash = inputHash(ownerId, data);
   return { schemaVersion: 1 as const, version: state?.version ?? 0, epoch: state?.epoch ?? "unsaved", basisHash, asOf,
     ...planningOverview(persona, payments, Object.values(state?.entries || {}), budget, asOf, integration),
-    integration, financialInputHash: inputHash(ownerId, data),
+    insightBasis: planningEvidenceHash(financialInputHash, { version: state?.version ?? 0, epoch: state?.epoch ?? "unsaved" }, { version: budget.version, epoch: budget.epoch, basisHash: budget.basisHash }),
+    integration, financialInputHash,
     policy: "Informational expectations only. Future income is not available cash today. Explicitly mapped income feeds the 45-day forecast but is omitted from stress; this view does not calculate safe-to-spend or investable cash.",
   };
 }
