@@ -290,7 +290,7 @@ body { font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont,
 .scenario-limit { margin: -10px 0 0; padding: 0 4px; }
 .confirm-card { position: sticky; top: 24px; padding: 24px; border-radius: var(--radius); box-shadow: var(--shadow-card); }
 .confirm-card h2 { font-size: 18px; margin: 0; }
-.confirm-card > .small { margin-top: 8px; }
+.confirm-card .checkout-order > .small { margin-top: 8px; }
 .checkout-product { display: flex; align-items: center; gap: 12px; padding: 20px 0; }
 .checkout-product-icon { width: 54px; height: 54px; display: grid; place-items: center; color: var(--ink); background: var(--hover); border-radius: 12px; flex-shrink: 0; }
 .checkout-product > div { display: flex; flex-direction: column; gap: 4px; }
@@ -972,7 +972,7 @@ summary { font-size:14px; }
   .review-workspace>.purchase-conclusion h2 { font-size:18px; }
   .review-workspace>.purchase-conclusion .row { gap:4px; }
   .review-workspace>.purchase-conclusion .row button { padding:8px; }
-  .confirm-card .checkout-product,.confirm-card > p.small:not(.confirmation-disclaimer) { display:none; }
+  .confirm-card .checkout-product,.confirm-card .checkout-order > p.small { display:none; }
   .confirm-card .checkout-total { margin-top:8px;padding:10px 0; }
   .checkout-explanation { padding:12px 14px; }
   .checkout-explanation .insight-ask { padding:6px 0; }
@@ -1150,4 +1150,27 @@ summary { font-size:14px; }
   .smart-recheck { padding:12px 14px; }
   .recheck-fresh { flex-direction:column;gap:3px; }
   .recheck-checks>div { grid-template-columns:1fr;gap:2px; }
+}
+
+/* Keep the essential review compact; expand into the full desktop workspace on demand. */
+.review-workspace > .purchase-conclusion,
+.review-workspace > [aria-label="Payment and forecast status"] { margin-bottom:16px; }
+.review-workspace > .checkout-explanation,
+.review-workspace > .profile-purchase { margin:0 0 16px; }
+.checkout-order,.checkout-payment,.checkout-footnotes { display:contents; }
+.review-analysis > summary { font-size:18px;font-weight:700;padding:12px 16px;border:1px solid var(--accent-border);border-radius:12px;background:var(--accent-soft); }
+.review-analysis[open] > summary { margin-bottom:16px; }
+.review-layout:not(:has(> .review-analysis[open])) { grid-template-columns:minmax(0,1fr);gap:16px; }
+.review-layout:not(:has(> .review-analysis[open])) > .review-analysis { grid-column:1;grid-row:1; }
+.review-layout:not(:has(> .review-analysis[open])) > .confirm-card { grid-column:1;grid-row:2;position:static;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 32px; }
+.review-layout:not(:has(> .review-analysis[open])) .checkout-order,
+.review-layout:not(:has(> .review-analysis[open])) .checkout-payment { display:block;min-width:0; }
+.review-layout:not(:has(> .review-analysis[open])) .checkout-footnotes { display:flex;grid-column:1 / -1;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px;border-top:1px solid var(--line);padding-top:12px; }
+.review-layout:not(:has(> .review-analysis[open])) .checkout-footnotes p { margin:0;padding:0;border:0; }
+.review-layout:not(:has(> .review-analysis[open])) .confirmation-disclaimer { flex-basis:100%; }
+.review-layout:not(:has(> .review-analysis[open])) .cancel-checkout { margin:0;min-height:44px;display:flex;align-items:center; }
+.review-layout:not(:has(> .review-analysis[open])) .text-action { margin-bottom:0; }
+@media(max-width:600px) {
+  .review-layout:not(:has(> .review-analysis[open])) > .confirm-card { grid-template-columns:minmax(0,1fr);gap:12px;padding:16px; }
+  .review-analysis > summary { font-size:16px; }
 }
