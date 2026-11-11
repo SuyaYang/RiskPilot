@@ -23,6 +23,11 @@ export function reviewFacts(review: PurchaseReview, method: MethodId, question: 
   const recommended = review.decision.options.find(item => item.recommended)!;
   const delays = option.goalImpact.filter(item => item.delayDays > 0);
   const facts: Record<string, string> = {
+    checkout_summary: timing === "after_income"
+      ? "This fixed-date preview cannot schedule payment; late income can still reduce your cash buffer."
+      : option.method === "wait" ? "Skipping this purchase adds no payment obligation; your existing bills and goals remain in the forecast."
+      : f.stressBufferGap < 0 ? `This purchase leaves less than your protected buffer in ${f.bufferGap < 0 ? "the current and late-income forecasts" : "the late-income forecast"}; compare waiting before confirming.`
+      : `The selected ${option.hypothetical ? "hypothetical " : ""}scenario protects the buffer in both engine checks; payment funding and terms still require PayPal confirmation.`,
     outlook: `${option.method === "wait" ? "Without this purchase" : `For the ${option.label} scenario`}, lowest projected cash is ${money(f.minBalance)} on ${f.minBalanceDate}.`,
     buffer: f.bufferGap < 0
       ? `That is ${money(Math.abs(f.bufferGap))} below your ${money(review.buffer)} cash buffer.`

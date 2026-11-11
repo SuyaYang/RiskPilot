@@ -70,7 +70,15 @@ export function BalanceChart({
   events?: { date: string; label: string }[];
 }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const W = 640;
+  const viewport = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(640);
+  useEffect(() => {
+    if (!viewport.current) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(280, Math.min(900, entry.contentRect.width))));
+    observer.observe(viewport.current);
+    return () => observer.disconnect();
+  }, []);
+  const W = width;
   const H = 230;
   const P = { l: 66, r: 14, t: 18, b: 30 };
   const all = [...series, ...(compare ?? [])].map((d) => d.balance).concat(buffer, 0);
@@ -80,12 +88,12 @@ export function BalanceChart({
   const x = (i: number) => P.l + (i / Math.max(1, series.length - 1)) * (W - P.l - P.r);
   const y = (v: number) => P.t + (1 - (v - min) / span) * (H - P.t - P.b);
   const path = (s: { balance: number }[]) => s.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.balance).toFixed(1)}`).join(" ");
-  const ticks = [max, (max + min) / 2, min];
+  const ticks = [...new Set([max, (max + min) / 2, min])];
   const selected = hoverIndex ?? activeIndex;
   const selectedDay = selected !== undefined ? series[selected] : undefined;
   const tooltipX = selected !== undefined ? Math.max(P.l, Math.min(x(selected) + 10, W - 222)) : P.l;
   return (
-    <div className="balance-chart-viewport" role="region" aria-label="Cash flow chart; scroll horizontally on smaller screens" tabIndex={0}><svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Projected balance for the next 45 days" onPointerMove={event => {
+    <div ref={viewport} className="balance-chart-viewport" role="region" aria-label="Cash flow projection"><svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Projected balance for the next 45 days" onPointerMove={event => {
       const bounds = event.currentTarget.getBoundingClientRect();
       const position = (event.clientX - bounds.left) / bounds.width * W;
       setHoverIndex(Math.max(0, Math.min(series.length - 1, Math.round((position - P.l) / (W - P.l - P.r) * (series.length - 1)))));

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Icon from "./Icon";
+import { postJson, useApi } from "./ui";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -18,21 +19,15 @@ export default function Nav() {
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState("alex");
 
+  const { data: profile, error: profileError, reload: retryProfile } = useApi<{ personas: typeof personas; active: string }>("/api/personas");
   useEffect(() => {
-    fetch("/api/personas")
-      .then(async (r) => { if (!r.ok) throw new Error("Could not load personas"); return r.json(); })
-      .then((j) => {
-        setPersonas(j.personas);
-        setActive(j.active);
-      }).catch(() => setError("Could not load demo personas. Reload to retry."));
-  }, []);
+    if (profile) { setPersonas(profile.personas); setActive(profile.active); }
+  }, [profile]);
 
   async function choose(id: string) {
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/personas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+      await postJson("/api/personas", { id });
       window.dispatchEvent(new Event("rp:persona"));
       setActive(id);
       window.dispatchEvent(new Event("rp:refresh"));
@@ -42,9 +37,7 @@ export default function Nav() {
     if (!window.confirm("Reset this demo persona (goals, simulated purchases)?")) return;
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/reset", { method: "POST" });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+      await postJson("/api/reset", {});
       window.dispatchEvent(new Event("rp:persona"));
       window.dispatchEvent(new Event("rp:refresh"));
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -57,13 +50,13 @@ export default function Nav() {
         <div className="nav-links">
         {LINKS.map((l) => (
           <Link key={l.href} href={l.href} className={path === l.href ? "active" : ""} aria-current={path === l.href ? "page" : undefined}>
-            {l.label}
+            <Icon name={l.href === "/" ? "chart" : l.href === "/goals" ? "target" : l.href === "/shop" ? "bag" : "wallet"} size={19} />{l.label}
           </Link>
         ))}
         </div>
         <span className="spacer" />
-        <div className="persona-control"><span className="avatar" aria-hidden="true">{active.slice(0, 1).toUpperCase()}</span><label className="sr-only" htmlFor="demo-persona">Demo persona</label>
-        <select id="demo-persona" disabled={busy} aria-label="Demo persona" value={active} onChange={(e) => choose(e.target.value)}>
+        <details className="demo-controls"><summary>Demo profile</summary><div className="demo-controls-body"><div className="persona-control"><span className="avatar" aria-hidden="true">{active.slice(0, 1).toUpperCase()}</span><label className="sr-only" htmlFor="demo-persona">Demo persona</label>
+        <select id="demo-persona" disabled={busy || !personas.length} aria-label="Demo persona" value={active} onChange={(e) => choose(e.target.value)}>
           {personas.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} · Demo profile
@@ -74,7 +67,8 @@ export default function Nav() {
         <button disabled={busy} onClick={resetDemo} className="small reset-button">
           Reset demo
         </button>
-        {error && <span className="error" role="alert">{error}</span>}
+        </div></details>
+        {(error || profileError) && <span className="error" role="alert">{error || profileError}{profileError && <button onClick={retryProfile}>Retry profiles</button>}</span>}
       </div>
     </nav>
   );

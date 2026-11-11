@@ -6,6 +6,9 @@ Object.assign(globalThis,{React});
 import {renderToStaticMarkup} from "react-dom/server";
 import PurchaseConclusion from "../app/components/PurchaseConclusion";
 import TimingComparison from "../app/components/TimingComparison";
+import ReviewInsights from "../app/components/ReviewInsights";
+import {reviewFacts} from "../lib/reviewInsights";
+import type {PurchaseReview} from "../lib/orderReview";
 import CaptureComparison from "../app/components/CaptureComparison";
 import {buildPersonas} from "../lib/personas";
 import {buildOptions} from "../lib/engine/options";
@@ -28,4 +31,15 @@ test("timing UI presents actual computed amounts and warns that the date remains
 test("legacy payment UI does not invent before-purchase figures",()=>{
   const html=renderToStaticMarkup(createElement(CaptureComparison,{comparison:{available:false,reason:"This earlier payment has no saved before-purchase snapshot."}}));
   assert.match(html,/no saved before-purchase snapshot/);assert.doesNotMatch(html,/\$0|Here&#x27;s what changed/);
+});
+
+test("compact merchant review preserves critical risk and gives one concise grounded explanation",()=>{
+  const current=decision(),facts=reviewFacts({decision:current,buffer:1000} as PurchaseReview,"full","overview");
+  const critical=renderToStaticMarkup(createElement(PurchaseConclusion,{decision:current,buffer:1000,compact:true,onAfterIncome:()=>{},onSkip:()=>{}}));
+  assert.match(critical,/\$820/);assert.match(critical,/\$640/);assert.match(critical,/3 goals/);assert.match(critical,/buffer/);
+  assert.doesNotMatch(critical,/Compare buying on/);
+  const explanation=renderToStaticMarkup(createElement(ReviewInsights,{orderId:"fixture",inputHash:"ui",method:"full",compact:true,fallback:facts.facts.checkout_summary}));
+  assert.match(explanation,/Before you confirm/);assert.match(explanation,/current and late-income forecasts/);assert.match(explanation,/Funding and loan terms remain unconfirmed/);
+  assert.doesNotMatch(explanation,/copilot-launcher/);
+  const future=reviewFacts({decision:current,buffer:1000} as PurchaseReview,"full","overview","after_income");assert.match(future.facts.checkout_summary,/cannot schedule payment/);
 });

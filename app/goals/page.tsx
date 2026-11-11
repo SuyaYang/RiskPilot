@@ -1,4 +1,5 @@
 "use client";
+import ResponsiveDetails from "../components/ResponsiveDetails";
 import LoadingState from "../components/LoadingState";
 import ContextCopilot from "../components/ContextCopilot";
 import Icon from "../components/Icon";
@@ -20,8 +21,9 @@ export default function Goals() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const mutationVersion = useRef(0), mutationBusy = useRef(false);
   useEffect(() => {
-    const clear = () => { setDraft(empty); setEditing(null); setMessage(""); setText(""); setPlanner(false); };
+    const clear = () => { mutationVersion.current++; mutationBusy.current = false; setBusy(false); setError(""); setDraft(empty); setEditing(null); setMessage(""); setText(""); setPlanner(false); };
     window.addEventListener("rp:persona", clear);
     return () => window.removeEventListener("rp:persona", clear);
   }, []);
@@ -37,14 +39,21 @@ export default function Goals() {
     // Also reveal an already-open editor when the same goal is selected again.
     setPlannerRequest(request => request + 1);
   }
-  async function run(action: () => Promise<void>) {
+  async function run(action: (isCurrent: () => boolean) => Promise<void>) {
+    if (mutationBusy.current) return;
+    mutationBusy.current = true;
+    const version = ++mutationVersion.current;
+    const isCurrent = () => version === mutationVersion.current;
     setBusy(true); setError(""); setMessage("");
-    try { await action(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try { await action(isCurrent); }
+    catch (e) { if (isCurrent()) setError((e as Error).message); }
+    finally { if (isCurrent()) { mutationBusy.current = false; setBusy(false); } }
   }
   async function save(e: FormEvent) {
     e.preventDefault();
-    await run(async () => {
+    await run(async isCurrent => {
       const result = await postJson(editing ? `/api/goals/${editing}` : "/api/goals", draft, editing ? "PATCH" : "POST");
+      if (!isCurrent()) return;
       setMessage(result.changes?.join(". ") || "Goal saved. Forecast updated.");
       setDraft(empty); setEditing(null); reload();
     });
@@ -64,19 +73,22 @@ export default function Goals() {
       <div className="row between"><span className="goal-purpose"><Icon name={goal.type === "invest" ? "chart" : "target"} size={17} />{primary ? "Your primary focus" : goal.type === "invest" ? "Investing goal" : "Savings goal"}</span><span className={`badge ${status?.status === "delayed" ? "yellow" : "gray"}`}>{goal.paused ? "Paused" : status?.status.replaceAll("_"," ") || "Status unknown"}</span></div>
       <h2>{goal.name}</h2><div className="goal-funding"><div><strong>{money(goal.savedSoFar)}</strong><span>saved toward {money(goal.targetAmount)}</span></div><strong className="goal-percent">{percent}%</strong></div>
       <div className="goal-track" role="progressbar" aria-label={`${goal.name} saved progress`} aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}><span style={{width:`${percent}%`}} /></div>
+      <details className="goal-forecast"><summary>Forecast & milestones</summary>
       {primary && <div className="goal-milestones" aria-label="Savings milestones">{[25,50,75,100].map(mark => <span key={mark} className={percent>=mark ? "reached" : ""}><i>{percent>=mark ? "✓" : ""}</i>{mark}%</span>)}</div>}
       <div className="goal-dates"><div><span>Target date</span><strong>{fmtDate(goal.targetDate)}</strong></div><div><span>Predicted completion</span><strong>{goal.paused ? "Paused" : status?.eta ? fmtDate(status.eta) : "Not projected"}</strong></div></div>
       <p className="small muted">Saved amount: manual demo input. Monthly allocation: {status ? money(status.allocatedThisMonth) : "unknown"}, projected.</p>
       {status?.status === "delayed" && <p className="goal-adjust-note">{status.eta ? `Currently projected after your target date. Review the amount, priority or deadline.` : "The goal is not funded within the engine's evaluated allocation horizon. Review its target or priority."}</p>}
-      <div className="goal-actions"><button disabled={busy} aria-controls="goal-planner" aria-expanded={planner && editing === goal.id} onClick={() => openPlanner(goal)}>Edit plan</button><button disabled={busy} onClick={() => run(async () => { await postJson(`/api/goals/${goal.id}`, { paused: !goal.paused, version:goal.version }, "PATCH"); reload(); })}>{goal.paused ? "Resume" : "Pause"}</button><button className="text-action" disabled={busy} onClick={() => { if (confirm(`Delete ${goal.name}?`)) void run(async () => { await postJson(`/api/goals/${goal.id}`, {version:goal.version}, "DELETE"); reload(); }); }}>Delete</button></div>
+      </details>
+      <details className="goal-action-menu"><summary aria-label={`Actions for ${goal.name}`}>Manage goal</summary><div className="goal-actions"><button disabled={busy} aria-controls="goal-planner" aria-expanded={planner && editing === goal.id} onClick={() => openPlanner(goal)}>Edit plan</button><button disabled={busy} onClick={() => run(async isCurrent => { await postJson(`/api/goals/${goal.id}`, { paused: !goal.paused, version:goal.version }, "PATCH"); if (isCurrent()) reload(); })}>{goal.paused ? "Resume" : "Pause"}</button><button className="text-action" disabled={busy} onClick={() => { if (confirm(`Delete ${goal.name}?`)) void run(async isCurrent => { await postJson(`/api/goals/${goal.id}`, {version:goal.version}, "DELETE"); if (isCurrent()) reload(); }); }}>Delete</button></div></details>
     </article>;
   }
   return <div className="goals-page">
-    <header className="goals-hero"><div><span className="page-kicker">Progress & milestones</span><h1>Make space for<br />what matters.</h1><p className="sub">Your goals, made tangible. Track what you&apos;ve saved and what the plan predicts.</p><button className="primary" aria-expanded={planner} aria-controls="goal-planner" onClick={() => planner && !editing ? setPlanner(false) : openPlanner()}>+ Add a goal</button></div><div className="overall-progress"><svg viewBox="0 0 160 160" role="img" aria-label={`${overall}% saved toward all goal targets`}><circle cx="80" cy="80" r="66" fill="none" stroke="var(--divider)" strokeWidth="9" /><circle cx="80" cy="80" r="66" fill="none" stroke="var(--accent)" strokeWidth="9" pathLength="100" strokeDasharray={`${overall} 100`} strokeLinecap="round" transform="rotate(-90 80 80)" /></svg><div><strong>{overall}%</strong><span>of goal targets saved</span></div><p>{money(saved)} / {money(total)}<span>Across {data.goals.length} goals · manual inputs</span></p></div></header>
+    <header className="goals-hero"><div><span className="page-kicker">Progress & milestones</span><h1>Make space for what matters.</h1><p className="sub">Your goals, made tangible. Track what you&apos;ve saved and what the plan predicts.</p><button className="primary" aria-expanded={planner} aria-controls="goal-planner" onClick={() => planner && !editing ? setPlanner(false) : openPlanner()}>+ Add a goal</button></div><div className="overall-progress"><svg viewBox="0 0 160 160" role="img" aria-label={`${overall}% saved toward all goal targets`}><circle cx="80" cy="80" r="66" fill="none" stroke="var(--divider)" strokeWidth="9" /><circle cx="80" cy="80" r="66" fill="none" stroke="var(--accent)" strokeWidth="9" pathLength="100" strokeDasharray={`${overall} 100`} strokeLinecap="round" transform="rotate(-90 80 80)" /></svg><div><strong>{overall}%</strong><span>of goal targets saved</span></div><p>{money(saved)} / {money(total)}<span>Across {data.goals.length} goals · manual inputs</span></p></div></header>
     {planner && <section ref={plannerRef} id="goal-planner" className="card goal-planner stack" aria-label="Goal planning form"><h2>{editing ? "Edit goal" : "Add a goal"}</h2>
         {!editing && <div className="stack"><label>Describe a goal<input value={text} onChange={e => setText(e.target.value)} placeholder="Japan trip by next March, $3,000" maxLength={300} /></label>
-          <button disabled={busy || !text.trim()} onClick={() => run(async () => {
+          <button disabled={busy || !text.trim()} onClick={() => run(async isCurrent => {
             const result = await postJson("/api/goals/parse", { text });
+            if (!isCurrent()) return;
             setDraft({ ...empty, ...result.draft });
             setMessage("Draft only. Check the amount and date, then confirm to save.");
           })}>Draft with AI</button><p className="small muted">If AI is unavailable, use the form. A draft never saves automatically.</p></div>}
@@ -90,7 +102,7 @@ export default function Goals() {
           <div className="row"><button className="primary" disabled={busy}>{editing ? "Save changes" : "Confirm and save goal"}</button>{editing && <button type="button" onClick={() => { setEditing(null); setDraft(empty); }}>Cancel edit</button>}</div>
         </form><div className="row"><button className="text-action" onClick={() => setPlanner(false)}>Close planner</button></div></section>}
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="note" role="status">{message}</p>}
-    {featured ? <div className="goals-composition"><div>{goalCard(featured,true)}</div><section className="milestone-panel"><div className="row between"><h2>Your milestones ahead</h2><Icon name="target" size={19} /></div><p className="small muted">Engine-predicted dates, separate from your chosen deadlines.</p>{milestones.length ? <ol className="milestone-timeline">{milestones.map(goal => <li key={goal.goalId}><i /><span className="small muted">{goal.eta ? `Est. ${fmtDate(goal.eta)}` : "Completion not projected"}</span><strong>{goal.name}</strong><span>Target {fmtDate(goal.targetDate)}</span></li>)}</ol> : <p className="small muted">No active milestones. Resume a paused goal or add a new one.</p>}</section></div> : <div className="card empty-state"><Icon name="target" size={34} /><h2>What are you working toward?</h2><p className="muted">Add a goal to see saved progress and a predicted completion date.</p><button onClick={() => openPlanner()}>Create your first goal</button></div>}
+    {featured ? <div className="goals-composition"><div>{goalCard(featured,true)}</div><ResponsiveDetails className="milestone-panel"><summary>Milestone timeline · {milestones.length} active</summary><div className="row between"><h2>Your milestones ahead</h2><Icon name="target" size={19} /></div><p className="small muted">Engine-predicted dates, separate from your chosen deadlines.</p>{milestones.length ? <ol className="milestone-timeline">{milestones.map(goal => <li key={goal.goalId}><i /><span className="small muted">{goal.eta ? `Est. ${fmtDate(goal.eta)}` : "Completion not projected"}</span><strong>{goal.name}</strong><span>Target {fmtDate(goal.targetDate)}</span></li>)}</ol> : <p className="small muted">No active milestones. Resume a paused goal or add a new one.</p>}</ResponsiveDetails></div> : <div className="card empty-state"><Icon name="target" size={34} /><h2>What are you working toward?</h2><p className="muted">Add a goal to see saved progress and a predicted completion date.</p><button onClick={() => openPlanner()}>Create your first goal</button></div>}
     {ordered.length > 1 && <section><div className="row between"><h2>Your other goals</h2><span className="small muted">Saved progress · fictional profile</span></div><div className="other-goals">{ordered.filter(goal => goal.id!==featured?.id).map(goal => goalCard(goal))}</div></section>}
     {data.history.length>0 && <details className="card goal-history"><summary>Plan changes ({data.history.length})</summary>{data.history.slice(0,10).map((change,index) => <div className="history-item" key={`${change.at}-${index}`}><span>{fmtDate(change.at)}</span><div><strong>{change.name}</strong><p>{change.summary || "Goal updated."}</p></div></div>)}</details>}
     <ContextCopilot page="Goals & milestones" questions={[

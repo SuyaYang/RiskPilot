@@ -48,9 +48,10 @@ const CHECK_HELP:Record<string,{why:string;action:string;href:string}>={
 };
 export default function Invest() {
   const {data,error,reload}=useApi<InvestmentData>("/api/invest");
+  const preferenceVersion = useRef(0);
   const [localPrefs,setLocalPrefs]=useState<Prefs|null>(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
-  useEffect(()=>{const clear=()=>{setLocalPrefs(null);setMessage("");};window.addEventListener("rp:persona",clear);return()=>window.removeEventListener("rp:persona",clear);},[]);
-  async function choose(next:Prefs){if(!data||busy)return;const previous=localPrefs||data.prefs;setLocalPrefs(next);setBusy(true);setMessage("");try{await postJson("/api/invest",next);}catch(error){setLocalPrefs(previous);setMessage((error as Error).message);}finally{setBusy(false);}}
+  useEffect(()=>{const clear=()=>{preferenceVersion.current++;setBusy(false);setLocalPrefs(null);setMessage("");};window.addEventListener("rp:persona",clear);return()=>window.removeEventListener("rp:persona",clear);},[]);
+  async function choose(next:Prefs){if(!data||busy)return;const version=++preferenceVersion.current;const previous=localPrefs||data.prefs;setLocalPrefs(next);setBusy(true);setMessage("");try{await postJson("/api/invest",next);}catch(error){if(version===preferenceVersion.current){setLocalPrefs(previous);setMessage((error as Error).message);}}finally{if(version===preferenceVersion.current)setBusy(false);}}
   if(error)return <div className="card stack"><h1>Readiness unavailable</h1><p className="error" role="alert">{error}</p><button onClick={reload}>Try again</button></div>;
   if(!data)return <LoadingState label="Loading investment readiness" />;
   const inv=data.investable,prefs=localPrefs||data.prefs,readiness=readinessView(inv),mix=data.templates[prefs.horizon]?.[prefs.risk];
