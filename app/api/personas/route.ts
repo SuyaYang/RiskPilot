@@ -1,19 +1,10 @@
 import { NextResponse } from "next/server";
-import { buildPersonas } from "@/lib/personas";
-import { currentPersonaId, PERSONA_COOKIE } from "@/lib/state";
-
+import { currentDemoAccount } from "@/lib/demoAccounts";
+/** Compatibility read: one account has one fixed financial profile, never a selectable list. */
 export async function GET() {
-  const active = (await currentPersonaId()).split(":").at(-1);
-  return NextResponse.json({
-    active,
-    personas: buildPersonas().map((p) => ({ id: p.id, name: p.name, tagline: p.tagline })),
-  });
+  const account = await currentDemoAccount();
+  return NextResponse.json({ active: account.personaId, personas: [{ id: account.personaId, name: account.name, tagline: "Fictional account profile" }] });
 }
-
-export async function POST(req: Request) {
-  const { id } = await req.json().catch(() => ({}));
-  if (!buildPersonas().some((p) => p.id === id)) return NextResponse.json({ error: "Unknown persona" }, { status: 400 });
-  const res = NextResponse.json({ active: id });
-  res.cookies.set(PERSONA_COOKIE, id, { httpOnly: true, sameSite: "lax", path: "/" });
-  return res;
+export async function POST() {
+  return NextResponse.json({ error: "An account has one fixed financial profile. Use demo account sign-in to change accounts." }, { status: 409 });
 }

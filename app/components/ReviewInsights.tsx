@@ -6,7 +6,7 @@ import Icon from "./Icon";
 
 type Answer = { text: string; source: "ai" | "template" | "unsupported"; uncertainty: string; inputHash: string };
 
-export default function ReviewInsights({ orderId, inputHash, method, timing="now", fallback="", compact=false }: { orderId: string; inputHash: string; method: MethodId; timing?:"now"|"after_income"; fallback?:string; compact?:boolean }) {
+export default function ReviewInsights({ orderId, inputHash, method, timing="now", fallback="", compact=false, allowQuestions=true }: { orderId: string; inputHash: string; method: MethodId; timing?:"now"|"after_income"; fallback?:string; compact?:boolean;allowQuestions?:boolean }) {
   const [input,setInput]=useState(""),[customQuestion,setCustomQuestion]=useState("");
   const [overview, setOverview] = useState<Answer | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -49,9 +49,9 @@ export default function ReviewInsights({ orderId, inputHash, method, timing="now
       <p className="insight-copy" role="status">{overview?.text || fallback || "Reading your forecast…"}</p>
       <p className="small muted">{overview?.source === "template" ? "AI is unavailable; showing a deterministic engine summary. " : ""}Fictional inputs. Funding and loan terms remain unconfirmed.</p>
       {overviewError&&<p className="small muted" role="status">AI explanation is unavailable. The current engine summary is shown above.</p>}
-      <button className="insight-ask" onClick={() => setOpen(true)}>Explore with RiskPilot <Icon name="arrow" size={15} /></button>
+      {allowQuestions && <button className="insight-ask" onClick={() => setOpen(true)}>Explore with RiskPilot <Icon name="arrow" size={15} /></button>}
     </section>
-    {!compact && <button ref={askButton} className="copilot-launcher" onClick={() => open ? close() : setOpen(true)} aria-expanded={open} aria-controls="riskpilot-copilot"><Icon name="spark" size={18} />Ask RiskPilot {open ? "−" : "+"}</button>}
+    {!compact && allowQuestions && <button ref={askButton} className="copilot-launcher" onClick={() => open ? close() : setOpen(true)} aria-expanded={open} aria-controls="riskpilot-copilot"><Icon name="spark" size={18} />Ask RiskPilot {open ? "−" : "+"}</button>}
     {open && <div ref={panel} tabIndex={-1} className="copilot-panel" id="riskpilot-copilot" role="dialog" aria-modal="false" aria-label="Ask RiskPilot" onKeyDown={event => { if (event.key === "Escape") close(); }}><div className="copilot-heading"><div className="row"><Icon name="spark" /><div><strong>Ask RiskPilot</strong><span>Understand this purchase</span></div></div><button aria-label="Close assistant" onClick={close}>×</button></div>
       <div className="copilot-body"><p className="small muted">Ask a question about this purchase, or choose a topic.</p><div className="copilot-questions">{(Object.keys(REVIEW_QUESTIONS) as ReviewQuestion[]).filter(id => id !== "overview").map(id => <button key={id} disabled={loading} aria-pressed={!customQuestion && question === id} onClick={() => ask(id)}>{REVIEW_QUESTIONS[id]}</button>)}</div>
         {question && <div className="copilot-answer" aria-live="polite"><strong>{customQuestion || REVIEW_QUESTIONS[question]}</strong><p>{loading ? "Checking the current forecast…" : error || answer?.text}</p>{answer && <span className="small muted">{answer.source === "ai" ? "Gemini-selected engine facts" : answer.source === "unsupported" ? "Outside the available data" : "Engine facts · AI fallback"}</span>}</div>}

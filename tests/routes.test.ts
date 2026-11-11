@@ -17,6 +17,8 @@ test("middleware and API integration without opening a network listener", async 
   const { RequestCookies } = await import("next/dist/compiled/@edge-runtime/cookies");
   const { NextRequest } = await import("next/server");
   const { middleware } = await import("../middleware");
+  const accounts = await import("../app/api/account/route");
+  const personas = await import("../app/api/personas/route");
   const decisions = await import("../app/api/decisions/route");
   const goals = await import("../app/api/goals/route");
   const goal = await import("../app/api/goals/[id]/route");
@@ -86,6 +88,54 @@ test("middleware and API integration without opening a network listener", async 
     const checkout = await within(cookie, () => orders.POST(req("/api/orders", { decisionId: assessment.decision.id, method: "full" })));
     assert.equal(checkout.status, 200); assert.equal((await checkout.json()).simulated, true);
     assert.deepEqual(await within(cookie, () => snap.GET()).then(r => r.json()), before);
+  });
+  await t.test("demo account sign-in fixes one financial profile and cannot choose its entitlement", async () => {
+    const cookie = workspace(), signed = `${cookie}; rp_account=alex`;
+    const opened = await accounts.POST(req("/api/account", { email: "alex@riskpilot.demo" }));
+    assert.equal(opened.status, 200); assert.match(opened.headers.get("set-cookie")!, /rp_account=alex/);
+    const identity = await within(signed.replace("rp_persona=alex", "rp_persona=jordan"), () => accounts.GET()).then(r => r.json());
+    assert.equal(identity.account.personaId, "alex"); assert.equal(identity.access.detailedAnalysis, true);
+    assert.equal((await within(signed.replace("rp_persona=alex", "rp_persona=jordan"), () => snap.GET()).then(r => r.json())).persona.id, "alex");
+    const profiles = await within(signed, () => personas.GET()).then(r => r.json());
+    assert.equal(profiles.personas.length, 1); assert.equal(profiles.active, "alex");
+    assert.equal((await personas.POST()).status, 409);
+    assert.equal((await accounts.POST(req("/api/account", { email: "jordan@riskpilot.demo", tier: "premium" }))).status, 400);
+    assert.equal((await accounts.POST(req("/api/account", { email: "real@example.com" }))).status, 400);
+    const before = await within(signed, () => snap.GET()).then(r => r.json());
+    await accounts.POST(req("/api/account", { email: "alex@riskpilot.demo" }));
+    assert.deepEqual(await within(signed, () => snap.GET()).then(r => r.json()), before);
+  });
+  await t.test("Basic checkout retains safety and payment while Premium scenario endpoints are enforced", async () => {
+    const cookie = `${workspace()}; rp_account=jordan`;
+    const before = await within(cookie, () => snap.GET()).then(r => r.json());
+    assert.equal(before.persona.id, "jordan");
+    const assessed = await within(cookie, () => decisions.POST(req("/api/decisions", { productId: "aero-14" }))).then(r => r.json());
+    assert.ok(assessed.decision.options.length > 1, "Proactive exploration remains available without a purchase");
+    const created = await within(cookie, () => orders.POST(req("/api/orders", { decisionId: assessed.decision.id, method: "full" }))).then(r => r.json());
+    const view = await within(cookie, () => order.GET(new Request("http://localhost:3000"), params(created.id))).then(r => r.json());
+    assert.equal(view.access.detailedAnalysis, false); assert.equal(view.access.demo, true);
+    assert.deepEqual(view.review.decision.options.map((option: {method:string}) => option.method), ["full"]);
+    assert.equal(view.review.decision.options[0].forecast.minBalance, assessed.decision.options[0].forecast.minBalance);
+    assert.deepEqual(view.review.decision.options[0].forecast.dailyBalances, []);
+    assert.equal(view.review.decision.afterIncome.available, false);
+    const body = { question: "overview", compact: true, method: "full", inputHash: view.review.decision.inputHash };
+    const concise = await within(cookie, () => insights.POST(req("/insights", body), params(created.id)));
+    assert.equal(concise.status, 200); assert.match((await concise.json()).text, /buffer/);
+    for (const extra of [{ compact: false }, { method: "pay_in_4" }, { timing: "after_income" }, { prompt: "Explain everything" }]) assert.equal((await within(cookie, () => insights.POST(req("/insights", { ...body, ...extra }), params(created.id)))).status, 403);
+    assert.equal((await within(cookie, () => profilePurchase.POST(req("/api/financial-profile/purchase", { orderId: created.id, method: "full" })))).status, 403);
+    assert.deepEqual(await within(cookie, () => snap.GET()).then(r => r.json()), before);
+    assert.equal((await within(cookie, () => simulate.POST(req("/simulate", {}), params(created.id)))).status, 200);
+    assert.equal((await within(cookie, () => simulate.POST(req("/simulate", {}), params(created.id)))).status, 200);
+    assert.equal((await within(cookie, () => snap.GET()).then(r => r.json())).purchases.length, 1);
+  });
+  await t.test("Premium account retains checkout What-if and cannot read another demo account's order", async () => {
+    const base = workspace(), premium = `${base}; rp_account=alex`, basic = `${base}; rp_account=jordan`;
+    const assessed = await within(premium, () => decisions.POST(req("/api/decisions", { productId: "aero-14" }))).then(r => r.json());
+    const created = await within(premium, () => orders.POST(req("/api/orders", { decisionId: assessed.decision.id, method: "full" }))).then(r => r.json());
+    const view = await within(premium, () => order.GET(new Request("http://localhost:3000"), params(created.id))).then(r => r.json());
+    assert.equal(view.access.detailedAnalysis, true); assert.ok(view.review.decision.options.length > 1); assert.equal(view.review.decision.afterIncome.available, true);
+    assert.ok(view.review.decision.options[0].forecast.dailyBalances.length > 0);
+    assert.equal((await within(basic, () => order.GET(new Request("http://localhost:3000"), params(created.id)))).status, 404);
   });
   await t.test("copilot validates input and reports missing Gemini configuration without network calls",async()=>{
     const invalid=await copilot.POST(req("/api/copilot",{question:"",page:"Goals"}));assert.equal(invalid.status,400);

@@ -90,8 +90,10 @@ export default function Checkout({ decisionId, method, price, onComplete }: { de
     {!captured && !orderId && <>
       {config?.simulation && <div className="warn"><p>Simulation only · no PayPal payment will occur.</p><button disabled={busy} onClick={simulate}>Simulate purchase</button></div>}
       {config?.paypal && !eligibility && !error && <p role="status">Checking PayPal eligibility…</p>}
-      {eligibility?.paypal && <button className="primary" disabled={busy} onClick={() => start(false)}>Continue with PayPal Sandbox</button>}
-      {eligibility?.paylater && createElement("paypal-pay-later-button", { ref: payLaterButton, onClick: () => { if (!busy) void start(true); }, disabled: busy || undefined, "aria-label": "Pay Later with PayPal Sandbox" })}
+      {(eligibility?.paypal || eligibility?.paylater) && <div className="paypal-checkout-actions">
+      {eligibility?.paypal && <div className="paypal-action-slot"><button className="primary" disabled={busy} onClick={() => start(false)}>Continue with PayPal Sandbox</button></div>}
+      {eligibility?.paylater && <div className="paypal-action-slot">{createElement("paypal-pay-later-button", { ref: payLaterButton, onClick: () => { if (!busy) void start(true); }, disabled: busy || undefined, "aria-label": "Pay Later with PayPal Sandbox" })}</div>}
+      </div>}
       {eligibility && !eligibility.paypal && !eligibility.paylater && <p className="warn">No eligible PayPal method is available for this checkout.</p>}
       {config && !config.paypal && !config.simulation && <p className="warn">Checkout is unavailable until PayPal Sandbox is configured.</p>}
     </>}

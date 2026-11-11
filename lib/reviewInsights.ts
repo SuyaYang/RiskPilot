@@ -20,7 +20,7 @@ export function reviewFacts(review: PurchaseReview, method: MethodId, question: 
   const option=current && timing==="after_income" && later?.available ? {...current,label:`buying on ${later.purchaseDate}`,forecast:later.forecast,goalImpact:later.goalImpact} : current;
   if (!option || !option.eligible) throw new Error("Unsupported forecast scenario");
   const f = option.forecast;
-  const recommended = review.decision.options.find(item => item.recommended)!;
+  const recommended = review.decision.options.find(item => item.recommended);
   const delays = option.goalImpact.filter(item => item.delayDays > 0);
   const facts: Record<string, string> = {
     checkout_summary: timing === "after_income"
@@ -34,7 +34,7 @@ export function reviewFacts(review: PurchaseReview, method: MethodId, question: 
       : `That leaves ${money(f.bufferGap)} above your ${money(review.buffer)} cash buffer.`,
     stress: `If income arrives a week late, lowest projected cash is ${money(f.stressMinBalance)}${f.stressBufferGap < 0 ? ", below your buffer" : ", at or above your buffer"}.`,
     goals: delays.length ? delays.map(item => `${item.name}: ${item.delayDays} additional days versus skipping this purchase.`).join(" ") : "The engine projects no additional goal delay for this scenario.",
-    alternative: recommended.method === "wait" ? "The engine suggests not buying now: none of the evaluated purchase scenarios protects the buffer in both checks."
+    alternative: !recommended ? "Review the current cash and buffer warnings before confirming; payment funding remains unconfirmed." : recommended.method === "wait" ? "The engine suggests not buying now: none of the evaluated purchase scenarios protects the buffer in both checks."
       : `The engine's suggested ${recommended.hypothetical ? "hypothetical " : ""}scenario is ${recommended.label}. Compare its cash flow before deciding.`,
     uncertainty: "Financial inputs are fictional. PayPal funding and loan terms are unconfirmed; a forecast cannot establish payment eligibility.",
     delay: "A purchase next month has not been evaluated. Compare 'Skip this purchase' as the no-purchase baseline; it is not a delayed-payment forecast.",

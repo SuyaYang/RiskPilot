@@ -1,3 +1,5 @@
+import { currentDemoAccount, accountAccess } from "@/lib/demoAccounts";
+import { reviewForAccess } from "@/lib/checkoutAccess";
 import { paymentStatusView, type PaymentObservation } from "@/lib/paymentStatus";
 import { captureComparison } from "@/lib/captureComparison";
 import { NextResponse } from "next/server";
@@ -19,7 +21,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     }
     // A capture/webhook may have completed while the read-only provider lookup was running.
     order = ownedOrder(id, owner);
+    const access = accountAccess(await currentDemoAccount());
     const forecastSnapshot = order.snapshotId ? load().snapshots[order.snapshotId] : null;
-    return NextResponse.json({ payment: paymentStatusView(order, observation, lookupFailed, !!forecastSnapshot), comparison:captureComparison(order,load()), order, returnUrl: merchantReturnUrl(order), cancelUrl: merchantReturnUrl(order, true), review: order.status === "CAPTURED" ? null : orderReview(order), forecastSnapshot });
+    return NextResponse.json({ access, payment: paymentStatusView(order, observation, lookupFailed, !!forecastSnapshot), comparison:captureComparison(order,load()), order, returnUrl: merchantReturnUrl(order), cancelUrl: merchantReturnUrl(order, true), review: order.status === "CAPTURED" ? null : reviewForAccess(orderReview(order), access), forecastSnapshot });
   } catch (e) { return apiError(e); }
 }

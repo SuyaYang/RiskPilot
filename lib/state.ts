@@ -1,3 +1,4 @@
+import { currentDemoAccount } from "./demoAccounts";
 import { cookies } from "next/headers";
 import { buildPersonas } from "./personas";
 import { load, ensurePersona, type StoreData } from "./store";
@@ -10,13 +11,12 @@ import { iso, today } from "./dates";
 
 export const PERSONA_COOKIE = "rp_persona";
 
-/** Fictional demo workspace only; persona selection is never an authentication credential. */
+/** Fictional workspace plus a fixed account profile; neither cookie is production authentication. */
 export async function currentPersonaId(): Promise<string> {
   const jar = await cookies();
   const workspace = jar.get("rp_workspace")?.value;
   if (!workspace || !/^[a-f0-9-]{36}$/.test(workspace)) throw new Error("Demo workspace missing; reload the page");
-  const c = jar.get(PERSONA_COOKIE)?.value;
-  const persona = buildPersonas().some((p) => p.id === c) ? c : "alex";
+  const persona = (await currentDemoAccount()).personaId;
   const id = `${workspace}:${persona}`;
   ensurePersona(id);
   return id;

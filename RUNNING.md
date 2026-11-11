@@ -191,3 +191,11 @@ scenario comparisons and What-if require no PayPal approval and create no order 
 For merchant checkout, run `npm run demo` and start directly at `http://localhost:3200`: PayPal
 approval automatically opens RiskPilot review through the signed handoff. Stop/cancel before
 **Confirm and pay** to leave the approved order uncaptured. See [both release gates](docs/PURCHASE_FLOWS.md).
+
+## Fixed account / membership demo
+
+The in-account persona dropdown has been retired. Open `/login` and enter `alex@riskpilot.demo`
+(Premium demo) or `jordan@riskpilot.demo` (Basic demo). Each account has one fixed fictional profile.
+Premium checkout offers expandable scenarios/What-if; Basic keeps the concise explanation and all
+essential warnings/payment controls. These are demo entitlements, not real sign-in or paid billing.
+See [account entry and merchant presentation sequence](docs/DEMO_ACCOUNTS.md).

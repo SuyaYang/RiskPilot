@@ -1,3 +1,4 @@
+import { currentDemoAccount, accountAccess } from "@/lib/demoAccounts";
 import { NextResponse } from "next/server";
 import { inputHash as currentInputHash, currentPersonaId } from "@/lib/state";
 import { ownedOrder, CheckoutError } from "@/lib/checkout";
@@ -14,6 +15,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const body = await req.json().catch(() => ({}));
     if (typeof body.question !== "string" || !Object.hasOwn(REVIEW_QUESTIONS, body.question)) throw new CheckoutError("INVALID_QUESTION", "Choose a supported review question.", 400);
     if (body.prompt !== undefined && (typeof body.prompt !== "string" || !body.prompt.trim() || body.prompt.length > 800)) throw new CheckoutError("INVALID_QUESTION", "Enter a question of up to 800 characters.", 400);
+    const access = accountAccess(await currentDemoAccount());
+    if (!access.detailedAnalysis && (body.compact !== true || body.question !== "overview" || body.method !== "full" || (body.timing && body.timing !== "now") || body.prompt)) throw new CheckoutError("PREMIUM_REQUIRED", "Detailed checkout analysis is a Premium demo feature. The concise summary and payment controls remain available.", 403);
     const review = orderReview(order);
     if (body.inputHash !== review.decision.inputHash) throw new CheckoutError("STALE_REVIEW", "Refresh the impact to use your latest financial inputs.", 409);
     if (!review.decision.options.some(item => item.method === body.method && item.eligible)) throw new CheckoutError("INVALID_SCENARIO", "Choose an available forecast scenario.", 400);
