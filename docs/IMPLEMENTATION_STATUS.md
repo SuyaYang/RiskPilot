@@ -153,3 +153,12 @@ unavailable/expired results preserve access to the full freshly recomputed asses
 All **147 tests**, TypeScript and production build pass. New browser/API capture checks used an
 isolated provider fixture; no new live Sandbox capture is claimed. See [complete final verification
 and implementation limits](FINAL_PURCHASE_EXPERIENCE.md).
+
+## Step 3 — spending-budget assumptions (November 11, 2026)
+
+Money now supports category budget suggestions, saved unconfirmed drafts, explicit confirmations,
+revert and source/overlap review using existing fictional spending aggregation and persona storage.
+Budget state is isolated from authoritative forecasts, cash capacity, goals and purchase scenarios.
+177 automated tests, TypeScript and production build pass; Chrome rendering/screenshots and
+interactions were checked at 375/390/768/1280px. No payment or existing-workspace reset was performed.
+See [data model, rules, verification and limits](SPENDING_BUDGETS.md). Steps 4 and 5 are not implemented.

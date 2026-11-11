@@ -2,7 +2,7 @@
 
 **See what a PayPal purchase changes before you pay. Save the resulting forecast from one verified capture.**
 
-RiskPilot is a grounded-AI financial checkpoint inside a PayPal checkout. It verifies the merchant amount, recalculates cash-buffer and goal impact, explains only deterministic engine facts, and links one verified Sandbox capture to one saved forecast. Supporting Dashboard, Goals, Shop, Invest, spending insights and Financial Profile pages use fictional finances; no live bank is connected and no real money moves.
+RiskPilot is a grounded-AI financial checkpoint inside a PayPal checkout. It verifies the merchant amount, recalculates cash-buffer and goal impact, explains only deterministic engine facts, and links one verified Sandbox capture to one saved forecast. Supporting Dashboard, Goals, Shop, Money, spending insights and Financial Profile pages use fictional finances; no live bank is connected and no real money moves.
 
 ## Built on Sheryl’s MVP
 
@@ -113,6 +113,7 @@ flowchart LR
 
 - **Finance:** the engine computes forecasts, risk, goal effects and educational investment capacity. AI cannot change authoritative figures or submit payments. Invest does not place trades.
 - **Spending:** deterministic fictional histories power trends, categories and recurring detection. Confirm/edit/reject saves informational patterns; it does not automatically add a bill or double-count an existing obligation. [Feature guide](docs/SPENDING_INTELLIGENCE.md).
+- **Money planning:** user-reviewed monthly budget assumptions derive from simulated spending history. Drafts and explicit confirmations remain separate from authoritative forecasts; `/invest` redirects to `/money`. [Budget assumptions and validation](docs/SPENDING_BUDGETS.md).
 - **Financial Profile:** summaries and personalized purchase explanations use available server facts and confirmed preferences. Sources and uncertainty remain inspectable; preferences do not overwrite financial calculations.
 - **Payments:** ownership, frozen product/amount/currency, approval and capture results are checked on the server. Pending/unknown/local-save-failure states retain same-order recovery. Merchant capture does not identify a consumer funding account or confirm an installment schedule.
 - **Demo data:** reset is for disposable fictional state. Verified/uncertain payment records are protected. Northstar’s **Start another demo checkout** rotates a completed merchant session only after verification and preserves earlier records.
@@ -127,7 +128,7 @@ npm test
 npm run build
 ```
 
-Current validation has **158 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
+Current validation has **177 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
 
 Browser checks cover desktop/mobile layouts, default collapsed review, Skip navigation and the single visible Shop PayPal button. These responsive viewport checks are not physical iOS/Android acceptance.
 

@@ -1180,3 +1180,37 @@ summary { font-size:14px; }
 }
 
 .shop-payment .paypal-checkout-actions { grid-template-columns:minmax(0,1fr); }
+
+/* Money planning assumptions stay distinct from the authoritative readiness surfaces. */
+.spending-plan { min-width:0;scroll-margin-top:24px; }
+.spending-plan header h2 { margin:4px 0 6px; }
+.spending-plan-policy { padding:10px 12px;background:var(--accent-soft);border-radius:10px; }
+.budget-column-headings,.budget-row { display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(2,minmax(100px,.8fr)) minmax(160px,1.1fr) auto;gap:16px;align-items:center; }
+.budget-column-headings { font-size:12px;color:var(--muted);padding:8px 0; }
+.budget-item { padding:10px 0;border-top:1px solid var(--line); }
+.budget-category,.budget-status,.budget-value { min-width:0;display:flex;flex-direction:column; }
+.budget-row strong { font-size:14px;overflow-wrap:anywhere; }
+.budget-category>span,.budget-status>span { font-size:12px;color:var(--muted); }
+.budget-mobile-label { display:none; }
+.budget-row>button { min-height:44px; }
+.budget-evidence { margin-top:2px;padding:0;border:0; }
+.budget-evidence summary { min-height:30px;font-size:12px;color:var(--muted); }
+.budget-evidence p { font-size:13px;color:var(--muted);margin:8px 0; }
+.budget-editor { margin:10px 0;padding:12px;background:var(--hover);border-radius:10px; }
+.budget-editor label { max-width:260px; }
+.budget-editor p { margin:8px 0; }
+.budget-editor .row { flex-wrap:wrap; }
+.budget-method { margin-top:12px; }
+.budget-method summary { min-height:44px; }
+@media(max-width:760px) {
+  .budget-column-headings { display:none; }
+  .budget-evidence summary { min-height:44px; }
+  .budget-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px 12px; }
+  .budget-category { grid-column:1;grid-row:1; }
+  .budget-mobile-label { display:block;font-size:12px;color:var(--muted); }
+  .budget-status { grid-column:2;grid-row:1; }
+  .budget-row>button { grid-column:3;grid-row:1 / 3; }
+  .budget-value { grid-row:2; }
+  .budget-value:nth-child(2) { grid-column:1; }
+  .budget-value:nth-child(3) { grid-column:2; }
+}
