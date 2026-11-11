@@ -45,6 +45,42 @@ test("middleware and API integration without opening a network listener", async 
   }
   const req = (url: string, body: unknown, method = "POST") => new Request(`http://localhost:3000${url}`, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const params = (id: string) => ({ params: Promise.resolve({ id }) });
+  await t.test("Flow A explores scenarios without PayPal authorization, order creation or financial mutation", async () => {
+    const cookie = workspace(), originalFetch = globalThis.fetch;
+    const { load } = await import("../lib/store");
+    const { orderReview } = await import("../lib/orderReview");
+    const before = await within(cookie, () => snap.GET()).then(r => r.json());
+    const ordersBefore = structuredClone(load().orders);
+    let providerCalls = 0;
+    globalThis.fetch = async () => { providerCalls++; throw new Error("Exploration must not contact a payment provider"); };
+    try {
+      const response = await within(cookie, () => decisions.POST(req("/api/decisions", { productId: "aero-14" })));
+      assert.equal(response.status, 200);
+      const { decision } = await response.json();
+      assert.deepEqual(decision.options.map((option: { method: string }) => option.method), ["full", "pay_in_4", "pay_monthly", "cheaper", "wait"]);
+      assert.equal(decision.afterIncome.available, true);
+      assert.equal(decision.options.find((option: { method: string }) => option.method === "full").forecast.minBalance, 820);
+      assert.equal(decision.afterIncome.forecast.minBalance, 1260);
+      assert.deepEqual(load().orders, ordersBefore);
+      assert.deepEqual(await within(cookie, () => snap.GET()).then(r => r.json()), before);
+      assert.equal(providerCalls, 0);
+      // A frozen merchant quote with the same price/profile must use identical calculations.
+      const review = orderReview({ orderId: "comparison-only", captureRequestId: "comparison-only-no-capture", personaId: decision.personaId, decisionId: decision.id, productId: "merchant:laptop", productName: "Merchant laptop", method: "full", amount: 900, currency: "USD", status: "CREATED", createdAt: decision.createdAt });
+      for (const method of ["full", "pay_in_4", "pay_monthly", "wait"]) {
+        const exploration = decision.options.find((option: { method: string }) => option.method === method);
+        const checkout = review.decision.options.find(option => option.method === method)!;
+        assert.deepEqual(checkout.forecast, exploration.forecast);
+        assert.deepEqual(checkout.goalImpact, exploration.goalImpact);
+      }
+      assert.deepEqual(review.decision.afterIncome, decision.afterIncome);
+      assert.deepEqual(load().orders, ordersBefore);
+    } finally { globalThis.fetch = originalFetch; }
+    // An optional checkout is still available, but starts only after its explicit order request.
+    const assessment = await within(cookie, () => decisions.POST(req("/api/decisions", { productId: "aero-14" }))).then(r => r.json());
+    const checkout = await within(cookie, () => orders.POST(req("/api/orders", { decisionId: assessment.decision.id, method: "full" })));
+    assert.equal(checkout.status, 200); assert.equal((await checkout.json()).simulated, true);
+    assert.deepEqual(await within(cookie, () => snap.GET()).then(r => r.json()), before);
+  });
   await t.test("copilot validates input and reports missing Gemini configuration without network calls",async()=>{
     const invalid=await copilot.POST(req("/api/copilot",{question:"",page:"Goals"}));assert.equal(invalid.status,400);
     const unavailable=await copilot.POST(req("/api/copilot",{question:"Am I on track?",page:"Goals"}));assert.equal(unavailable.status,503);
@@ -192,5 +228,32 @@ test("middleware and API integration without opening a network listener", async 
     await within(a, () => reset.POST());
     assert.equal((await within(a, () => snap.GET()).then(r => r.json())).purchases.length, 0);
   });
+  await t.test("reset removes simulation histories and leaves another persona in the same workspace intact", async () => {
+    const sam = a.replace("rp_persona=alex", "rp_persona=sam");
+    const beforeSam = await within(sam, () => snap.GET()).then(r => r.json());
+    const assessment = await within(a, () => decisions.POST(req("/api/decisions", { productId: "quiet-buds" }))).then(r => r.json());
+    const created = await within(a, () => orders.POST(req("/api/orders", { decisionId: assessment.decision.id, method: "full" }))).then(r => r.json());
+    await within(a, () => simulate.POST(req("/simulate", {}), params(created.id)));
+    assert.equal((await within(a, () => reset.POST())).status, 200);
+    const after = await within(a, () => snap.GET()).then(r => r.json());
+    assert.equal(after.purchases.length, 0); assert.equal(after.goalHistory.length, 0);
+    assert.deepEqual(await within(sam, () => snap.GET()).then(r => r.json()), beforeSam);
+    assert.equal((await within(a, () => order.GET(new Request("http://localhost:3000"), params(created.id)))).status, 404);
+    const { load } = await import("../lib/store");
+    assert.equal(Object.values(load().snapshots).some(x => x.orderId === created.id), false);
+  });
+  await t.test("production reset route is unavailable without explicit demo opt-in", async () => {
+    const node = process.env.NODE_ENV, flag = process.env.DEMO_SEED_ENABLED;
+    try {
+      Object.assign(process.env, { NODE_ENV: "production" }); delete process.env.DEMO_SEED_ENABLED;
+      assert.equal((await reset.POST()).status, 404);
+    } finally {
+      if (node === undefined) Reflect.deleteProperty(process.env, "NODE_ENV"); else Object.assign(process.env, { NODE_ENV: node });
+      if (flag === undefined) delete process.env.DEMO_SEED_ENABLED; else process.env.DEMO_SEED_ENABLED = flag;
+    }
+  });
+
+
+
   fs.rmSync(dir, { recursive: true });
 });

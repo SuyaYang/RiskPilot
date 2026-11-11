@@ -50,7 +50,7 @@ export async function postJson(url: string, body: unknown, method = "POST") {
     if(error.name==="TimeoutError")throw new Error("The request timed out. Check the current status before retrying.");
     throw error;
   });
-  const j = await r.json().catch(() => ({}));
+  const j = await r.json().catch(() => { throw new Error("The server returned an unreadable response. Check the current status before retrying."); });
   if (!r.ok || j.error) throw new Error(j.error || `Request failed (${r.status})`);
   return j;
 }

@@ -1,4 +1,6 @@
 "use client";
+import CheckoutStatus from "../../components/CheckoutStatus";
+import type { PaymentStatusView } from "@/lib/paymentStatus";
 import ResponsiveDetails from "../../components/ResponsiveDetails";
 import { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -18,6 +20,7 @@ import type { OrderRecord } from "@/lib/store";
 import Icon from "@/app/components/Icon";
 
 type Review = {
+  payment: PaymentStatusView;
   comparison: SavedComparison;
   order: OrderRecord; returnUrl?: string | null; cancelUrl?: string | null; review: PurchaseReview | null;
   forecastSnapshot: { id: string; createdAt: string; data: { forecast: ForecastResult; asOf: string } } | null;
@@ -71,7 +74,9 @@ function ReviewInner({id}:{id:string}) {
   const displayedForecast=preview?.forecast||option.forecast;
   const displayedImpact=preview?.goalImpact||option.goalImpact;
   const delays = displayedImpact.filter(goal => goal.delayDays > 0);
-  const unknown = data.order.status === "UNKNOWN";
+  const unknown = data.payment.state === "UNKNOWN";
+  const pending = data.payment.state === "PENDING";
+  const paymentBlocked = ["PENDING", "FAILED", "CREATED"].includes(data.payment.state) && !data.order.simulated;
   const grounded=reviewFacts(review,preview?"full":option.method,"overview",preview?"after_income":"now");
   const upcomingTotal = review.context.upcoming.reduce((sum, item) => sum + item.amount, 0);
   return <div className="review-workspace">
@@ -80,14 +85,15 @@ function ReviewInner({id}:{id:string}) {
     <PurchaseConclusion compact decision={review.decision} buffer={review.buffer} disabled={busy || unknown || paid} onAfterIncome={()=>{setSelected("full");setAfterIncome(true);}} onSkip={()=>{setAfterIncome(false);setSelected("wait");}}/>
     {preview&&<p className="timing-preview-banner" role="status">Previewing a purchase on {fmtDate(preview.purchaseDate)}. Payment is unavailable in this preview; return to the current checkout to pay today.</p>}
     <ReviewInsights key={`${id}:${review.decision.inputHash}:${option.method}:${!!preview}`} compact orderId={id} inputHash={review.decision.inputHash} method={preview?"full":option.method} timing={preview?"after_income":"now"} fallback={grounded.facts.checkout_summary} />
+    <CheckoutStatus payment={data.payment} />
     {unknown && <p className="warn" role="status">Payment outcome is unknown. Retry confirmation on this same order to recover its status. Do not start another purchase.</p>}
     {review.inputChanged && <p className="note small">Your finances changed. This review now uses your latest goals and commitments.</p>}
     <div className="review-layout"><aside className="card confirm-card" aria-labelledby="confirm-heading">
       <div className="row between"><h2 id="confirm-heading">Your checkout</h2><Icon name="lock" size={17} /></div><p className="small muted">{data.order.merchant?.name || "RiskPilot Demo Store"}</p><div className="checkout-product"><span className="checkout-product-icon"><Icon name="bag" size={27} /></span><div><strong>{data.order.productName}</strong><span>Quantity 1 · USD</span></div></div>
       <div className="checkout-total"><span>Total</span><strong>{money(data.order.amount)}</strong></div>
-      <div className="confirmation-note"><Icon name="shield" size={18} /><p>{unknown ? "Check or recover this same order before changing payment methods." : "Only your explicit confirmation completes payment."}</p></div>
-      {preview ? <div className="skip-purchase"><p>This is a future-date forecast. No purchase is scheduled.</p><button className="primary" disabled={busy || unknown} onClick={()=>{setAfterIncome(false);setSelected("full");}}>Return to current checkout</button><a className="btn" href={data.cancelUrl || "/shop"}>Return to {data.order.merchant?"store":"Shop"}</a></div> : selected === "wait" ? <div className="skip-purchase"><p>You&apos;re comparing the no-purchase baseline.</p><a className="btn primary" href={data.cancelUrl || "/shop"}>Skip and return to {data.order.merchant ? "store" : "Shop"}</a></div> : <button className="primary confirm-pay" disabled={busy || paid} onClick={makePayment}>{busy ? "Confirming…" : unknown ? "Recover this payment" : data.order.simulated ? "Confirm simulation" : "Confirm and pay"}{!busy && <Icon name="arrow" size={16} />}</button>}
-      {data.order.approvalUrl && <button className="change-method" disabled={busy || unknown || paid} onClick={() => window.location.assign(data.order.approvalUrl!)}>Change method in PayPal</button>}
+      <div className="confirmation-note"><Icon name="shield" size={18} /><p>{unknown || pending || data.payment.state === "CAPTURED_UNSAVED" ? "Check or recover this same order before changing payment methods." : "Only your explicit confirmation completes payment."}</p></div>
+      {preview ? <div className="skip-purchase"><p>This is a future-date forecast. No purchase is scheduled.</p><button className="primary" disabled={busy || unknown} onClick={()=>{setAfterIncome(false);setSelected("full");}}>Return to current checkout</button><a className="btn" href={data.cancelUrl || "/shop"}>Return to {data.order.merchant?"store":"Shop"}</a></div> : selected === "wait" ? <div className="skip-purchase"><p>You&apos;re comparing the no-purchase baseline.</p><a className="btn primary" href={data.cancelUrl || "/shop"}>Skip and return to {data.order.merchant ? "store" : "Shop"}</a></div> : <button className="primary confirm-pay" disabled={busy || paid} onClick={paymentBlocked ? reload : makePayment}>{busy ? "Confirming…" : paymentBlocked ? "Check payment status" : data.payment.state === "CAPTURED_UNSAVED" ? "Recover confirmed payment" : unknown ? "Recover this payment" : data.order.simulated ? "Confirm simulation" : "Confirm and pay"}{!busy && <Icon name="arrow" size={16} />}</button>}
+      {data.order.approvalUrl && <button className="change-method" disabled={busy || unknown || pending || data.payment.state === "CAPTURED_UNSAVED" || paid} onClick={() => window.location.assign(data.order.approvalUrl!)}>Change method in PayPal</button>}
       <button className="text-action" disabled={busy} onClick={reload}>Refresh financial impact</button>
       <p className="small muted confirmation-disclaimer">Forecast comparisons don&apos;t change your PayPal selection. Funding and loan terms remain unconfirmed.</p>
       <p className="security-line"><Icon name="lock" size={12} />Sandbox · No real money moves</p>

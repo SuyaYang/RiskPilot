@@ -75,12 +75,12 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
         const operation = async () => {
           const record = entry[1];
           let remote = await api.get(request.orderId); validateOrder(remote, record);
-          if (request.action === "capture" && !applyCapture(remote, record)) {
+          if (request.action === "capture" && !applyCapture(remote, record) && !readCapture(remote)) {
             if (remote.status !== "APPROVED") throw new Error("Choose and approve a payment method in PayPal first.");
             record.reviewedHash = request.reviewHash; record.confirmedAt = new Date().toISOString(); record.state = "UNKNOWN"; save();
             await api.capture(request.orderId);
             remote = await api.get(request.orderId); validateOrder(remote, record);
-            if (!applyCapture(remote, record)) throw new Error("Payment is not yet completed. Check the same order again.");
+            if (!applyCapture(remote, record) && !readCapture(remote)) throw new Error("Payment is not yet completed. Check the same order again.");
           }
           return quote(record, remote);
         };
@@ -105,7 +105,7 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
         const record = ledger.sessions[id];
         if (!record?.orderId) { json(res, 200, { status: record?.state ?? "NONE" }); return; }
         const remote = await api.get(record.orderId); validateOrder(remote, record); applyCapture(remote, record);
-        json(res, 200, { id: record.orderId, status: record.state === "CAPTURED" ? "CAPTURED" : remote.status, captureId: record.captureId }); return;
+        json(res, 200, { id: record.orderId, status: record.state === "CAPTURED" ? "CAPTURED" : remote.status, captureId: record.captureId, captureStatus: readCapture(remote)?.status ?? null }); return;
       }
       if (url.pathname === "/api/capture") { json(res, 403, { error: "Review and explicitly confirm this purchase in RiskPilot first." }); return; }
       if (req.method !== "POST" || req.headers.origin !== origin || url.pathname !== "/api/order") {

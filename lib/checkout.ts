@@ -10,7 +10,7 @@ export class CheckoutError extends Error {
   constructor(public code: string, message: string, public status = 409) { super(message); }
 }
 export const demoEnabled = () => process.env.DEMO_SEED_ENABLED === "true" ||
-  (!process.env.DEMO_SEED_ENABLED && (process.env.APP_ENV === "local" || process.env.NODE_ENV !== "production"));
+  (!process.env.DEMO_SEED_ENABLED && process.env.NODE_ENV !== "production");
 
 export interface Gateway {
   configured(): boolean;
@@ -43,7 +43,7 @@ export async function createCheckout(owner: string, decisionId: string, method: 
   update(s => {
     const command = s.commands[key];
     if (command?.state === "STARTED" && Date.now() - command.startedAt < 30000) throw new CheckoutError("CREATE_IN_PROGRESS", "Order creation is already running. Check again shortly.", 202);
-    s.commands[key] = { requestId: key, personaId: owner, decisionId, method, state: "STARTED", startedAt: Date.now(), firstAttemptAt: command?.firstAttemptAt ?? Date.now() };
+    s.commands[key] = { requestId: key, personaId: owner, decisionId, method, state: "STARTED", startedAt: Date.now(), firstAttemptAt: command?.firstAttemptAt ?? Date.now(), simulated: command?.simulated ?? !api.configured() };
   });
   try {
     const simulated = !api.configured();
@@ -75,6 +75,31 @@ function validateProviderOrder(o: OrderRecord, remote: PayPalOrder) {
     throw new CheckoutError("PROVIDER_MISMATCH", "PayPal order does not match the frozen checkout");
   }
 }
+export async function inspectCheckout(order: OrderRecord, api = gateway) {
+  const remote = await api.get(order.orderId);
+  validateProviderOrder(order, remote);
+  const capture = readCapture(remote);
+  if (capture && (capture.currency !== order.currency || !Number.isFinite(capture.amount) || Math.round(capture.amount * 100) !== Math.round(order.amount * 100))) {
+    throw new CheckoutError("PROVIDER_MISMATCH", "Capture does not match the frozen checkout");
+  }
+  return { status: remote.status, capture };
+}
+function unsettledCapture(order: OrderRecord, remote: PayPalOrder) {
+  const capture = readCapture(remote);
+  if (!capture || capture.status === "COMPLETED") return null;
+  if (capture.currency !== order.currency || !Number.isFinite(capture.amount) || Math.round(capture.amount * 100) !== Math.round(order.amount * 100)) throw new CheckoutError("PROVIDER_MISMATCH", "Capture does not match the frozen checkout");
+  const pending = capture.status === "PENDING";
+  update(data => {
+    if (data.orders[order.orderId].status !== "CAPTURED") {
+      data.orders[order.orderId].status = "UNKNOWN";
+      data.orders[order.orderId].captureCommand = "UNKNOWN";
+      data.orders[order.orderId].settlementReview = pending ? "PAYMENT.CAPTURE.PENDING" : "PAYMENT.CAPTURE.DECLINED";
+    }
+  });
+  return new CheckoutError(pending ? "PAYMENT_PENDING" : "PAYMENT_FAILED", pending
+    ? "Capture is pending. Check this same order later; do not start another purchase."
+    : "The capture did not complete. Check this order and review the payment method in PayPal.", pending ? 202 : 409);
+}
 function completed(o: OrderRecord, remote: PayPalOrder) {
   const cap = readCapture(remote);
   if (!cap || cap.status !== "COMPLETED") return null;
@@ -91,31 +116,49 @@ export async function captureCheckout(owner: string, id: string, api = gateway, 
   try { remote = await api.get(id); }
   catch { throw new CheckoutError("LOOKUP_UNAVAILABLE", "Cannot check PayPal right now. Payment status is unconfirmed; check again.", 502); }
   validateProviderOrder(o, remote);
+  const latest = ownedOrder(id, owner);
+  if (latest.status === "CAPTURED") return { status: "CAPTURED", captureId: latest.captureId, duplicate: true, snapshotId: latest.snapshotId };
   const done = completed(o, remote);
   if (done) return done;
+  const unsettled = unsettledCapture(o, remote);
+  if (unsettled) throw unsettled;
   if (remote.status !== "APPROVED") {
     throw new CheckoutError(remote.status === "COMPLETED" ? "PAYMENT_PENDING" : "PAYMENT_NOT_APPROVED",
       remote.status === "COMPLETED" ? "Payment is still pending confirmation. Check again later." : "Payment not completed. Approve it in PayPal, then try again.");
   }
-  update(s => {
+  const alreadyCaptured = update(s => {
+    if (s.orders[id].status === "CAPTURED") return true;
     if (reviewedHash && inputHash(owner, s) !== reviewedHash) throw new CheckoutError("STALE_REVIEW", "Your finances changed. Refresh the purchase overview before paying.");
     if (s.orders[id].captureCommand === "STARTED" && Date.now() - (s.orders[id].captureStartedAt || 0) < 30000) throw new CheckoutError("CAPTURE_IN_PROGRESS", "Payment is already processing. Check status shortly.", 202);
     s.orders[id].captureCommand = "STARTED";
     s.orders[id].captureStartedAt = Date.now();
+    return false;
   });
+  if (alreadyCaptured) {
+    const saved = ownedOrder(id, owner);
+    return { status: "CAPTURED", captureId: saved.captureId, duplicate: true, snapshotId: saved.snapshotId };
+  }
   try {
     const result = await api.capture(id);
     if (result.id !== id) throw new Error("Capture order id mismatch");
     const out = completed(o, result);
     if (out) return out;
-  } catch {
+    const unsettled = unsettledCapture(o, result);
+    if (unsettled) throw unsettled;
+  } catch (error) {
+    if (error instanceof CheckoutError && ["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(error.code)) throw error;
     // Capture may have succeeded remotely. Lookup before allowing any retry with the same key.
     try {
       const recovered = await api.get(id);
       validateProviderOrder(o, recovered);
       const out = completed(o, recovered);
       if (out) return out;
-    } catch { /* persist UNKNOWN below; do not create another capture command */ }
+      const unsettled = unsettledCapture(o, recovered);
+      if (unsettled) throw unsettled;
+    } catch (error) {
+      if (error instanceof CheckoutError && ["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(error.code)) throw error;
+      /* persist UNKNOWN below; do not create another capture command */
+    }
   }
   update(s => { if (s.orders[id].status !== "CAPTURED") { s.orders[id].status = "UNKNOWN"; s.orders[id].captureCommand = "UNKNOWN"; } });
   throw new CheckoutError("CAPTURE_UNKNOWN", "Payment could not be confirmed. Check this order again; do not start another purchase.", 502);

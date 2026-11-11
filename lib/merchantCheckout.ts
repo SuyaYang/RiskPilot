@@ -14,6 +14,13 @@ function validQuote(quote: MerchantQuote, order?: OrderRecord) {
     throw new CheckoutError("MERCHANT_MISMATCH", "The merchant quote does not match this purchase.");
   }
 }
+export async function inspectMerchantCheckout(order: OrderRecord, caller: MerchantCaller = callMerchant) {
+  if (!order.merchant) throw new CheckoutError("NOT_FOUND", "Not a merchant checkout", 404);
+  const quote = await caller("inspect", { merchantId: order.merchant.id, checkoutId: order.merchant.checkoutId, orderId: order.orderId });
+  validQuote(quote, order);
+  if (quote.capture && (quote.capture.currency !== order.currency || !Number.isFinite(quote.capture.amount) || Math.round(quote.capture.amount * 100) !== Math.round(order.amount * 100))) throw new CheckoutError("MERCHANT_MISMATCH", "Merchant capture does not match this purchase");
+  return { status: quote.status, capture: quote.capture ?? null };
+}
 export async function claimMerchantCheckout(owner: string, ticket: string, caller: MerchantCaller = callMerchant) {
   let ref;
   try { ref = readMerchantTicket(ticket); }
@@ -63,11 +70,17 @@ export async function confirmMerchantCheckout(owner: string, id: string, reviewe
   try {
     const quote = await caller("capture", { merchantId: order.merchant.id, checkoutId: order.merchant.checkoutId, orderId: id }, reviewedHash);
     validQuote(quote, order);
+    if (quote.capture && quote.capture.status !== "COMPLETED") {
+      const pending = quote.capture.status === "PENDING";
+      update(data => { data.orders[id].settlementReview = pending ? "PAYMENT.CAPTURE.PENDING" : "PAYMENT.CAPTURE.DECLINED"; });
+      throw new CheckoutError(pending ? "PAYMENT_PENDING" : "PAYMENT_FAILED", pending ? "Capture is pending. Check this same order later; do not start another purchase." : "The merchant capture did not complete. Check the same order in PayPal.", pending ? 202 : 409);
+    }
     if (quote.capture?.status !== "COMPLETED") throw new Error("Merchant payment is not yet confirmed");
     const saved = recordCapture(id, quote.capture.id, quote.capture.amount, quote.capture.currency);
     return { status: "CAPTURED", captureId: quote.capture.id, snapshotId: saved.order.snapshotId, returnUrl: merchantReturnUrl(order) };
-  } catch {
+  } catch (error) {
     update(data => { if (data.orders[id].status !== "CAPTURED") { data.orders[id].status = "UNKNOWN"; data.orders[id].captureCommand = "UNKNOWN"; } });
+    if (error instanceof CheckoutError && ["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(error.code)) throw error;
     throw new CheckoutError("MERCHANT_CONFIRMATION_UNKNOWN", "Payment could not be confirmed. Retry this same confirmation to check the merchant; do not start a second purchase.", 502);
   }
 }

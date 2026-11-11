@@ -21,7 +21,7 @@ export interface OrderRecord {
 }
 export interface CreateCommand {
   requestId: string; personaId: string; decisionId: string; method: MethodId;
-  state: "STARTED" | "UNKNOWN" | "COMPLETED"; orderId?: string; startedAt: number; firstAttemptAt: number;
+  state: "STARTED" | "UNKNOWN" | "COMPLETED"; orderId?: string; simulated?: boolean; startedAt: number; firstAttemptAt: number;
 }
 export interface WebhookRecord { type: string; state: "RECEIVED" | "PROCESSED" | "IGNORED"; raw: string }
 export interface StoreData {
@@ -80,6 +80,9 @@ export function reset(personaId: string) {
   update(d => {
     if (Object.values(d.orders).some(o => o.personaId === personaId && !o.simulated)) {
       throw new Error("This workspace has Sandbox orders. Use a new browser workspace to preserve payment records.");
+    }
+    if (Object.values(d.commands).some(command => command.personaId === personaId && command.simulated !== true && command.state !== "COMPLETED")) {
+      throw new Error("This workspace has an unconfirmed provider request. Preserve it for recovery before resetting.");
     }
     d.personas[personaId] = newPersona(personaId);
     for (const [id, x] of Object.entries(d.decisions)) if (x.personaId === personaId) delete d.decisions[id];

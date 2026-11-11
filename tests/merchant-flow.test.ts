@@ -19,7 +19,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
   process.env.MERCHANT_ORIGIN = "http://localhost:3200";
   process.env.DEMO_TODAY = "2026-11-10";
   const key = process.env.MERCHANT_BRIDGE_SECRET;
-  let creates = 0, captures = 0, timeoutAfterCapture = false;
+  let creates = 0, captures = 0, timeoutAfterCapture = false, capturePending = false;
   let lastCreate: Parameters<typeof createOrder>[0];
   const remoteOrders = new Map<string, PayPalOrder>();
   const gateway = {
@@ -34,7 +34,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     capture: async (id: string) => {
       captures++;
       const remote = remoteOrders.get(id)!; remote.status = "COMPLETED";
-      remote.purchase_units![0].payments = { captures: [{ id: `CAP-${id}`, status: "COMPLETED", amount: { value: "900.00", currency_code: "USD" } }] };
+      remote.purchase_units![0].payments = { captures: [{ id: `CAP-${id}`, status: capturePending ? "PENDING" : "COMPLETED", amount: { value: "900.00", currency_code: "USD" } }] };
       if (timeoutAfterCapture) throw new Error("Timeout after PayPal succeeded");
       return { id, status: "COMPLETED" };
     },
@@ -47,7 +47,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     const res = {
       setHeader(name: string, value: string) { headers[name.toLowerCase()] = value; },
       writeHead(code: number, extra: { [name: string]: string } = {}) { status = code; for (const [name, value] of Object.entries(extra)) headers[name.toLowerCase()] = value; },
-      end(value = "") { raw = value; },
+      end(value: string | Buffer = "") { raw = value.toString(); },
     };
     await handle({ url: route, method: options.method || "POST", headers: { cookie: options.cookie || "", origin: options.origin ?? "http://localhost:3200", authorization: options.authorization } } as IncomingMessage, res as unknown as ServerResponse);
     return { status, headers, raw, data: raw.startsWith("{") ? JSON.parse(raw) : {}, cookie: headers["set-cookie"]?.split(";")[0] || options.cookie || "" };
@@ -85,6 +85,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
   const confirm = (body: unknown) => within(workspace, () => captureRoute.POST(req(body), params()));
 
   await t.test("merchant creates its full-price order with CONTINUE and never captures on return", async () => {
+    assert.equal(Object.keys(load().decisions).length, 0, "Merchant checkout must not require a prior Shop exploration");
     const created = await merchantRequest("/api/order"); assert.equal(created.status, 200);
     id = created.data.orderId; merchantCookie = created.cookie;
     assert.equal(lastCreate.amount, 900);
@@ -116,6 +117,32 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     assert.equal(data.cancelUrl, "http://localhost:3200/?cancelled=1");
     assert.equal(captures, 0); assert.equal(snapshot(owner).purchases.length, 0);
     assert.equal((await within(workspace, () => claim.POST(req({ ticket })))).status, 200);
+  });
+
+  await t.test("Flow B can cancel before or after approval without capture, then reopen the same review", async () => {
+    const created = await merchantRequest("/api/order");
+    const cancelledId = created.data.orderId, cookie = created.cookie;
+    const before = snapshot(owner), captureCount = captures;
+    const cancelled = await merchantRequest(`/checkout/return?cancelled=1&token=${cancelledId}`, { method: "GET", cookie });
+    assert.equal(cancelled.status, 302); assert.equal(cancelled.headers.location, "/?cancelled=1");
+    assert.equal(captures, captureCount); assert.equal(load().orders[cancelledId], undefined);
+    remoteOrders.get(cancelledId)!.status = "APPROVED";
+    const returned = await merchantRequest(`/checkout/return?token=${cancelledId}`, { method: "GET", cookie });
+    const destination = new URL(returned.headers.location);
+    assert.equal(destination.pathname, "/checkout/connect");
+    const cancelTicket = destination.searchParams.get("ticket")!;
+    assert.equal((await within(workspace, () => claim.POST(req({ ticket: cancelTicket })))).status, 200);
+    const ctx = { params: Promise.resolve({ id: cancelledId }) };
+    const review = await within(workspace, () => orderRoute.GET(new Request("http://localhost:3100"), ctx)).then(r => r.json());
+    assert.equal(review.payment.state, "APPROVED"); assert.ok(review.review);
+    assert.equal(review.cancelUrl, "http://localhost:3200/?cancelled=1");
+    assert.equal(new URL(review.order.approvalUrl).searchParams.get("token"), cancelledId);
+    const storeReturn = await merchantRequest("/?cancelled=1", { method: "GET", cookie });
+    assert.equal(storeReturn.status, 200);
+    const status = await merchantRequest("/api/status", { method: "GET", cookie });
+    assert.equal(status.data.status, "APPROVED"); assert.equal(status.data.captureId, undefined);
+    assert.equal((await within(workspace, () => claim.POST(req({ ticket: cancelTicket })))).status, 200);
+    assert.equal(captures, captureCount); assert.deepEqual(snapshot(owner), before);
   });
   await t.test("another buyer, direct capture and unsigned merchant requests cannot bypass review", async () => {
     assert.equal((await within(otherWorkspace, () => claim.POST(req({ ticket })))).status, 404);
@@ -175,4 +202,37 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     assert.equal(middleware(new NextRequest("http://localhost:3100/api/merchant/claim", { method: "POST", headers: { origin: "https://evil.example" } })).status, 403);
     assert.equal(MERCHANT_ID, "northstar-demo");
   });
+  await t.test("pending merchant capture is shown honestly, never recaptured, then recovered once", async () => {
+    timeoutAfterCapture = false; capturePending = true;
+    const created = await merchantRequest("/api/order");
+    id = created.data.orderId; merchantCookie = created.cookie;
+    remoteOrders.get(id)!.status = "APPROVED";
+    const returned = await merchantRequest(`/review?token=${id}`, { method: "GET", cookie: merchantCookie });
+    ticket = new URL(returned.headers.location).searchParams.get("ticket")!;
+    assert.equal((await within(workspace, () => claim.POST(req({ ticket })))).status, 200);
+    reviewedHash = inputHash(owner);
+    const before = snapshot(owner), captureCount = captures;
+    const review = await view();
+    assert.equal(review.payment.state, "APPROVED");
+    const first = await confirm({ reviewConfirmed: true, inputHash: reviewedHash });
+    assert.equal(first.status, 202); assert.equal((await first.json()).code, "PAYMENT_PENDING");
+    assert.equal(captures, captureCount + 1);
+    const pendingReview = await view(); assert.equal(pendingReview.payment.state, "PENDING");
+    assert.equal(pendingReview.payment.forecast, "Awaiting confirmed capture");
+    const again = await confirm({ reviewConfirmed: true, inputHash: reviewedHash });
+    assert.equal(again.status, 202); assert.equal(captures, captureCount + 1);
+    assert.deepEqual(snapshot(owner), before);
+    const receipt = await merchantRequest("/api/status", { method: "GET", cookie: merchantCookie });
+    assert.notEqual(receipt.data.status, "CAPTURED"); assert.equal(receipt.data.captureStatus, "PENDING");
+    remoteOrders.get(id)!.purchase_units![0].payments!.captures![0].status = "COMPLETED";
+    const recoveryView = await view(); assert.equal(recoveryView.payment.state, "CAPTURED_UNSAVED");
+    assert.equal(snapshot(owner).purchases.length, before.purchases.length, "Read-only status lookup must not update the forecast");
+    assert.equal((await confirm({ reviewConfirmed: true, inputHash: reviewedHash })).status, 200);
+    assert.equal(captures, captureCount + 1);
+    assert.equal(snapshot(owner).purchases.length, before.purchases.length + 1);
+    assert.equal((await view()).payment.state, "CAPTURED");
+    assert.equal((await view()).payment.forecast, "Updated & saved");
+    capturePending = false;
+  });
+
 });

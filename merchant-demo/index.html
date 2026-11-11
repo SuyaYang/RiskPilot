@@ -91,14 +91,18 @@ header{height:70px}.product{min-height:470px}h1{font-size:36px}.price{font-size:
 <script>
 const buy = document.getElementById('checkout'), status = document.getElementById('status'), error = document.getElementById('error'), reopen = document.getElementById('reopen');
 let sdk, busy = false;
+function bounded(promise, message) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), 20000); })]).finally(() => clearTimeout(timer));
+}
 async function call(url, method = 'GET') {
-  const response = await fetch(url, { method, headers: method === 'POST' ? {'Content-Type':'application/json'} : {}, ...(method === 'POST' ? {body:'{}'} : {}) });
+  const response = await fetch(url, { method, headers: method === 'POST' ? {'Content-Type':'application/json'} : {}, signal:AbortSignal.timeout(20000), ...(method === 'POST' ? {body:'{}'} : {}) });
   const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Request failed'); return data;
 }
 function show(data) {
   const expected = new URLSearchParams(location.search).get('order');
   if (expected && data.id !== expected) throw new Error('The receipt does not match this store session.');
-  status.textContent = data.status === 'CAPTURED' ? 'Sandbox payment completed.\nOrder: ' + data.id + '\nCapture: ' + data.captureId : 'Order status: ' + data.status + (data.id ? '\n' + data.id : '');
+  status.textContent = data.captureStatus === 'PENDING' ? 'Capture pending. Payment is not yet completed. Check this same order again.' : ['DECLINED','FAILED','REFUNDED','PARTIALLY_REFUNDED','REVERSED'].includes(data.captureStatus) ? 'Payment needs settlement review: ' + data.captureStatus + '. No bank reconciliation is available.' : data.status === 'CAPTURED' ? 'Sandbox payment completed.\nOrder: ' + data.id + '\nCapture: ' + data.captureId : 'Order status: ' + data.status + (data.id ? '\n' + data.id : '');
   reopen.hidden = !['APPROVED','COMPLETED'].includes(data.status);
 }
 buy.addEventListener('click', async () => {
@@ -125,7 +129,7 @@ document.getElementById('check-status').addEventListener('click', async () => { 
       const receiptStatus = await call('/api/status');
       show(receiptStatus);
       if (receiptStatus.status === 'CAPTURED') {
-        document.querySelector('h1').textContent = 'Payment confirmed.';
+        document.querySelector('h1').textContent = ['REFUNDED','PARTIALLY_REFUNDED','REVERSED','FAILED','DECLINED'].includes(receiptStatus.captureStatus) ? 'Payment needs review.' : 'Payment confirmed.';
         const receiptConfig = await call('/api/config');
         document.getElementById('saved-review').href = receiptConfig.reviewOrigin + '/checkout/review?order=' + encodeURIComponent(receiptStatus.id);
         document.getElementById('dashboard-link').href = receiptConfig.reviewOrigin + '/';
@@ -143,14 +147,14 @@ document.getElementById('check-status').addEventListener('click', async () => { 
       script.onerror = () => { clearTimeout(timer); reject(new Error('PayPal Sandbox could not load.')); };
       document.head.append(script);
     });
-    sdk = await window.paypal.createInstance({ clientId:config.clientId, components:['paypal-payments'], pageType:'checkout', locale:'en-US' });
-    const methods = await sdk.findEligibleMethods({ currencyCode:'USD', amount:'900.00' });
+    sdk = await bounded(window.paypal.createInstance({ clientId:config.clientId, components:['paypal-payments'], pageType:'checkout', locale:'en-US' }), 'PayPal initialization timed out. Reload this store to retry.');
+    const methods = await bounded(sdk.findEligibleMethods({ currencyCode:'USD', amount:'900.00' }), 'PayPal eligibility timed out. Reload this store to retry.');
     if (!methods.isEligible('paypal')) throw new Error('PayPal is not eligible for this checkout.');
     buy.textContent = 'Check out with PayPal Sandbox'; buy.disabled = false;
     if (params.get('cancelled')) status.textContent = 'Checkout cancelled.';
     const current = await call('/api/status');
     if (current.status === 'CAPTURED') { show(current); buy.disabled = true; }
     else if (current.status === 'APPROVED') reopen.hidden = false;
-  } catch(e) { error.textContent = e.message; }
+  } catch(e) { error.textContent = e.name === 'TimeoutError' ? 'The request timed out. Check this same order before retrying.' : e.message; buy.textContent = 'Checkout unavailable'; buy.disabled = true; }
 })();
 </script></body></html>

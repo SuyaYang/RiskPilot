@@ -1,4 +1,4 @@
-name: Verify checkout
+name: Verify both purchase flows
 on: [push, pull_request]
 permissions:
   contents: read
@@ -13,6 +13,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Both proactive exploration and signed merchant checkout are required release gates.
       - run: npm test
       - run: npm run build
         env:
