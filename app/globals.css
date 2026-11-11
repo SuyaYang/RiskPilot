@@ -1096,7 +1096,7 @@ summary { font-size:14px; }
   .profile-insights li { padding-block:7px; }
 }
 
-/* Fixed demo identity; membership is illustrative, never a billing control. */
+/* Fixed fictional demo identity; no subscription tiers. */
 .account-link { display:flex;align-items:center;gap:8px;min-height:44px;color:var(--ink);text-decoration:none; }
 .account-link>span:last-child { display:flex;flex-direction:column;gap:2px;font-size:13px;font-weight:650; }
 .account-link small { font-size:11px;color:var(--muted);font-weight:400; }
@@ -1105,8 +1105,6 @@ summary { font-size:14px; }
 .demo-login form { display:grid;gap:14px; }
 .demo-login label { display:grid;gap:8px; }
 .demo-login details { border-top:1px solid var(--line);padding-top:12px; }
-.premium-checkout-note { padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);font-size:14px; }
-.premium-checkout-note p { margin:8px 0; }
 /* Use explicit grid cells so the SDK custom element never sits on an inline baseline. */
 .paypal-checkout-actions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:center; }
 .paypal-checkout-actions:has(>.paypal-action-slot:only-child) { grid-template-columns:1fr; }
@@ -1121,3 +1119,35 @@ summary { font-size:14px; }
 
 /* Keep the checkout heading compact without a forced line break. */
 .review-heading h1 { font-size:clamp(22px,2.3vw,28px);line-height:1.2;font-weight:650;letter-spacing:-.6px;margin-bottom:0; }
+
+/* One full review mechanism, with a verified recheck rather than a permission tier. */
+.review-layout>.review-analysis { grid-column:1;grid-row:1;min-width:0;padding:0;border:0; }
+.review-analysis>summary { min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 0; }
+.review-analysis>summary::before { content:'▸'; }
+.review-analysis[open]>summary::before { content:'▾'; }
+.review-analysis .review-main { gap:14px; }
+.review-analysis .review-overview { margin:10px 0; }
+.smart-recheck { border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;background:var(--card);padding:14px 18px;margin-bottom:14px; }
+.smart-recheck.has-changes { border-left-color:var(--warning); }
+.smart-recheck h2 { margin:0;font-size:17px; }
+.smart-recheck p { margin:8px 0; }
+.smart-recheck details { padding:0;margin-top:8px; }
+.smart-recheck summary { min-height:44px; }
+.recheck-fresh { display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--muted);margin:0 0 12px; }
+.recheck-fresh strong { color:var(--ink);white-space:nowrap; }
+.recheck-checks { display:grid;gap:8px;margin:8px 0; }
+.recheck-checks>div { display:grid;grid-template-columns:160px 1fr;gap:12px;font-size:13px; }
+.recheck-checks dt { font-weight:600; }
+.recheck-checks dd { margin:0;color:var(--muted); }
+.recheck-changes { margin:8px 0;padding-left:18px;font-size:13px; }
+.merchant-continuation { display:grid;gap:8px;padding:12px 0; }
+.merchant-continuation .primary { justify-self:start; }
+.merchant-continuation p { margin:0; }
+.shop-checkout-details { padding:0; }
+.shop-checkout-details>summary { min-height:44px; }
+@media(max-width:850px) {
+  .review-layout>.review-analysis { grid-column:1;grid-row:auto; }
+  .smart-recheck { padding:12px 14px; }
+  .recheck-fresh { flex-direction:column;gap:3px; }
+  .recheck-checks>div { grid-template-columns:1fr;gap:2px; }
+}

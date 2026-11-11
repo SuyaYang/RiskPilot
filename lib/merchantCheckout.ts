@@ -39,7 +39,7 @@ export async function claimMerchantCheckout(owner: string, ticket: string, calle
     const decisionId = crypto.randomUUID();
     data.decisions[decisionId] = {
       id: decisionId, personaId: owner, productId: quote.productId, createdAt: new Date().toISOString(),
-      inputHash: inputHash(owner, data), schemaVersion: "rp-v1", baseline: forecast(persona, payments), options: result.options, recommendedMethod: result.recommended,
+      inputHash: inputHash(owner, data), schemaVersion: "rp-v1", origin:"merchant_review", currency:"USD", baseline: forecast(persona, payments), options: result.options, recommendedMethod: result.recommended,
     };
     const order: OrderRecord = {
       orderId: quote.orderId, personaId: owner, decisionId, productId: quote.productId, productName: quote.productName,
@@ -47,6 +47,10 @@ export async function claimMerchantCheckout(owner: string, ticket: string, calle
       merchant: { id: MERCHANT_ID, checkoutId: quote.checkoutId, name: "Northstar Electronics" },
       approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=${encodeURIComponent(quote.orderId)}`,
     };
+    const intent = quote.reviewIntentId ? data.reviewIntents?.[quote.reviewIntentId] : undefined;
+    if (intent && intent.owner === owner && intent.merchantId === quote.merchantId && intent.productId === quote.productId && intent.currency === quote.currency && intent.expiresAt > Date.now()) {
+      order.reviewIntentId = quote.reviewIntentId; order.priorAssessmentId = intent.decisionId;
+    }
     data.orders[order.orderId] = order; return order;
   });
   // Recovery can discover an already completed payment; never describe that as unpaid.

@@ -1,4 +1,5 @@
 "use client";
+import MerchantCheckoutLink from "../components/MerchantCheckoutLink";
 import ProfilePurchaseInsight from "../components/ProfilePurchaseInsight";
 import ContextCopilot from "../components/ContextCopilot";
 import TimingComparison from "../components/TimingComparison";
@@ -66,7 +67,7 @@ export default function Shop() {
         <BalanceChart series={preview?preview.forecast.dailyBalances:option.forecast.dailyBalances} compare={decision.baseline.dailyBalances} buffer={buffer} />
         <p className="small muted">Solid: selected scenario · dashed: without this purchase · visible chart: 45 days.</p>
 
-        {preview?<div className="timing-preview-banner"><p>Previewing a purchase on {fmtDate(preview.purchaseDate)}. This does not schedule an order.</p><button onClick={()=>setAfterIncome(false)}>Return to current checkout</button></div>:selected === "wait" ? <p>No checkout is started. You can revisit the purchase after your finances change.</p> : <Checkout key={`${decision.id}:${selected}`} decisionId={decision.id} method={selected} price={option.price} onComplete={() => setPaid(true)} />}
+        {preview?<div className="timing-preview-banner"><p>Previewing a purchase on {fmtDate(preview.purchaseDate)}. This does not schedule an order.</p><button onClick={()=>setAfterIncome(false)}>Return to current checkout</button></div>:selected === "wait" ? <p>No checkout is started. You can revisit the purchase after your finances change.</p> : <>{decision.productId==="aero-14" && selected!=="cheaper" && !paid && <MerchantCheckoutLink key={decision.id} decisionId={decision.id}/>}<details className="shop-checkout-details"><summary>Checkout here with PayPal</summary><Checkout key={`${decision.id}:${selected}`} decisionId={decision.id} method={selected} price={option.price} onComplete={() => setPaid(true)} /></details></>}
       </div>}
     </div>}
     <ContextCopilot decisionId={decision?.id} page="Purchase decision" source="Existing decision assessment" questions={[

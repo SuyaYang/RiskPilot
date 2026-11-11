@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     productId,
     createdAt: new Date().toISOString(),
     inputHash: inputHash(personaId,store),
-    schemaVersion: "rp-v1",
+    schemaVersion: "rp-v1", origin:"shop", currency:"USD",
     baseline: forecast(persona, payments),
     options, afterIncome,
     recommendedMethod: recommended,

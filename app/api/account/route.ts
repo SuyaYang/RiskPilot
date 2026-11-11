@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { ACCOUNT_COOKIE, DEMO_ACCOUNTS, currentDemoAccount, accountAccess } from "@/lib/demoAccounts";
+import { ACCOUNT_COOKIE, DEMO_ACCOUNTS, currentDemoAccount } from "@/lib/demoAccounts";
 import { demoEnabled } from "@/lib/checkout";
 export async function GET() {
   const account = await currentDemoAccount();
-  return NextResponse.json({ account, access: accountAccess(account), demo: true });
+  return NextResponse.json({ account, demo: true });
 }
 export async function POST(req: Request) {
   if (!demoEnabled()) return NextResponse.json({ error: "Demo account sign-in is disabled." }, { status: 404 });
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const account = value && typeof value.email === "string" && Object.keys(value).every(key => key === "email")
     ? DEMO_ACCOUNTS.find(item => item.email === value.email.trim().toLowerCase()) : null;
   if (!account) return NextResponse.json({ error: "Use a listed fictional demo email. No real account is created." }, { status: 400 });
-  const res = NextResponse.json({ account, access: accountAccess(account), demo: true });
+  const res = NextResponse.json({ account, demo: true });
   res.cookies.set(ACCOUNT_COOKIE, account.id, { httpOnly: true, sameSite: "lax", secure: new URL(req.url).protocol === "https:", path: "/", maxAge: 604800 });
   return res;
 }

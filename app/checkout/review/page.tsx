@@ -1,4 +1,5 @@
 "use client";
+import SmartRecheckSummary from "../../components/SmartRecheckSummary";
 import ProfilePurchaseInsight from "../../components/ProfilePurchaseInsight";
 import CheckoutStatus from "../../components/CheckoutStatus";
 import type { PaymentStatusView } from "@/lib/paymentStatus";
@@ -21,7 +22,6 @@ import type { OrderRecord } from "@/lib/store";
 import Icon from "@/app/components/Icon";
 
 type Review = {
-  access: {tier:"basic"|"premium";detailedAnalysis:boolean;demo:true};
   payment: PaymentStatusView;
   comparison: SavedComparison;
   order: OrderRecord; returnUrl?: string | null; cancelUrl?: string | null; review: PurchaseReview | null;
@@ -80,14 +80,16 @@ function ReviewInner({id}:{id:string}) {
   const pending = data.payment.state === "PENDING";
   const paymentBlocked = ["PENDING", "FAILED", "CREATED"].includes(data.payment.state) && !data.order.simulated;
   const grounded=reviewFacts(review,preview?"full":option.method,"overview",preview?"after_income":"now");
-  const conciseExplanation = <ReviewInsights key={`${id}:${review.decision.inputHash}:${option.method}:${!!preview}`} compact allowQuestions={data.access.detailedAnalysis} orderId={id} inputHash={review.decision.inputHash} method={preview?"full":option.method} timing={preview?"after_income":"now"} fallback={grounded.facts.checkout_summary} />;
+  const conciseExplanation = <ReviewInsights key={`${id}:${review.decision.inputHash}:${option.method}:${!!preview}`} compact orderId={id} inputHash={review.decision.inputHash} method={preview?"full":option.method} timing={preview?"after_income":"now"} fallback={grounded.facts.checkout_summary} />;
+  const aiInsight = <ProfilePurchaseInsight orderId={id} method={option.method} timing={preview?"after_income":"now"} fallback={conciseExplanation}/>;
   const upcomingTotal = review.context.upcoming.reduce((sum, item) => sum + item.amount, 0);
   return <div className="review-workspace">
     <div className="checkout-steps" aria-label="Checkout progress"><span><i className="step-number"><Icon name="check" size={12} /></i>PayPal selection</span><i className="step-line" /><span className="current" aria-current="step"><i className="step-number">2</i>Impact review</span><i className="step-line" /><span><i className="step-number">3</i>Confirm payment</span></div>
     <header className="review-heading"><div><h1>Review before you pay.</h1><p className="sub">See how this purchase fits your cash and goals.</p></div><div className="review-merchant"><span className="metric-icon"><Icon name="bag" /></span><div><strong>{data.order.merchant?.name || "RiskPilot Demo Store"}</strong><span>{data.order.productName} · {money(data.order.amount)}</span></div><span className="badge blue">{data.order.simulated ? "Simulation" : "Sandbox"}</span></div></header>
+    <SmartRecheckSummary recheck={review.recheck}/>
     <PurchaseConclusion compact decision={review.decision} buffer={review.buffer} disabled={busy || unknown || paid} onAfterIncome={()=>{setSelected("full");setAfterIncome(true);}} onSkip={()=>{setAfterIncome(false);setSelected("wait");}}/>
     {preview&&<p className="timing-preview-banner" role="status">Previewing a purchase on {fmtDate(preview.purchaseDate)}. Payment is unavailable in this preview; return to the current checkout to pay today.</p>}
-    {data.access.detailedAnalysis ? <ProfilePurchaseInsight orderId={id} method={option.method} timing={preview?"after_income":"now"} fallback={conciseExplanation}/> : conciseExplanation}
+    {review.recheck.status!=="unchanged" && aiInsight}
     <CheckoutStatus payment={data.payment} />
     {unknown && <p className="warn" role="status">Payment outcome is unknown. Retry confirmation on this same order to recover its status. Do not start another purchase.</p>}
     {review.inputChanged && <p className="note small">Your finances changed. This review now uses your latest goals and commitments.</p>}
@@ -102,18 +104,18 @@ function ReviewInner({id}:{id:string}) {
       <p className="security-line"><Icon name="lock" size={12} />Sandbox · No real money moves</p>
       {error && <p className="error" role="alert">{error}</p>}
       <a className="cancel-checkout" href={data.cancelUrl || "/shop"}>Cancel and return to {data.order.merchant ? "store" : "Shop"}</a>
-    </aside><div className="review-main">{data.access.detailedAnalysis ? <><ResponsiveDetails className="review-forecast-details"><summary>Detailed amounts & commitments</summary>    <div className="review-overview">
+    </aside><details className="review-analysis" key={`${id}:${review.decision.inputHash}:${review.recheck.status}`} open={review.recheck.status!=="unchanged" || undefined}><summary>{review.recheck.status==="unchanged" ? "View reviewed analysis" : "Explore full financial analysis"}</summary><div className="review-main">{review.recheck.status==="unchanged" && aiInsight}<ResponsiveDetails startCollapsed className="review-forecast-details"><summary>Detailed amounts & commitments</summary>    <div className="review-overview">
       <div><span className="data-kind">Merchant quote</span><span>Purchase amount</span><strong>{money(data.order.amount)}</strong><small>Full order · USD</small></div>
       <div><span className="data-kind">Predicted</span><span>Lowest projected cash</span><strong>{money(displayedForecast.minBalance)}</strong><small>{fmtDate(displayedForecast.minBalanceDate)} <RiskBadge risk={displayedForecast.risk} /></small></div>
       <div><span className="data-kind">Scheduled · demo inputs</span><span>Upcoming commitments</span><strong>{money(upcomingTotal)}</strong><small>{review.context.upcoming.length} bills & reserves · next 45 days</small></div>
       <div><span className="data-kind">Predicted</span><span>Savings goal impact</span><strong>{delays.length ? `${delays.length} delayed` : "No extra delay"}</strong><small>Versus skipping this purchase</small></div>
     </div>
 </ResponsiveDetails>
-      <ResponsiveDetails className="review-timing-details" expanded={!!preview}><summary>Compare buying now or after income</summary><TimingComparison currentMethod={option.method} decision={review.decision} active={!!preview} disabled={busy || unknown || paid} onChange={active=>{setSelected("full");setAfterIncome(active);}}/></ResponsiveDetails>
+      <ResponsiveDetails startCollapsed className="review-timing-details" expanded={!!preview}><summary>Compare buying now or after income</summary><TimingComparison currentMethod={option.method} decision={review.decision} active={!!preview} disabled={busy || unknown || paid} onChange={active=>{setSelected("full");setAfterIncome(active);}}/></ResponsiveDetails>
       {!preview&&<PurchaseImpact decision={review.decision} option={option} buffer={review.buffer} onSelect={method=>{setAfterIncome(false);setSelected(method);}} locked={busy || unknown || paid} variant="scenarios" />}
-      <ResponsiveDetails className="review-forecast-details"><summary>Explore cash flow & upcoming commitments</summary><CashFlowExplorer baseline={review.decision.baseline} forecast={displayedForecast} buffer={review.buffer} upcoming={preview?[...review.context.upcoming,{...preview.payment,source:"what-if" as const}]:review.context.upcoming} label={preview?`buy on ${fmtDate(preview.purchaseDate)}`:option.label} /></ResponsiveDetails>
+      <ResponsiveDetails startCollapsed className="review-forecast-details"><summary>Explore cash flow & upcoming commitments</summary><CashFlowExplorer baseline={review.decision.baseline} forecast={displayedForecast} buffer={review.buffer} upcoming={preview?[...review.context.upcoming,{...preview.payment,source:"what-if" as const}]:review.context.upcoming} label={preview?`buy on ${fmtDate(preview.purchaseDate)}`:option.label} /></ResponsiveDetails>
       <p className="small muted scenario-limit">The after-income preview assumes the same full price on a fixed future date. Other dates and lower-cost merchant quotes have not been evaluated.</p>
-    </> : <section className="premium-checkout-note"><strong>More context with Premium</strong><p>Payment-scenario comparisons and What-if are available with Premium. Your essential risk warnings, confirmation and cancellation remain available on Basic.</p><Link href="/login">View demo account access →</Link><p className="small muted">Demonstration access only · no subscription purchase or billing.</p></section>}</div></div>
+    </div></details></div>
     <div className="review-data-note"><Icon name="shield" size={15} /><span>{review.context.personaName}&apos;s fictional profile · As of {fmtDate(review.context.asOf)}. No live bank is connected. Full purchase price is reserved after capture until funding is confirmed.</span></div>
   </div>;
 }

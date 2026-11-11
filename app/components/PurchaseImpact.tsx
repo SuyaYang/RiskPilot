@@ -11,6 +11,7 @@ export default function PurchaseImpact({ decision, option, buffer, onSelect, loc
   const first = option.payments[0];
   return <section className="impact-review" aria-label="Purchase impact overview">
     <div className="row between"><div><h2>{variant === "scenarios" ? "Compare your options" : "Check purchase impact"}</h2></div><RiskBadge risk={option.forecast.risk} /></div>
+    {option.method === "wait" && <p className="small muted">Skipping adds no new payment. Any remaining risk comes from your existing cash flow.</p>}
     <p className="small muted">{variant === "scenarios" ? `Selected forecast: ${option.label}. Your actual payment method is selected in PayPal.` : `${option.productName} · ${money(option.price)} · Compare the effect on your cash and goals before making a payment.`}</p>
     {onSelect && <ResponsiveDetails className="scenario-picker"><summary>Compare payment forecast scenarios</summary><div className="impact-methods" role="group" aria-label="Payment forecast scenario">
       {decision.options.filter(o => (variant === "scenarios" ? ["full", "pay_in_4", "pay_monthly", "wait", "cheaper"] : ["full", "pay_in_4", "pay_monthly"]).includes(o.method)).map(o => <button

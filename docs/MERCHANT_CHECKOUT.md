@@ -95,3 +95,13 @@ outside the implemented local flow. The wider README architecture still lists un
 The merchant flow remains independent of RiskPilot Shop. Shop's **Explore purchase impact** is a
 separate, payment-free starting point for voluntary analysis. It is never required before merchant
 PayPal approval or the automatic signed handoff. [Both flows are release requirements](PURCHASE_FLOWS.md).
+
+## Final review and explicit prior-assessment association
+
+Every account receives the same full review; no subscription gate or Protection toggle applies.
+A buyer who explored Aero 14 in Shop can choose **Continue at Northstar**. The server creates only
+an expiring signed purchase intent; visiting the store creates no payment. The merchant binds that
+intent before its own server-priced order creation and returns its ID in the signed quote.
+RiskPilot verifies ownership/SKU/currency/policy/expiry and recomputes current finances before
+showing Smart Recheck. Missing/invalid/expired associations show a fresh full review. Direct
+merchant buyers need no Shop visit or intent. See [contract and repeatable demos](FINAL_PURCHASE_EXPERIENCE.md).

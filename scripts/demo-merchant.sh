@@ -35,7 +35,7 @@ web_ready() {
 }
 merchant_ready() {
   curl --noproxy '*' -fsS --connect-timeout 1 --max-time 2 "$MERCHANT_ORIGIN/api/health" 2>/dev/null |
-    python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("flow")=="riskpilot-continue-v1" and d.get("reviewOrigin")=="http://localhost:3100" else 1)' 2>/dev/null
+    python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("flow")=="riskpilot-continue-v1" and d.get("reviewIntent")=="signed-v1" and d.get("reviewOrigin")=="http://localhost:3100" else 1)' 2>/dev/null
 }
 if ! web_ready; then
   if "$check_only"; then printf 'RiskPilot is not ready at %s.\n' "$APP_ORIGIN" >&2; exit 1; fi

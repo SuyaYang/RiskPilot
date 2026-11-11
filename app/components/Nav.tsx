@@ -13,7 +13,7 @@ const LINKS = [
 
 export default function Nav() {
   const path = usePathname();
-  const { data, error, reload } = useApi<{ account: { name: string; tier: "basic" | "premium" } }>("/api/account");
+  const { data, error, reload } = useApi<{ account: { name: string } }>("/api/account");
 
   return (
     <nav className="nav" aria-label="Main navigation">
@@ -27,7 +27,7 @@ export default function Nav() {
         ))}
         </div>
         <span className="spacer" />
-        <Link href="/login" className="account-link" aria-label="Account and demo sign-in"><span className="avatar" aria-hidden="true">{data?.account.name.slice(0,1)||"A"}</span><span>{data?.account.name||"Account"}<small>{data?.account.tier === "basic" ? "Basic demo" : "Premium demo"}</small></span></Link>
+        <Link href="/login" className="account-link" aria-label="Account and demo sign-in"><span className="avatar" aria-hidden="true">{data?.account.name.slice(0,1)||"A"}</span><span>{data?.account.name||"Account"}<small>Demo account</small></span></Link>
         {error && <span className="error" role="alert">{error}<button onClick={reload}>Retry account</button></span>}
       </div>
     </nav>

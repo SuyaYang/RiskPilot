@@ -4,6 +4,7 @@ import React, {createElement} from "react";
 // The Node/tsx runner preserves classic JSX; Next supplies its automatic runtime in the app.
 Object.assign(globalThis,{React});
 import {renderToStaticMarkup} from "react-dom/server";
+import SmartRecheckSummary from "../app/components/SmartRecheckSummary";
 import PurchaseConclusion from "../app/components/PurchaseConclusion";
 import TimingComparison from "../app/components/TimingComparison";
 import ReviewInsights from "../app/components/ReviewInsights";
@@ -42,4 +43,9 @@ test("compact merchant review preserves critical risk and gives one concise grou
   assert.match(explanation,/Before you confirm/);assert.match(explanation,/current and late-income forecasts/);assert.match(explanation,/Funding and loan terms remain unconfirmed/);
   assert.doesNotMatch(explanation,/copilot-launcher/);
   const future=reviewFacts({decision:current,buffer:1000} as PurchaseReview,"full","overview","after_income");assert.match(future.facts.checkout_summary,/cannot schedule payment/);
+});
+
+test("unchanged Smart Recheck never turns an existing risk warning into a safety claim",()=>{
+  const html=renderToStaticMarkup(createElement(SmartRecheckSummary,{recheck:{status:"unchanged",reason:"No material changes.",currentAmountCents:90000,previousAmountCents:90000,reviewedAt:"2026-11-10T17:00:00Z",comparison:"full_price",checks:[]}}));
+  assert.match(html,/No material changes/);assert.match(html,/risk warning below still applies/);assert.match(html,/does not confirm PayPal funding/);assert.doesNotMatch(html,/Guaranteed|safe to buy|Premium/);
 });

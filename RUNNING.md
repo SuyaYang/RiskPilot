@@ -192,10 +192,12 @@ For merchant checkout, run `npm run demo` and start directly at `http://localhos
 approval automatically opens RiskPilot review through the signed handoff. Stop/cancel before
 **Confirm and pay** to leave the approved order uncaptured. See [both release gates](docs/PURCHASE_FLOWS.md).
 
-## Fixed account / membership demo
+## Fixed demo accounts and final purchase journeys
 
-The in-account persona dropdown has been retired. Open `/login` and enter `alex@riskpilot.demo`
-(Premium demo) or `jordan@riskpilot.demo` (Basic demo). Each account has one fixed fictional profile.
-Premium checkout offers expandable scenarios/What-if; Basic keeps the concise explanation and all
-essential warnings/payment controls. These are demo entitlements, not real sign-in or paid billing.
-See [account entry and merchant presentation sequence](docs/DEMO_ACCOUNTS.md).
+The in-account persona dropdown remains retired. Open `/login` and enter `alex@riskpilot.demo`
+or `jordan@riskpilot.demo`; each account has one fixed financial profile and full feature access.
+There are no Basic/Premium tiers or upgrade controls. For Explore → Buy, assess Aero 14 in Shop,
+use **Continue at Northstar**, then choose PayPal at the merchant. A verified prior decision
+produces Smart Recheck; expired/unavailable associations produce a fresh full review.
+Restart an older merchant server to load signed-intent support, preserving its ledger/key.
+See [repeatable scenarios and verification](docs/FINAL_PURCHASE_EXPERIENCE.md).

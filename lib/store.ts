@@ -21,6 +21,7 @@ export interface OrderRecord {
   captureRequestId: string; captureCommand?: "STARTED" | "UNKNOWN" | "COMPLETED"; captureStartedAt?: number;
   approvalUrl?: string; projectionStatus?: "PENDING" | "UPDATED"; snapshotId?: string;
   settlementReview?: string;
+  priorAssessmentId?: string; reviewIntentId?: string;
   merchant?: { id: "northstar-demo"; checkoutId: string; name: string };
 }
 export interface CreateCommand {
@@ -28,7 +29,9 @@ export interface CreateCommand {
   state: "STARTED" | "UNKNOWN" | "COMPLETED"; orderId?: string; simulated?: boolean; startedAt: number; firstAttemptAt: number;
 }
 export interface WebhookRecord { type: string; state: "RECEIVED" | "PROCESSED" | "IGNORED"; raw: string }
+export interface ReviewIntent { owner:string; decisionId:string; merchantId:"northstar-demo"; productId:"northstar:aero-14"; currency:"USD"; expiresAt:number }
 export interface StoreData {
+  reviewIntents?: Record<string, ReviewIntent>;
   version: 2;
   personas: Record<string, PersonaState>;
   decisions: Record<string, Decision>;
@@ -92,6 +95,7 @@ export function reset(personaId: string) {
     for (const [id, x] of Object.entries(d.decisions)) if (x.personaId === personaId) delete d.decisions[id];
     for (const [id, x] of Object.entries(d.orders)) if (x.personaId === personaId) delete d.orders[id];
     for (const [id, x] of Object.entries(d.commands)) if (x.personaId === personaId) delete d.commands[id];
+    for (const [id, intent] of Object.entries(d.reviewIntents || {})) if (intent.owner === personaId) delete d.reviewIntents![id];
     for (const [id, x] of Object.entries(d.snapshots)) if (x.personaId === personaId) delete d.snapshots[id];
   });
 }

@@ -2,8 +2,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 /** Secondary analysis starts expanded on desktop, and stays discoverable on mobile. */
-export default function ResponsiveDetails({ children, className, expanded = false }: {
-  children: ReactNode; className?: string; expanded?: boolean;
+export default function ResponsiveDetails({ children, className, expanded = false, startCollapsed = false }: {
+  children: ReactNode; className?: string; expanded?: boolean; startCollapsed?:boolean;
 }) {
   const [desktop, setDesktop] = useState(false);
   useEffect(() => {
@@ -13,5 +13,5 @@ export default function ResponsiveDetails({ children, className, expanded = fals
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
-  return <details className={className} open={expanded || desktop || undefined}>{children}</details>;
+  return <details className={className} open={expanded || (!startCollapsed && desktop) || undefined}>{children}</details>;
 }

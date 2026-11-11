@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { createOrder, getOrder, captureOrder, readCapture, paypalConfigured, type PayPalOrder } from "../lib/paypal";
-import { MERCHANT_ID, bridgeOrigin, merchantOrigin, merchantKey, riskpilotOrigin, readBridgeRequest, signEnvelope, type MerchantQuote, type MerchantRef } from "../lib/merchantBridge";
+import { MERCHANT_ID, bridgeOrigin, merchantOrigin, merchantKey, riskpilotOrigin, readBridgeRequest, readPurchaseIntent, signEnvelope, type MerchantPurchaseIntent, type MerchantQuote, type MerchantRef } from "../lib/merchantBridge";
 
 type MerchantGateway = { configured: typeof paypalConfigured; create: typeof createOrder; get: typeof getOrder; capture: typeof captureOrder };
 export function createMerchantServer(options: { port?: number; origin?: string; ledgerPath?: string; gateway?: MerchantGateway; bridgeKey?: string; reviewOrigin?: string } = {}) {
@@ -17,8 +17,8 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
   const price = 900;
   const product = "Aero 14 Laptop";
   const file = options.ledgerPath ?? process.env.MERCHANT_STORE_PATH ?? path.join(process.cwd(), "data", "merchant-demo.json");
-  type Record = { requestId: string; customId: string; checkoutId?: string; orderId?: string; state: "CREATING" | "CREATED" | "UNKNOWN" | "CAPTURED"; captureId?: string; reviewedHash?: string; confirmedAt?: string };
-  let ledger: { sessions: { [key: string]: Record } };
+  type Record = { reviewIntentId?: string; requestId: string; customId: string; checkoutId?: string; orderId?: string; state: "CREATING" | "CREATED" | "UNKNOWN" | "CAPTURED"; captureId?: string; reviewedHash?: string; confirmedAt?: string };
+  let ledger: { intents?: { [key:string]: MerchantPurchaseIntent }; sessions: { [key: string]: Record } };
   try { ledger = JSON.parse(readFileSync(file, "utf8")); if (!ledger.sessions) throw new Error("Invalid merchant ledger"); }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; ledger = { sessions: {} }; }
   function save() { mkdirSync(path.dirname(file), { recursive: true }); const tmp = `${file}.tmp`; writeFileSync(tmp, JSON.stringify(ledger), { mode: 0o600 }); renameSync(tmp, file); }
@@ -52,7 +52,7 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
     return { merchantId: MERCHANT_ID, checkoutId: record.checkoutId, orderId: record.orderId };
   }
   function quote(record: Record, remote: PayPalOrder): MerchantQuote {
-    return { ...reference(record), productId: "northstar:aero-14", productName: product, merchantName: "Northstar Electronics", amount: price, currency: "USD", status: remote.status, capture: readCapture(remote) };
+    return { ...reference(record), productId: "northstar:aero-14", productName: product, merchantName: "Northstar Electronics", amount: price, currency: "USD", status: remote.status, reviewIntentId:record.reviewIntentId, capture: readCapture(remote) };
   }
 
   const server = createServer(async (req, res) => {
@@ -62,7 +62,7 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
     const url = new URL(req.url || "/", origin);
     const id = session(req, res);
     try {
-      if (req.method === "GET" && url.pathname === "/api/health") { json(res, 200, { status: "ok", flow: "riskpilot-continue-v1", reviewOrigin }); return; }
+      if (req.method === "GET" && url.pathname === "/api/health") { json(res, 200, { status: "ok", flow: "riskpilot-continue-v1", reviewIntent:"signed-v1", reviewOrigin }); return; }
       if (url.pathname === "/api/riskpilot" && req.method === "POST") {
         // Only signed server-to-server requests can ask the merchant to capture.
         const auth = req.headers.authorization;
@@ -96,6 +96,11 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
         res.writeHead(302, { Location: `${reviewOrigin}/checkout/connect?ticket=${encodeURIComponent(ticket)}` }); res.end(); return;
       }
       if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/receipt")) {
+        if (url.pathname === "/" && url.searchParams.has("riskpilot_intent") && !ledger.sessions[id]?.orderId) {
+          try { (ledger.intents ??= {})[id] = readPurchaseIntent(url.searchParams.get("riskpilot_intent")!,key()); }
+          catch { if (ledger.intents) delete ledger.intents[id]; }
+          save(); // Association only; visiting the store never creates a payment.
+        }
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(readFileSync(path.join(process.cwd(), "merchant-demo/index.html"))); return;
       }
       if (req.method === "GET" && url.pathname === "/api/config") {
@@ -120,6 +125,8 @@ export function createMerchantServer(options: { port?: number; origin?: string; 
           // Never use a new idempotency key after an uncertain create, including after restart.
           if (record) throw new Error("Order creation is uncertain. Preserve this session for manual recovery; do not create a second order.");
           record = { requestId: crypto.randomUUID(), customId: `merchant-${crypto.randomUUID()}`, checkoutId: crypto.randomUUID(), state: "CREATING" };
+          const intent = ledger.intents?.[id];
+          if (intent && intent.expiresAt > Date.now()) record.reviewIntentId = intent.intentId;
           ledger.sessions[id] = record; save();
           try {
             const remote = await api.create({ amount: price, name: product, customId: record.customId, requestId: record.requestId,

@@ -1,3 +1,4 @@
+import { smartRecheck } from "./smartRecheck";
 import { buildOptions } from "./engine/options";
 import { forecast, occurrences, HORIZON_DAYS } from "./engine/forecast";
 import { addDays, iso, today } from "./dates";
@@ -25,7 +26,7 @@ export function orderReview(order: OrderRecord) {
     ...payments.filter(item => item.date > asOf && item.date < iso(addDays(today(), HORIZON_DAYS)))
       .map(item => ({ ...item, source: "purchase-reserve" as const })),
   ].sort((a, b) => a.date.localeCompare(b.date));
-  return { decision, buffer: persona.buffer, inputChanged: data.decisions[order.decisionId]?.inputHash !== hash,
+  return { recheck:smartRecheck(order,decision,persona.buffer,data), decision, buffer: persona.buffer, inputChanged: data.decisions[order.decisionId]?.inputHash !== hash,
     context: { asOf, personaName: persona.name, source: "fictional-manual-demo" as const, upcoming } };
 }
 

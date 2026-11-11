@@ -6,11 +6,12 @@ import { isIP } from "node:net";
 
 export const MERCHANT_ID = "northstar-demo" as const;
 export type MerchantRef = { merchantId: typeof MERCHANT_ID; checkoutId: string; orderId: string };
+export type MerchantPurchaseIntent = { intentId:string; merchantId:typeof MERCHANT_ID; productId:"northstar:aero-14"; currency:"USD"; expiresAt:number };
 export type MerchantTicket = MerchantRef & { expiresAt: number };
 export type BridgeRequest = MerchantRef & { action: "inspect" | "capture"; issuedAt: number; nonce: string; reviewHash?: string };
 export type MerchantQuote = MerchantRef & {
   productId: string; productName: string; merchantName: string; amount: number; currency: "USD";
-  status: string; approvalUrl?: string; capture?: { id: string; amount: number; currency: string; status: string } | null;
+  status: string; reviewIntentId?: string; approvalUrl?: string; capture?: { id: string; amount: number; currency: string; status: string } | null;
 };
 
 export function localOrigin(value: string): string {
@@ -44,12 +45,12 @@ export function merchantKey() {
   if (key.length < 32) throw new Error("Invalid local merchant bridge key");
   return key;
 }
-export function signEnvelope(purpose: "ticket" | "request" | "response", payload: unknown, key = merchantKey()) {
+export function signEnvelope(purpose: "ticket" | "request" | "response" | "intent", payload: unknown, key = merchantKey()) {
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const mac = crypto.createHmac("sha256", key).update(`${purpose}.${encoded}`).digest("hex");
   return `${encoded}.${mac}`;
 }
-export function verifyEnvelope<T>(purpose: "ticket" | "request" | "response", token: string, key = merchantKey()): T {
+export function verifyEnvelope<T>(purpose: "ticket" | "request" | "response" | "intent", token: string, key = merchantKey()): T {
   if (typeof token !== "string" || token.length > 16_384 || !/^[A-Za-z0-9_-]+\.[a-f0-9]{64}$/.test(token)) throw new Error("Invalid merchant signature");
   const [payload, mac] = token.split(".");
   const expected = crypto.createHmac("sha256", key).update(`${purpose}.${payload}`).digest();
@@ -58,6 +59,11 @@ export function verifyEnvelope<T>(purpose: "ticket" | "request" | "response", to
 }
 export function validateRef(ref: MerchantRef) {
   if (ref.merchantId !== MERCHANT_ID || typeof ref.checkoutId !== "string" || !/^[a-f0-9-]{36}$/.test(ref.checkoutId) || typeof ref.orderId !== "string" || !/^[A-Za-z0-9-]{3,80}$/.test(ref.orderId)) throw new Error("Invalid merchant checkout reference");
+}
+export function readPurchaseIntent(token: string, key = merchantKey()): MerchantPurchaseIntent {
+  const data = verifyEnvelope<MerchantPurchaseIntent>("intent",token,key);
+  if (data.merchantId !== MERCHANT_ID || data.productId !== "northstar:aero-14" || data.currency !== "USD" || typeof data.intentId !== "string" || !/^[a-f0-9-]{36}$/.test(data.intentId) || !Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now() || data.expiresAt > Date.now()+30*60_000) throw new Error("Purchase intent is invalid or expired");
+  return data;
 }
 export function readMerchantTicket(token: string, key = merchantKey()): MerchantTicket {
   const data = verifyEnvelope<MerchantTicket>("ticket", token, key); validateRef(data);

@@ -112,6 +112,8 @@ export interface Decision {
   createdAt: string;
   inputHash: string;
   schemaVersion: "rp-v1";
+  origin?: "shop" | "merchant_review";
+  currency?: "USD";
   baseline: ForecastResult;
   options: OptionResult[];
   recommendedMethod: MethodId;

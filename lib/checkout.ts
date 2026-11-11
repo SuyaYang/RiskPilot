@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { load, update, type OrderRecord } from "./store";
+import { ASSESSMENT_MAX_AGE_MS } from "./smartRecheck";
 import { inputHash } from "./state";
 import { createOrder, captureOrder, getOrder, paypalConfigured, readCapture, type PayPalOrder } from "./paypal";
 import { recordCapture } from "./purchases";
@@ -35,7 +36,7 @@ export async function createCheckout(owner: string, decisionId: string, method: 
   // PayPal retains idempotency keys for a bounded period. Older unknown commands need reconciliation.
   if (prior && Date.now() - prior.firstAttemptAt > 5 * 3600_000) throw new CheckoutError("CREATE_REQUIRES_REVIEW", "An earlier order is still unconfirmed. Reconcile it before creating another order.");
   if (!prior && d.inputHash !== inputHash(owner)) throw new CheckoutError("STALE_DECISION", "Your financial data changed. Assess the purchase again.");
-  if (!prior && Date.now() - Date.parse(d.createdAt) > 30 * 60_000) throw new CheckoutError("STALE_DECISION", "This assessment expired. Assess again.");
+  if (!prior && Date.now() - Date.parse(d.createdAt) > ASSESSMENT_MAX_AGE_MS) throw new CheckoutError("STALE_DECISION", "This assessment expired. Assess again.");
   if (!api.configured() && !demoEnabled()) throw new CheckoutError("PAYPAL_UNAVAILABLE", "PayPal Sandbox is not configured", 503);
   const alternative = method === "cheaper" ? getProduct(d.productId)?.alternativeId : undefined;
   const product = prior ? { id: alternative || d.productId, name: option.productName, price: option.price } : getProduct(alternative || d.productId);

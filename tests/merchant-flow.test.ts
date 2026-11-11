@@ -112,6 +112,7 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     const response = await within(workspace, () => claim.POST(req({ ticket })));
     assert.equal(response.status, 200); assert.equal((await response.json()).orderId, id);
     const data = await view(); reviewedHash = data.review.decision.inputHash;
+    assert.equal(data.review.recheck.status,"unavailable");assert.ok(data.review.decision.options.length>=4);
     assert.equal(data.order.amount, 900); assert.equal(data.order.merchant.name, "Northstar Electronics");
     assert.equal(data.review.decision.options.find((option: { method: string }) => option.method === "full").forecast.minBalance, 7995);
     assert.equal(data.cancelUrl, "http://localhost:3200/?cancelled=1");
@@ -245,6 +246,54 @@ test("cooperating store → PayPal Continue → RiskPilot review → merchant ca
     assert.equal((await view()).payment.state, "CAPTURED");
     assert.equal((await view()).payment.forecast, "Updated & saved");
     capturePending = false;
+  });
+
+  await t.test("Explore → signed intent → merchant approval → Smart Recheck → explicit capture stays exactly once", async () => {
+    const decisions = await import("../app/api/decisions/route");
+    const intentRoute = await import("../app/api/merchant/intent/route");
+    const assessed = await within(workspace, () => decisions.POST(req({ productId:"aero-14" }))).then(r=>r.json());
+    const prior = structuredClone(load().decisions[assessed.decision.id]);
+    const intents = await within(workspace, () => intentRoute.POST(req({ decisionId:prior.id }))).then(r=>r.json());
+    assert.equal(intents.createsPayment,false);
+    const destination = new URL(intents.url);
+    const storeVisit = await merchantRequest(destination.pathname+destination.search,{method:"GET"});
+    const localCookie=storeVisit.cookie,captureCount=captures;
+    const created = await merchantRequest("/api/order",{cookie:localCookie});const localId=created.data.orderId;
+    remoteOrders.get(localId)!.status="APPROVED";
+    const returned=await merchantRequest(`/checkout/return?token=${localId}`,{method:"GET",cookie:localCookie});
+    const localTicket=new URL(returned.headers.location).searchParams.get("ticket")!;
+    assert.equal((await within(workspace,()=>claim.POST(req({ticket:localTicket})))).status,200);
+    const context={params:Promise.resolve({id:localId})};
+    const reviewed=await within(workspace,()=>orderRoute.GET(new Request("http://localhost:3100"),context)).then(r=>r.json());
+    assert.equal(reviewed.review.recheck.status,"unchanged");assert.equal(reviewed.order.priorAssessmentId,prior.id);
+    assert.ok(reviewed.review.decision.options.length>=4);assert.equal(captures,captureCount);
+    assert.deepEqual(load().decisions[prior.id],prior);
+    update(data=>{data.personas[owner].goals[0].savedSoFar+=25;});
+    const refreshed=await within(workspace,()=>orderRoute.GET(new Request("http://localhost:3100"),context)).then(r=>r.json());
+    assert.equal(refreshed.review.recheck.status,"changed");
+    assert.equal((await within(workspace,()=>captureRoute.POST(req({inputHash:refreshed.review.decision.inputHash}),context))).status,400);
+    assert.equal(captures,captureCount);
+    const before=snapshot(owner),body={reviewConfirmed:true,inputHash:refreshed.review.decision.inputHash};
+    assert.equal((await within(workspace,()=>captureRoute.POST(req(body),context))).status,200);
+    assert.equal((await within(workspace,()=>captureRoute.POST(req(body),context))).status,200);
+    assert.equal(captures,captureCount+1);assert.equal(snapshot(owner).purchases.length,before.purchases.length+1);
+    const receipt=await merchantRequest("/api/status",{method:"GET",cookie:localCookie});assert.equal(receipt.data.status,"CAPTURED");
+  });
+  await t.test("invalid or cross-workspace intent cannot downgrade a fresh full merchant review", async () => {
+    const {createPurchaseIntent}=await import("../lib/purchaseIntent");
+    const decisions=await import("../app/api/decisions/route");
+    const assessed=await within(workspace,()=>decisions.POST(req({productId:"aero-14"}))).then(r=>r.json());
+    const valid=createPurchaseIntent(owner,assessed.decision.id),token=new URL(valid.url).searchParams.get("riskpilot_intent")!;
+    for (const intent of ["invalid",token]) {
+      const storeVisit=await merchantRequest(`/?riskpilot_intent=${encodeURIComponent(intent)}`,{method:"GET"});
+      const created=await merchantRequest("/api/order",{cookie:storeVisit.cookie});const localId=created.data.orderId;
+      remoteOrders.get(localId)!.status="APPROVED";
+      const returned=await merchantRequest(`/checkout/return?token=${localId}`,{method:"GET",cookie:storeVisit.cookie});
+      const ticket=new URL(returned.headers.location).searchParams.get("ticket")!;
+      assert.equal((await within(otherWorkspace,()=>claim.POST(req({ticket})))).status,200);
+      const view=await within(otherWorkspace,()=>orderRoute.GET(new Request("http://localhost:3100"),{params:Promise.resolve({id:localId})})).then(r=>r.json());
+      assert.equal(view.review.recheck.status,"unavailable");assert.ok(view.review.decision.options.length>=4);
+    }
   });
 
 });

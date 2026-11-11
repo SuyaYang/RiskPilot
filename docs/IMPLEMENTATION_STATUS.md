@@ -138,12 +138,18 @@ is documented in [the two-flow release gate](PURCHASE_FLOWS.md). No new live pro
 
 Baseline and separate phase commits are recorded in [the final optimization report](OPTIMIZATION_ROADMAP.md). Phase checkpoints passed 86 / 101 / 115 / 132 tests respectively, each with TypeScript and production build. Both purchase paths remain required. Final mobile merchant review moves confirmation before optional analysis, shows a concise explanation and retains critical funding disclosures. Existing real Sandbox completion was reverified read-only; new end-to-end capture checks used an isolated fixture.
 
-## Account experience and checkout membership follow-up
+## Fixed account experience
 
-In-account persona switching is replaced by fixed fictional account entry, preserving legacy order
-ownership. Basic/Premium checkout demonstration access is assigned server-side per demo account;
-Basic retains critical risk facts and payment/recovery/cancel controls while detailed endpoints and
-scenario payloads are gated. Proactive Shop exploration remains available. Actual PayPal SDK button
-alignment was verified on desktop and mobile. All **135 tests**, TypeScript and build pass.
-See [account and presentation details](DEMO_ACCOUNTS.md); production authentication/subscription
-billing is explicitly not implemented.
+Fixed fictional account entry preserves each account's profile and existing payment ownership.
+The final purchase requirements supersede the earlier Basic/Premium demonstration: all tiers and
+analysis locks are removed. Every account receives the normal full review. Smart Recheck uses
+verified prior assessments, not membership.
+
+## Final purchase experience
+
+Both purchase entry points remain operational. Explicit signed Shop → Northstar intents and the
+existing order/decision association support read-only Smart Recheck. Unchanged, changed and
+unavailable/expired results preserve access to the full freshly recomputed assessment.
+All **147 tests**, TypeScript and production build pass. New browser/API capture checks used an
+isolated provider fixture; no new live Sandbox capture is claimed. See [complete final verification
+and implementation limits](FINAL_PURCHASE_EXPERIENCE.md).

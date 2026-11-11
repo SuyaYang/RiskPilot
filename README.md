@@ -5,8 +5,8 @@
 ## Buyer checkout experience
 
 The current flow is **another merchant's website → PayPal Continue / Review Order → RiskPilot
-purchase-impact review → explicit Confirm and pay → merchant receipt**. Users do not install an
-extension or shop on RiskPilot. The shopping website must integrate RiskPilot; this does not
+purchase-impact review → explicit Confirm and pay → merchant receipt**. Users can also proactively explore purchases in RiskPilot Shop without paying. Neither flow requires an
+extension. The shopping website must integrate RiskPilot; this does not
 automatically intercept payments at stores that have not integrated it.
 
 Run `npm run demo` to start/check the independent **Northstar Electronics** merchant on port 3200
@@ -27,7 +27,7 @@ The `extension/` directory is an optional earlier placement experiment and is no
 
 RiskPilot compares a cart with upcoming bills, cash reserves, and savings goals. The customer chooses an option and approves checkout through PayPal. RiskPilot records the confirmed merchant payment and updates its own cash-flow projection. Plaid bank-activity reconciliation and debit matching remain planned; the local demo does not connect a bank or claim to have reconciled a payment.
 
-> **Status:** local fictional-data Checkout MVP. Dashboard, Goals, Shop, Invest, payment recovery and the cooperating-merchant review flow are implemented. A completed merchant Sandbox receipt and saved forecast have been observed; 112 automated tests pass. Supabase/Python/worker/deployment remain unfinished. Start with [RUNNING.md](RUNNING.md), [acceptance status](docs/IMPLEMENTATION_STATUS.md) and the [complete update record](docs/CHANGELOG_2026-11-10.md).
+> **Status:** local fictional-data Checkout MVP. Dashboard, Goals, Shop, Invest, payment recovery and the cooperating-merchant review flow are implemented. A completed merchant Sandbox receipt and saved forecast have been observed; 147 automated tests pass. Supabase/Python/worker/deployment remain unfinished. Start with [RUNNING.md](RUNNING.md), [acceptance status](docs/IMPLEMENTATION_STATUS.md) and the [complete update record](docs/CHANGELOG_2026-11-10.md).
 
 **Hackathon scope:** US, USD, an independent simulated cooperating merchant, one PayPal Sandbox
 merchant account, and Plaid Sandbox or clearly marked manual financial data. The merchant flow uses
@@ -256,3 +256,12 @@ never have to start in Shop. Both use the same financial engine. Regression in e
 See [flow boundaries and acceptance tests](docs/PURCHASE_FLOWS.md).
 
 Sequential implementation, phase commits, complete modified-file inventory, current verification and demo configuration: [optimization roadmap report](docs/OPTIMIZATION_ROADMAP.md).
+
+## Final purchase journeys
+
+Direct Northstar checkout always opens the full RiskPilot impact review after PayPal approval.
+Shop exploration remains payment-free, with optional checkout. A server-verified **Smart Recheck**
+recognizes an explicitly associated prior assessment, highlights changes and avoids repeating
+unchanged analysis. Invalid/expired associations receive a fresh full review. All demo accounts
+have the same feature access; no subscription tiers, Protection toggle or upgrade lock remains.
+See [final flows, matching contract, file inventory and verification](docs/FINAL_PURCHASE_EXPERIENCE.md).
