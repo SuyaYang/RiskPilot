@@ -2,12 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { Decision, Goal, MethodId, Purchase } from "./types";
+import type { SpendingPreferences } from "./spending/types";
 import type { snapshot } from "./state";
 import { buildPersonas } from "./personas";
 
 export interface GoalChange { at: string; action: "create" | "update" | "delete"; goalId: string; name: string; summary: string }
 export interface PersonaState {
   goals: Goal[]; goalHistory: GoalChange[]; purchases: Purchase[];
+  spending?: SpendingPreferences;
   prefs: { horizon: "short" | "medium" | "long"; risk: "conservative" | "balanced" | "growth"; custom?: { cash: number; bonds: number; index: number } };
 }
 export interface OrderRecord {

@@ -28,6 +28,8 @@ test("middleware and API integration without opening a network listener", async 
   const copilot = await import("../app/api/copilot/route");
   const parse = await import("../app/api/goals/parse/route");
   const snap = await import("../app/api/snapshot/route");
+  const spending = await import("../app/api/spending/route");
+  const recurringPattern = await import("../app/api/spending/recurring/[id]/route");
   const reset = await import("../app/api/reset/route");
   const webhook = await import("../app/api/webhooks/paypal/route");
   function workspace() {
@@ -252,7 +254,33 @@ test("middleware and API integration without opening a network listener", async 
       if (flag === undefined) delete process.env.DEMO_SEED_ENABLED; else process.env.DEMO_SEED_ENABLED = flag;
     }
   });
-
+  await t.test("spending API is fictional, versioned, profile-scoped and cannot silently alter purchase impact", async () => {
+    const before = await within(a, () => snap.GET()).then(r => r.json());
+    const view = await within(a, () => spending.GET()).then(r => r.json());
+    assert.equal(view.mode, "local-sandbox-fixture");
+    assert.equal(view.analysis.averageMonthCount, 3);
+    const candidate = view.candidates[0];
+    const patch = (body: unknown) => req("/api/spending/recurring", body, "PATCH");
+    const confirmed = await within(a, () => recurringPattern.PATCH(patch({ action: "confirm", version: 0, asOf: view.analysis.coverage.asOf }), params(candidate.id)));
+    assert.equal(confirmed.status, 200); assert.equal((await confirmed.json()).forecastChanged, false);
+    const saved = await within(a, () => spending.GET()).then(r => r.json());
+    assert.equal(saved.candidates.find((c: { id: string }) => c.id === candidate.id).status, "confirmed");
+    const foreign = await within(b, () => recurringPattern.PATCH(patch({ action: "confirm", version: 0, asOf: view.analysis.coverage.asOf }), params(candidate.id)));
+    assert.equal(foreign.status, 404);
+    const stale = await within(a, () => recurringPattern.PATCH(patch({ action: "edit", version: 0, asOf: view.analysis.coverage.asOf, amountCents: 1000 }), params(candidate.id)));
+    assert.equal(stale.status, 409);
+    const invalid = await within(a, () => recurringPattern.PATCH(patch({ action: "edit", version: 1, asOf: view.analysis.coverage.asOf, amountCents: 10.01 }), params(candidate.id)));
+    assert.equal(invalid.status, 400);
+    const injected = await within(a, () => recurringPattern.PATCH(patch({ action: "confirm", version: 1, asOf: view.analysis.coverage.asOf, personaId: "sam" }), params(candidate.id)));
+    assert.equal(injected.status, 400);
+    const malformed = await within(a, () => recurringPattern.PATCH(new Request("http://localhost:3000/api/spending", { method: "PATCH", body: "{" }), params(candidate.id)));
+    assert.equal(malformed.status, 400);
+    assert.deepEqual(await within(a, () => snap.GET()).then(r => r.json()), before);
+    await within(a, () => reset.POST());
+    const baseline = await within(a, () => spending.GET()).then(r => r.json());
+    assert.equal(baseline.version, 0); assert.deepEqual(baseline.analysis, view.analysis);
+    assert.ok(baseline.candidates.every((c: { status: string }) => c.status === "suggested"));
+  });
 
 
   fs.rmSync(dir, { recursive: true });
