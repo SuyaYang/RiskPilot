@@ -1266,3 +1266,6 @@ summary { font-size:14px; }
   .income-plan>.row { align-items:flex-start;flex-wrap:wrap; }
   .money-months dl>div { font-size:13px; }
 }
+.income-mapping { margin:10px 0;padding:12px;background:var(--hover);border-radius:10px; }
+.income-mapping label { max-width:440px; }
+.income-mapping p { margin:10px 0; }

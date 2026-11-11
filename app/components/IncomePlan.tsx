@@ -10,9 +10,10 @@ const initial = { name: "", amount: "", currency: "USD", frequency: "monthly" as
 export default function IncomePlan({ data, onSaved, onReload }: { data: MoneyPlanView | null; onSaved: (view: MoneyPlanView) => void; onReload: () => void }) {
   const [editing, setEditing] = useState<string | null>(null), [draft, setDraft] = useState(initial);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState("");
+  const [mappingEntry, setMappingEntry] = useState<string | null>(null), [forecastUse, setForecastUse] = useState("planning_only");
   const lock = useRef(false), generation = useRef(0), nameInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    const clear = () => { generation.current++; lock.current = false; setBusy(false); setEditing(null); setError(""); setMessage(""); };
+    const clear = () => { generation.current++; lock.current = false; setBusy(false); setEditing(null); setMappingEntry(null); setError(""); setMessage(""); };
     window.addEventListener("rp:persona", clear); window.addEventListener("rp:refresh", clear);
     return () => { generation.current++; window.removeEventListener("rp:persona", clear); window.removeEventListener("rp:refresh", clear); };
   }, []);
@@ -21,16 +22,18 @@ export default function IncomePlan({ data, onSaved, onReload }: { data: MoneyPla
     setError(""); setMessage(""); setEditing(entry?.id || "new");
     setDraft(entry ? { name: entry.name, amount: (entry.amountCents / 100).toFixed(2), currency: entry.currency, frequency: entry.frequency, nextDate: entry.nextDate, sourceType: entry.sourceType, reliability: entry.reliability } : { ...initial, nextDate: data?.asOf || "" });
   }
-  async function save(action: "create" | "edit" | "confirm" | "pause" | "remove", id?: string) {
+  async function save(action: "create" | "edit" | "confirm" | "pause" | "remove", id?: string, mapping?: string) {
     if (!data || lock.current) return;
     const amountCents = parseCents(draft.amount), edits = action === "create" || action === "edit";
     if (edits && (amountCents === null || amountCents > 100_000_000 || !draft.name.trim() || !draft.nextDate)) { setError("Enter an income source, a nonnegative USD amount with up to two decimals, and a next expected date."); return; }
     lock.current = true; setBusy(true); setError(""); setMessage(""); const version = ++generation.current;
     try {
       const result = await postJson("/api/money-plan", { action, ...(id ? { id } : {}), version: data.version, epoch: data.epoch, basisHash: data.basisHash,
+        ...(action === "confirm" && mapping ? { forecastUse: mapping.startsWith("replace:") ? "replace" : mapping, ...(mapping.startsWith("replace:") ? { modeledItemId: mapping.slice(8) } : {}) } : {}),
         ...(edits ? { name: draft.name, amountCents, currency: "USD", frequency: draft.frequency, nextDate: draft.nextDate, sourceType: draft.sourceType, reliability: draft.reliability } : {}) }, "PATCH");
       if (version !== generation.current) return;
-      onSaved(result.plan); setEditing(null); setMessage(result.message);
+      onSaved(result.plan); setEditing(null); setMappingEntry(null); setMessage(result.message);
+      if (result.forecastChanged) window.dispatchEvent(new Event("rp:refresh"));
     } catch (error) { if (version === generation.current) setError((error as Error).message); }
     finally { if (version === generation.current) { lock.current = false; setBusy(false); } }
   }
@@ -38,14 +41,17 @@ export default function IncomePlan({ data, onSaved, onReload }: { data: MoneyPla
   return <section className="income-plan" id="income-plan" aria-labelledby="income-plan-title">
     <div className="row between"><div><h3 id="income-plan-title">Expected income</h3><p className="small muted">Review modeled sources and manage additional expectations.</p></div><button disabled={busy || !data} onClick={() => edit()}>+ Add income</button></div>
     {!data ? <p role="status" className="small muted">Loading income schedules…</p> : <>
-      <ul className="income-list">{data.modeledIncome.map(entry => <li key={entry.id} className="income-row"><div><strong>{entry.name}</strong><span>{formatCents(entry.amountCents)} · {entry.frequency === "monthly" ? "Existing 30-day model cadence" : frequencyLabel[entry.frequency]} · next {fullDate(entry.nextDate)}</span></div><span className={`badge ${entry.status === "uncertain" ? "yellow" : "gray"}`}>{entry.status === "uncertain" ? "Modeled · uncertain" : "Already modeled"}</span></li>)}</ul>
+      <ul className="income-list">{data.modeledIncome.map(entry => <li key={entry.id} className="income-row"><div><strong>{entry.name}</strong><span>{formatCents(entry.amountCents)} · {entry.frequency === "monthly" ? "Existing 30-day model cadence" : frequencyLabel[entry.frequency]} · next {fullDate(entry.nextDate)}</span></div><span className={`badge ${entry.status === "uncertain" ? "yellow" : "gray"}`}>{entry.forecastReplaced ? "Replaced in 45-day forecast" : entry.status === "uncertain" ? "Modeled · uncertain" : "Already modeled"}</span></li>)}</ul>
       <p className="small muted">Modeled sources are shown once and remain managed by the existing demo profile. Adding an income draft does not replace them.</p>
       {data.entries.length ? <ul className="income-list">{data.entries.map(entry => <li key={entry.id} className="income-entry" data-income-id={entry.id}>
         <div className="income-row"><div><strong>{entry.name}</strong><span>{formatCents(entry.amountCents)} · {frequencyLabel[entry.frequency]} · next {fullDate(entry.nextDate)}</span></div><span className={`badge ${entry.status === "confirmed" ? "blue" : "gray"}`}>{entry.status === "draft" ? "Unconfirmed draft" : entry.status === "paused" ? "Paused" : "User-confirmed"}</span></div>
         <p className="small muted">{entry.sourceType === "hypothetical" ? "Hypothetical example" : "User-entered expectation"} · {entry.reliability === "uncertain" ? "Uncertain; excluded from expected totals" : "Expected, not guaranteed"}.</p>
-        {entry.overlap.length > 0 && <p className="small income-overlap">Potential overlap with {entry.overlap.map(item => item.name).join(", ")}. Excluded from expected totals to avoid counting the same payment twice.</p>}
+        {entry.overlap.length > 0 && entry.forecastIntegration.status !== "included" && <p className="small income-overlap">Potential overlap with {entry.overlap.map(item => item.name).join(", ")}. Excluded from expected totals to avoid counting the same payment twice.</p>}
+        <p className="small muted" data-forecast-status={entry.forecastIntegration.status}><strong>{entry.forecastIntegration.status === "included" ? "Included in forecast" : entry.forecastIntegration.status === "needs_review" ? "Needs review" : "Planning only"}</strong> · {entry.forecastIntegration.reason}</p>
+        {entry.status === "draft" && entry.confirmedForecast && <p className="small muted">Previous confirmed schedule remains active: {entry.confirmedForecast.name} · {formatCents(entry.confirmedForecast.amountCents)} · {frequencyLabel[entry.confirmedForecast.frequency]}. Confirm your edit to apply it under the previous source mapping.</p>}
         {entry.nextDate < data.asOf && <p className="small muted">The saved next date has passed. Review the schedule before confirming again; no receipt of income is assumed.</p>}
-        <div className="row income-actions">{entry.status !== "confirmed" && <button disabled={busy} onClick={() => save("confirm", entry.id)}>{entry.status === "paused" ? "Confirm and resume" : "Confirm income"}</button>}<button disabled={busy} onClick={() => edit(entry)}>Edit income</button>{entry.status !== "paused" && <button disabled={busy} onClick={() => save("pause", entry.id)}>Pause</button>}<button disabled={busy} onClick={() => save("remove", entry.id)}>Remove</button></div>
+        <div className="row income-actions">{entry.status !== "confirmed" && <button disabled={busy} onClick={() => save("confirm", entry.id)}>{entry.status === "paused" ? "Confirm and resume" : "Confirm income"}</button>}<button disabled={busy} onClick={() => edit(entry)}>Edit income</button><button disabled={busy} onClick={() => { setMappingEntry(entry.id); const mapping = entry.forecastMapping || entry.confirmedForecast?.forecastMapping; setForecastUse(mapping?.kind === "replace" ? `replace:${mapping.modeledItemId}` : mapping?.kind || "planning_only"); }}>Review forecast use</button>{entry.status !== "paused" && <button disabled={busy} onClick={() => save("pause", entry.id)}>Pause</button>}<button disabled={busy} onClick={() => save("remove", entry.id)}>Remove</button></div>
+        {mappingEntry === entry.id && <div className="income-mapping"><label>Forecast use for {entry.name}<select value={forecastUse} onChange={event => setForecastUse(event.target.value)}><option value="planning_only">Planning only</option><option value="additional">Additional distinct income source</option>{data.modeledIncome.map(item => <option key={item.id} value={`replace:${item.id}`}>Replace modeled {item.name}</option>)}</select></label><p className="small muted">Confirm the exact source relationship. A replacement removes that modeled income from the forecast; a separate source must be distinct. New income is omitted from stress and never added to today&apos;s balance.</p><div className="row income-actions"><button disabled={busy} onClick={() => save("confirm", entry.id, forecastUse)}>Confirm forecast use</button><button disabled={busy} onClick={() => setMappingEntry(null)}>Cancel forecast review</button></div></div>}
       </li>)}</ul> : <p className="small muted">No additional income entries. Nothing has been inferred or confirmed automatically.</p>}
     </>}
     {editing && <form className="income-editor" onSubmit={submit} aria-label="Income planning form">

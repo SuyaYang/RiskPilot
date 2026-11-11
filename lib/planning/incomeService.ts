@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import { CheckoutError, demoEnabled } from "../checkout";
+import { inputHash } from "../state";
+import { compilePlanning, modeledIncomeSignature } from "./integration";
 import { iso, today, addDays } from "../dates";
 import { validDate } from "../spending/analysis";
 import { load, update, type StoreData } from "../store";
@@ -17,9 +19,11 @@ export function moneyPlanView(ownerId: string, data: StoreData = load()) {
   // Deliberately separate from checkout input hashes; budget edits do not invalidate income forms.
   const basisHash = crypto.createHash("sha256").update(JSON.stringify({ ownerId, asOf, recurring: persona.recurring })).digest("hex");
   const budget = planningBudgetView(ownerId, data);
+  const integration = compilePlanning(persona, saved);
   return { schemaVersion: 1 as const, version: state?.version ?? 0, epoch: state?.epoch ?? "unsaved", basisHash, asOf,
-    ...planningOverview(persona, payments, Object.values(state?.entries || {}), budget, asOf),
-    policy: "Informational expectations only. Future income is not available cash today. The existing 45-day engine remains authoritative; this view does not calculate safe-to-spend or investable cash.",
+    ...planningOverview(persona, payments, Object.values(state?.entries || {}), budget, asOf, integration),
+    integration, financialInputHash: inputHash(ownerId, data),
+    policy: "Informational expectations only. Future income is not available cash today. Explicitly mapped income feeds the 45-day forecast but is omitted from stress; this view does not calculate safe-to-spend or investable cash.",
   };
 }
 export type MoneyPlanView = ReturnType<typeof moneyPlanView>;
@@ -39,13 +43,14 @@ export function updatePlanningIncome(ownerId: string, body: unknown) {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new CheckoutError("INVALID_INCOME", "Invalid income request", 400);
   const input = body as Record<string, unknown>;
   const edits = input.action === "create" || input.action === "edit";
-  const allowed = ["action", "id", "version", "epoch", "basisHash", ...(edits ? allowedValues : [])];
+  const allowed = ["action", "id", "version", "epoch", "basisHash", ...(edits ? allowedValues : input.action === "confirm" ? ["forecastUse", "modeledItemId"] : [])];
   if (Object.keys(input).some(key => !allowed.includes(key)) || !["create", "edit", "confirm", "pause", "remove"].includes(String(input.action)) ||
     !Number.isSafeInteger(input.version) || Number(input.version) < 0 || typeof input.epoch !== "string" || typeof input.basisHash !== "string" ||
     (input.action === "create" ? Object.hasOwn(input, "id") : typeof input.id !== "string")) throw new CheckoutError("INVALID_INCOME", "Choose an explicit action and current income-plan version", 400);
   return update(data => {
     const before = moneyPlanView(ownerId, data);
     if (before.version !== input.version || before.epoch !== input.epoch || before.basisHash !== input.basisHash) throw new CheckoutError("STALE_INCOME", "Income plan or date changed. Refresh before saving.", 409);
+    const oldHash = inputHash(ownerId, data);
     const values = edits ? validateValues(input, before.asOf) : null;
     const state: PlanningIncomeState = data.personas[ownerId].planningIncome ??= { schemaVersion: 1, epoch: crypto.randomUUID(), version: 0, entries: {} };
     const now = new Date().toISOString();
@@ -58,9 +63,24 @@ export function updatePlanningIncome(ownerId: string, body: unknown) {
       if (!entry) throw new CheckoutError("NOT_FOUND", "Income entry not found in this profile", 404);
       if (input.action === "remove") delete state.entries[entry.id];
       else {
-        if (input.action === "edit") { Object.assign(entry, values); entry.status = "draft"; entry.confirmedAt = null; }
+        if (input.action === "edit") { Object.assign(entry, values); entry.status = "draft"; entry.confirmedAt = null; delete entry.forecastMapping; }
         if (input.action === "confirm") {
           if (entry.nextDate < before.asOf) throw new CheckoutError("OVERDUE_INCOME", "Review and update the next expected date before confirming this schedule", 409);
+          const previousMapping = entry.confirmedForecast?.forecastMapping;
+          const use = input.forecastUse ?? previousMapping?.kind ?? "planning_only";
+          if (!["planning_only", "additional", "replace"].includes(String(use)) || (use !== "replace" && Object.hasOwn(input, "modeledItemId"))) throw new CheckoutError("INVALID_MAPPING", "Choose a supported forecast use", 400);
+          delete entry.forecastMapping;
+          if (use === "replace") {
+            const { persona } = personaWithState(ownerId, data);
+            const modeled = persona.recurring.find(item => item.direction === "in" && item.id === (input.forecastUse === undefined && previousMapping?.kind === "replace" ? previousMapping.modeledItemId : input.modeledItemId));
+            if (!modeled) throw new CheckoutError("INVALID_MAPPING", "Select an existing modeled income identifier", 400);
+            entry.forecastMapping = { kind: "replace", modeledItemId: modeled.id, modeledSignature: input.forecastUse === undefined && previousMapping?.kind === "replace" ? previousMapping.modeledSignature : modeledIncomeSignature(modeled) };
+          }
+          if (use === "additional") entry.forecastMapping = { kind: "additional" };
+          if (entry.forecastMapping) {
+            const { name, amountCents, currency, frequency, nextDate, sourceType, reliability, forecastMapping } = entry;
+            entry.confirmedForecast = { name, amountCents, currency, frequency, nextDate, sourceType, reliability, forecastMapping, confirmedAt: now };
+          } else delete entry.confirmedForecast;
           entry.status = "confirmed"; entry.confirmedAt = now;
         }
         if (input.action === "pause") entry.status = "paused";
@@ -68,7 +88,8 @@ export function updatePlanningIncome(ownerId: string, body: unknown) {
       }
     }
     state.version++;
-    return { plan: moneyPlanView(ownerId, data), forecastChanged: false,
-      message: input.action === "create" || input.action === "edit" ? "Income draft saved. Confirm separately; current forecasts are unchanged." : "Income plan updated. Current forecasts are unchanged." };
+    const forecastChanged = oldHash !== inputHash(ownerId, data);
+    return { plan: moneyPlanView(ownerId, data), forecastChanged,
+      message: forecastChanged ? "Forecast updated. Previous purchase assessments require review." : input.action === "create" || input.action === "edit" ? "Income draft saved. Confirm separately; current forecasts are unchanged." : "Income plan saved; no supported forecast input changed." };
   });
 }

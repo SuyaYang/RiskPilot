@@ -5,6 +5,7 @@ import { normalizeMerchant } from "../spending/recurring";
 import { roundedRatio } from "../spending/money";
 import type { PlanningBudgetView } from "./service";
 import type { PlanningIncomeEntry } from "./incomeTypes";
+import type { compilePlanning } from "./integration";
 import { incomeDates, planningPeriod } from "./calendar";
 
 export function incomeOverlap(entry: PlanningIncomeEntry, persona: Persona, asOf: string) {
@@ -15,9 +16,9 @@ export function incomeOverlap(entry: PlanningIncomeEntry, persona: Persona, asOf
     (Math.round(item.amount * 100) === entry.amountCents && occurrences(item, daysBetween(parseIso(asOf), parseIso(period.end)) + 1).some(day => dates.includes(iso(addDays(parseIso(asOf), day)))))
   )).map(item => ({ id: item.id, name: item.name }));
 }
-export function planningOverview(persona: Persona, payments: Payment[], entries: PlanningIncomeEntry[], budget: PlanningBudgetView, asOf: string) {
+export function planningOverview(persona: Persona, payments: Payment[], entries: PlanningIncomeEntry[], budget: PlanningBudgetView, asOf: string, integration?: ReturnType<typeof compilePlanning>) {
   const period = planningPeriod(asOf), horizon = daysBetween(parseIso(asOf), parseIso(period.end)) + 1;
-  const modeledEvents = persona.recurring.flatMap(item => occurrences(item, horizon).map(day => ({
+  const modeledEvents = persona.recurring.filter(item => !integration?.planning?.replacedIncomeIds.includes(item.id)).flatMap(item => occurrences(item, horizon).map(day => ({
     id: `modeled:${item.id}:${day}`, sourceId: item.id, name: item.name, date: iso(addDays(parseIso(asOf), day)),
     amountCents: Math.round(item.amount * 100), direction: item.direction, kind: "modeled" as const,
     included: !item.uncertain || item.direction === "out", reliability: item.uncertain ? "uncertain" as const : "expected" as const,
@@ -28,13 +29,13 @@ export function planningOverview(persona: Persona, payments: Payment[], entries:
       normalizeMerchant(other.name) === normalizeMerchant(entry.name) ||
       (other.amountCents === entry.amountCents && incomeDates(other.nextDate, other.frequency, period.start, period.end).some(date => dates.includes(date)))
     )).map(other => ({ id: other.id, name: other.name }));
-    return { ...entry, overlap: [...incomeOverlap(entry, persona, asOf), ...otherPlanning] };
+    return { ...entry, forecastIntegration: integration?.income[entry.id] ?? { status: "planning_only" as const, reason: "No explicit forecast mapping." }, overlap: [...incomeOverlap(entry, persona, asOf), ...otherPlanning] };
   });
-  const additionalEvents = viewedEntries.filter(entry => entry.status !== "paused").flatMap(entry => incomeDates(entry.nextDate, entry.frequency, period.start, period.end).map(date => ({
+  const additionalEvents = viewedEntries.filter(entry => entry.status !== "paused").map(entry => entry.confirmedForecast ? { ...entry, ...entry.confirmedForecast, status: "confirmed" as const } : entry).flatMap(entry => incomeDates(entry.nextDate, entry.frequency, period.start, period.end).map(date => ({
     id: `${entry.id}:${date}`, sourceId: entry.id, name: entry.name, date, amountCents: entry.amountCents,
     direction: "in" as const, kind: "planning" as const, reliability: entry.reliability,
     status: entry.status, overlap: entry.overlap.length > 0,
-    included: entry.status === "confirmed" && entry.reliability === "expected" && entry.sourceType !== "hypothetical" && entry.overlap.length === 0,
+    included: entry.status === "confirmed" && entry.reliability === "expected" && entry.sourceType !== "hypothetical" && (entry.overlap.length === 0 || entry.forecastIntegration.status === "included"),
   })));
   const reserveEvents = payments.filter(payment => payment.date > asOf && payment.date <= period.end).map((payment, index) => ({
     id: `reserve:${index}`, sourceId: "purchase-reserve", name: payment.label, date: payment.date,
@@ -64,7 +65,7 @@ export function planningOverview(persona: Persona, payments: Payment[], entries:
       observation: row.confirmation!.evidence.observation, scheduledBills: row.overlap.scheduledBills,
       possibleEverydayOverlap: persona.dailySpend > 0, requiresReview: true as const })),
     modeledIncome: persona.recurring.filter(item => item.direction === "in").map(item => ({ id: item.id, name: item.name, amountCents: Math.round(item.amount * 100), currency: "USD" as const,
-      frequency: item.frequency, nextDate: iso(addDays(parseIso(asOf), item.firstInDays)), sourceType: "modeled" as const,
+      forecastReplaced: integration?.planning?.replacedIncomeIds.includes(item.id) ?? false, frequency: item.frequency, nextDate: iso(addDays(parseIso(asOf), item.firstInDays)), sourceType: "modeled" as const,
       status: item.uncertain ? "uncertain" as const : "known" as const })),
   };
 }

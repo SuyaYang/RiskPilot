@@ -33,6 +33,11 @@ export interface Persona {
   savingsBalance: number;
   buffer: number;
   dailySpend: number;
+  planning?: {
+    policy: "verified-planning-v1";
+    incomeEvents: { id: string; name: string; date: string; amountCents: number; source: "user_confirmed_plan" }[];
+    replacedIncomeIds: string[];
+  };
   recurring: RecurringItem[];
   goals: Goal[];
 }
@@ -58,6 +63,7 @@ export interface Purchase {
 }
 
 export interface ForecastResult {
+  planningIncomePolicy?: "omitted_from_stress";
   startBalance: number;
   dailyBalances: { date: string; balance: number }[];
   minBalance: number;

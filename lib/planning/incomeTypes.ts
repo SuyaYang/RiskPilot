@@ -4,6 +4,12 @@ export type PlanningIncomeEntry = {
   id: string; name: string; amountCents: number; currency: "USD"; frequency: IncomeFrequency;
   nextDate: string; status: "draft" | "confirmed" | "paused";
   sourceType: "user_entered" | "hypothetical"; reliability: "expected" | "uncertain";
+  forecastMapping?: { kind: "additional" } | { kind: "replace"; modeledItemId: string; modeledSignature: string };
+  confirmedForecast?: {
+    name: string; amountCents: number; currency: "USD"; frequency: IncomeFrequency; nextDate: string;
+    sourceType: "user_entered" | "hypothetical"; reliability: "expected" | "uncertain"; confirmedAt: string;
+    forecastMapping: { kind: "additional" } | { kind: "replace"; modeledItemId: string; modeledSignature: string };
+  };
   createdAt: string; updatedAt: string; confirmedAt: string | null; version: number;
 };
 /** Informational planning state only; not a receivable, balance or engine commitment. */

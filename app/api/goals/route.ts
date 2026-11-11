@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const s = snapshot(await currentPersonaId());
-  return NextResponse.json({ goals: s.goals, allocation: s.allocation, history: s.goalHistory });
+  return NextResponse.json({ financialInputHash: s.financialInputHash, goals: s.goals, allocation: s.allocation, history: s.goalHistory });
 }
 
 export async function POST(req: Request) {

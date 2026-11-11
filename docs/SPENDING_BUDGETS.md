@@ -1,5 +1,7 @@
 # Step 3: spending-budget assumptions
 
+Historical implementation checkpoint: [Step 5](FORECAST_INTEGRATION.md) now adds explicit income forecast mapping. Category budgets remain planning only; the isolation statements below describe their original step.
+
 Money (`/money`) replaces the previous planning introduction with a compact monthly budget review.
 Dashboard retains historical Spending Intelligence and links to `/money#spending-plan`.
 This step does not implement a three-month forecast or integrate budgets into financial commitments.

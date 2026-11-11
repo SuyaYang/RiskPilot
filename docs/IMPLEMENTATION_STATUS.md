@@ -176,3 +176,21 @@ input hashes are unchanged. The Step 3 editor is reused behind “Adjust your pl
 interactions were checked at 375/390/768/1280px. No PayPal payment or existing-workspace reset was
 performed. See [models, recurrence, financial boundaries and verification](MONEY_PLANNING.md).
 Step 5 authoritative integration remains unimplemented.
+
+## Step 5 — verified 45-day planning integration (November 11, 2026)
+
+The shared persona materializer now compiles explicitly mapped, confirmed expected income into the
+existing forecast simulator. Exact-ID replacement verifies the modeled source signature; similarity
+only raises an unresolved veto. The last confirmed schedule remains active during unconfirmed edits.
+New receipts are omitted from stress and long-term goal income; checking and capture reserves remain
+unchanged. Snapshot hashes propagate through Dashboard, Money, Goals, Shop and merchant review,
+reusing existing stale-decision and capture guards without changing payment code.
+
+All current category budgets remain Needs review: no source-backed partition of the single daily
+spend baseline exists, and scheduled bills/repayments may overlap. No arbitrary fraction is replaced
+or added. This is deliberate safe partial integration, not a claim of full budget reconciliation.
+
+219 tests, TypeScript and production build pass. Chrome rendering/screenshots and interactions were
+checked at 375/390/768/1280px. No actual PayPal capture or existing-workspace reset was performed.
+See the [pre-change calculation audit, mappings, timing, verification and limits](FORECAST_INTEGRATION.md).
+Step 6 and Vision remain unimplemented.

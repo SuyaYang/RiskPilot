@@ -9,16 +9,19 @@ import SpendingPlan from "./SpendingPlan";
 const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 export default function MoneyPlanning() {
   const { data: loaded, error, reload } = useApi<MoneyPlanView>("/api/money-plan");
-  const [saved, setSaved] = useState<MoneyPlanView | null>(null), data = saved || loaded;
+  const [saved, setSaved] = useState<MoneyPlanView | null>(null), [lastLoaded, setLastLoaded] = useState<MoneyPlanView | null>(null);
+  const data = saved || loaded || lastLoaded;
   const adjust = useRef<HTMLDetailsElement>(null);
-  useEffect(() => { setSaved(null); }, [loaded]);
+  useEffect(() => { if (loaded) { setSaved(null); setLastLoaded(loaded); } }, [loaded]);
   useEffect(() => {
     const clear = () => setSaved(null);
+    const clearPersona = () => { setSaved(null); setLastLoaded(null); };
     const openAnchor = () => { if (["#spending-plan", "#income-plan"].includes(window.location.hash) && adjust.current) adjust.current.open = true; };
-    openAnchor(); window.addEventListener("hashchange", openAnchor); window.addEventListener("rp:persona", clear); window.addEventListener("rp:refresh", clear);
-    return () => { window.removeEventListener("hashchange", openAnchor); window.removeEventListener("rp:persona", clear); window.removeEventListener("rp:refresh", clear); };
+    openAnchor(); window.addEventListener("hashchange", openAnchor); window.addEventListener("rp:persona", clearPersona); window.addEventListener("rp:refresh", clear);
+    return () => { window.removeEventListener("hashchange", openAnchor); window.removeEventListener("rp:persona", clearPersona); window.removeEventListener("rp:refresh", clear); };
   }, []);
   function refresh() { setSaved(null); reload(); }
+  const confirmedCount = data?.entries.filter(entry => entry.status === "confirmed" || (entry.confirmedForecast && entry.status !== "paused")).length || 0;
   const scale = Math.max(1, ...(data?.months.flatMap(month => [month.expectedIncomeCents, month.modeledOutgoingCents]) || []));
   return <section className="money-planning" aria-labelledby="three-month-title">
     <header><span className="page-kicker">Money planning · informational</span><h2 id="three-month-title">Your next three months</h2><p className="small muted">See what&apos;s expected to come in, what&apos;s planned to go out, and what may need your attention.</p></header>
@@ -38,9 +41,9 @@ export default function MoneyPlanning() {
         </dl>
       </li>)}</ol>
       <p className="small muted">{data.policy} Modeled outgoings are a partial estimate: confirmed budgets are shown separately because they may overlap scheduled bills or everyday spending. Goals and unmodeled costs are not included.</p>
-      <p className="small money-income-summary">{data.modeledIncome.length} modeled income {data.modeledIncome.length === 1 ? "source" : "sources"} · {data.entries.filter(entry => entry.status === "confirmed").length} confirmed planning {data.entries.filter(entry => entry.status === "confirmed").length === 1 ? "entry" : "entries"} · {data.confirmedBudgetCount} confirmed spending {data.confirmedBudgetCount === 1 ? "budget" : "budgets"}. Confirmation records your expectation, not a guaranteed receipt.</p>
+      <p className="small money-income-summary">{data.modeledIncome.length} modeled income {data.modeledIncome.length === 1 ? "source" : "sources"} · {confirmedCount} confirmed planning {confirmedCount === 1 ? "entry" : "entries"} ({data.entries.filter(entry => entry.forecastIntegration.status === "included").length} included in 45-day forecast) · {data.confirmedBudgetCount} confirmed spending {data.confirmedBudgetCount === 1 ? "budget" : "budgets"}. Confirmation records your expectation, not a guaranteed receipt.</p>
       <details className="money-plan-evidence"><summary>Timing, coverage & overlap notes</summary><p className="small muted">New monthly and three-month income recurs on calendar dates, clamped to the original day in shorter months. Biweekly means 14 days. Existing modeled events retain their current engine cadence (30 days for monthly items); this overview does not change it. Confirmed monthly budgets are planning estimates, prorated by remaining calendar days for a partial month, rather than future transactions.</p>
-        <p className="small muted">Unconfirmed, uncertain, hypothetical, paused and potentially duplicate income is excluded from expected income totals. Same-name sources or matching amounts on the same expected payment date require overlap review. No income is added to today&apos;s balance.</p>
+        <p className="small muted">Unconfirmed, uncertain, hypothetical, paused and unresolved duplicate income is excluded from expected income totals. Similarity only raises a review flag. Forecast replacement requires a specific modeled source ID. No income is added to today&apos;s balance.</p>
         {data.expenseReview.length > 0 && <p className="small muted">Budget overlap review required for {data.expenseReview.map(row => `${row.category}${row.scheduledBills.length ? ` (${row.scheduledBills.map(item => item.name).join(", ")})` : ""}`).join("; ")}. Everyday spending may also overlap these categories. No combined budget-plus-bills total is presented.</p>}
         <ul className="money-event-list">{data.events.map(event => <li key={event.id}><time dateTime={event.date}>{fullDate(event.date)}</time><span>{event.name}<small>{event.kind === "purchase_reserve" ? "Existing purchase reserve" : event.kind === "modeled" ? "Existing model" : "Planning expectation"}{!event.included && " · excluded from totals"}</small></span><strong>{event.direction === "in" ? "+" : "−"}{formatCents(event.amountCents)}</strong></li>)}</ul>
       </details>

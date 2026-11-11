@@ -23,7 +23,9 @@ export function planningBudgetView(ownerId: string, data: StoreData = load()) {
     sourceLabel: "Simulated transaction history · no bank connected", forecastPolicy: BUDGET_POLICY,
     categories: suggestions.map(suggestion => {
       const saved = state?.categories[suggestion.categoryId];
-      return { ...suggestion, draftMonthlyCents: saved?.draftMonthlyCents ?? null,
+      return { ...suggestion,
+        forecastIntegration: { status: saved?.confirmed ? "needs_review" as const : "planning_only" as const, reason: "No verified category split exists for daily spending. Keep the baseline; this budget is not added to bills or purchase reserves." },
+        draftMonthlyCents: saved?.draftMonthlyCents ?? null,
         confirmedMonthlyCents: saved?.confirmed?.monthlyCents ?? null,
         confirmation: saved?.confirmed ?? null, updatedAt: saved?.updatedAt ?? null,
         status: saved?.draftMonthlyCents !== undefined ? "draft" as const : saved?.confirmed ? "confirmed" as const : "suggested" as const,

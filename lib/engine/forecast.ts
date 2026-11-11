@@ -19,6 +19,7 @@ export function occurrences(item: RecurringItem, horizon = HORIZON_DAYS, shiftIn
 export function monthlySurplus(p: Persona): number {
   let net = 0;
   for (const r of p.recurring) {
+    if (r.direction === "in" && p.planning?.replacedIncomeIds.includes(r.id)) continue;
     const perMonth = r.frequency === "biweekly" ? (r.amount * 26) / 12 : r.amount;
     net += r.direction === "in" ? perMonth : -perMonth;
   }
@@ -42,7 +43,13 @@ function simulate(p: Persona, existing: Payment[], extra: Payment[], shiftIncome
   const cents = (n: number) => Math.round(n * 100);
   const deltas = new Array<number>(horizon).fill(0);
   for (const r of p.recurring) {
+    if (r.direction === "in" && p.planning?.replacedIncomeIds.includes(r.id)) continue;
     for (const d of occurrences(r, horizon, shiftIncome)) deltas[d] += r.direction === "in" ? cents(r.amount) : -cents(r.amount);
+  }
+  // User-confirmed receipts are future plans, not guaranteed cash. No planning income in stress.
+  if (shiftIncome === 0) for (const event of p.planning?.incomeEvents || []) {
+    const day = daysBetween(t, parseIso(event.date));
+    if (day >= 0 && day < Math.min(HORIZON_DAYS, horizon)) deltas[day] += event.amountCents;
   }
   for (let d = 0; d < horizon; d++) deltas[d] -= cents(p.dailySpend);
   // existing future payments (already-paid ones are in the starting balance)
@@ -76,6 +83,7 @@ export function forecast(p: Persona, existing: Payment[] = [], extra: Payment[] 
   const sGap = round2(sMin.balance - p.buffer);
   const risk = gap < 0 ? "red" : sGap < 0 ? "yellow" : "green";
   return {
+    ...(p.planning ? { planningIncomePolicy: "omitted_from_stress" as const } : {}),
     startBalance: normal.start,
     dailyBalances: normal.daily.slice(0, HORIZON_DAYS),
     minBalance: min.balance,

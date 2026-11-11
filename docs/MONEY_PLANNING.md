@@ -1,5 +1,7 @@
 # Step 4 — expected income and three-month Money planning
 
+Historical implementation checkpoint: [Step 5](FORECAST_INTEGRATION.md) now adds explicit income forecast mapping. Category budgets remain planning only; the isolation statements below describe their original step.
+
 Money keeps the existing readiness hero, cash protection/checks, Allocation Explorer and learning
 accordions. A compact informational overview replaces the always-expanded budget section. One
 “Adjust your plan” disclosure contains the income editor and the existing Step 3 Spending Plan;
