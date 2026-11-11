@@ -1077,7 +1077,10 @@ summary { font-size:14px; }
 .profile-purchase h3 { margin:0;font-size:16px; }
 .profile-purchase>p { margin:8px 0; }
 .profile-purchase details { padding:0;margin-top:8px; }
-.profile-purchase summary { min-height:44px; }
+.profile-purchase summary { min-height:44px;display:flex;align-items:center;gap:6px;padding:4px 0; }
+.profile-purchase summary::before { content:"▸";font-size:12px; }
+.profile-purchase details[open]>summary::before { content:"▾"; }
+.profile-purchase details>p { margin:2px 0 0; }
 @media(max-width:760px) {
   .profile-summary { font-size:14px; }
   .profile-insights li { gap:8px; }
@@ -1115,3 +1118,6 @@ summary { font-size:14px; }
   .account-link { gap:6px; }
   .account-link .avatar { width:28px;height:28px; }
 }
+
+/* Keep the checkout heading compact without a forced line break. */
+.review-heading h1 { font-size:clamp(22px,2.3vw,28px);line-height:1.2;font-weight:650;letter-spacing:-.6px;margin-bottom:0; }
