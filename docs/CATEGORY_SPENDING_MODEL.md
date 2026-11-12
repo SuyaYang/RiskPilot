@@ -1,5 +1,10 @@
 # Step 7A.2 — explicit fictional category spending coverage
 
+**Current correction:** [Step 8.5](STEP85_RESULT.md) supersedes earlier blanket replacement-income exclusions,
+duplicate purchase/buffer goal charges, zero-difference budget application and client-selected capture validation.
+Historical test counts and acceptance statements below describe their original checkpoints.
+
+
 ## Provenance, migration and compatibility
 
 Alex's legacy assumption is exactly **$20.00/day (2,000 cents)**. `alex-everyday-v1`

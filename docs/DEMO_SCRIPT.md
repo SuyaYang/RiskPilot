@@ -1,4 +1,10 @@
-# Decision-to-outcome presentation (about 2½ minutes)
+# Historical decision-to-outcome presentation
+
+**Superseded for recording.** Use [the authoritative current three-minute rehearsal](STEP7B_DEMO_REHEARSAL.md),
+including the clean Alex budget example, prewarming, human payment actions and `/vision` closing frame.
+The script below is retained as historical evidence. Its dates, financial policy and timing predate
+[Step 8.5 corrections](STEP85_RESULT.md); do not mix it with the current sequence.
+
 
 Use only the **Northstar → PayPal → RiskPilot → Capture** path in the presentation. Use fictional data with `DEMO_TODAY=2026-11-10` on a dedicated demo workspace. Keep existing
 Sandbox ledgers intact: a fresh browser profile gives a separate RiskPilot workspace and a fresh

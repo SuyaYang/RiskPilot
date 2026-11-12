@@ -1,10 +1,16 @@
 const DAY = 24 * 60 * 60 * 1000;
 
-/** Today as a UTC-midnight Date. DEMO_TODAY (YYYY-MM-DD) pins the date for tests and recordings. */
+/** Financial calendar day, represented at UTC midnight for date arithmetic. Payment timestamps stay real UTC instants. */
 export function today(): Date {
   const pinned = process.env.DEMO_TODAY;
-  const d = pinned ? new Date(`${pinned}T00:00:00Z`) : new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  if (pinned) {
+    const value = new Date(`${pinned}T00:00:00Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(pinned) || !Number.isFinite(value.getTime()) || iso(value) !== pinned) throw new Error("Invalid DEMO_TODAY");
+    return value;
+  }
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: process.env.FINANCIAL_TIMEZONE || "America/New_York", year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(new Date());
+  const value = (name: string) => parts.find(part => part.type === name)!.value;
+  return new Date(`${value("year")}-${value("month")}-${value("day")}T00:00:00Z`);
 }
 
 export function addDays(d: Date, n: number): Date {

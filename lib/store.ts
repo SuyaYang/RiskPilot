@@ -27,6 +27,7 @@ export interface OrderRecord {
   captureRequestId: string; captureCommand?: "STARTED" | "UNKNOWN" | "COMPLETED"; captureStartedAt?: number;
   approvalUrl?: string; projectionStatus?: "PENDING" | "UPDATED"; snapshotId?: string;
   settlementReview?: string;
+  settlementEvents?: { id: string; type: "refund" | "reversal"; amount?: number; currency?: string }[];
   priorAssessmentId?: string; reviewIntentId?: string;
   merchant?: { id: "northstar-demo"; checkoutId: string; name: string };
 }

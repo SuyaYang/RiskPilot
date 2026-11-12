@@ -49,7 +49,10 @@ test("Alex: paying in full breaks the buffer, Pay in 4 is recommended", () => {
   assert.equal(by("full").forecast.risk, "red");
   assert.equal(by("pay_in_4").forecast.risk, "green");
   assert.equal(r.recommended, "pay_in_4");
-  assert.ok(by("pay_in_4").goalImpact.find((g) => g.goalId === "a-trip")!.delayDays < by("full").goalImpact.find((g) => g.goalId === "a-trip")!.delayDays);
+  // Equal economic cost can land in the same coarse monthly funding bucket. The old
+  // strict advantage depended on charging full payment plus its overlapping buffer deficit.
+  assert.equal(by("full").goalImpact.find((g) => g.goalId === "a-trip")!.delayDays, 30);
+  assert.equal(by("pay_in_4").goalImpact.find((g) => g.goalId === "a-trip")!.delayDays, 30);
 });
 
 test("Sam: comfortable buyers are not pushed into installments", () => {

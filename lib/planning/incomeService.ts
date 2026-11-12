@@ -26,7 +26,7 @@ export function moneyPlanView(ownerId: string, data: StoreData = load()) {
     ...planningOverview(persona, payments, Object.values(state?.entries || {}), budget, asOf, integration),
     insightBasis: planningEvidenceHash(financialInputHash, { version: state?.version ?? 0, epoch: state?.epoch ?? "unsaved" }, { version: budget.version, epoch: budget.epoch, basisHash: budget.basisHash }),
     integration: { ...integration, budgets: Object.fromEntries(budget.categories.filter(row => row.confirmedMonthlyCents !== null).map(row => [row.categoryId, row.forecastIntegration])) }, financialInputHash,
-    policy: "Informational expectations only. Future income is not available cash today. Explicitly mapped income feeds the 45-day forecast but is omitted from stress; this view does not calculate safe-to-spend or investable cash.",
+    policy: "Informational expectations only. Future income is not available cash today. Additional planned income is excluded from stress and long-term goal funding. Verified replacements retain only original-date receipts capped at original amounts in stress; equivalent biweekly cadence retains capped goal income. Manual checking is unchanged. This informational view does not calculate spendable cash.",
   };
 }
 export type MoneyPlanView = ReturnType<typeof moneyPlanView>;

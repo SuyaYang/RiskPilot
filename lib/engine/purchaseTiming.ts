@@ -14,6 +14,6 @@ export function purchaseAfterIncome(p: Persona, goals: Goal[], existing: Payment
   const payment = { date:purchaseDate, amount, label:"What-if purchase · after expected income" };
   const projected = forecast(p,existing,[payment]);
   const future = existing.filter(item => item.date > iso(today()));
-  const allocation = allocateGoals(p,goals,[...future,payment],Math.max(0,-projected.bufferGap));
+  const allocation = allocateGoals(p,goals,[...future,payment],Math.max(0,-projected.bufferGap),Math.max(0,-forecast(p,existing.filter(x=>x.date<=iso(today()))).bufferGap));
   return { available:true, income:{name:income.item.name,date:iso(addDays(today(),income.day)),amount:income.item.amount,uncertain:!!income.item.uncertain},purchaseDate,forecast:projected,allocation,goalImpact:goalImpact(baseline,allocation),payment };
 }

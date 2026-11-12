@@ -1,5 +1,10 @@
 # Two purchase entries, one intelligent review
 
+**Current correction:** [Step 8.5](STEP85_RESULT.md) supersedes earlier blanket replacement-income exclusions,
+duplicate purchase/buffer goal charges, zero-difference budget application and client-selected capture validation.
+Historical test counts and acceptance statements below describe their original checkpoints.
+
+
 Both entry points are required release gates. A regression in either blocks release.
 
 - **Flow A — Direct Merchant Checkout:** Northstar → PayPal approval → automatic signed RiskPilot

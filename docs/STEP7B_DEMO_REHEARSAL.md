@@ -1,4 +1,4 @@
-# Step 7B — three-minute recording rehearsal
+# Authoritative three-minute recording rehearsal (updated Step 8.5)
 
 Use a fresh browser profile for the recording, never Reset demo in an account with Sandbox
 orders. Keep the product owner's current Alex/Sam/Jordan workspaces intact. Fixed fictional
@@ -21,22 +21,43 @@ Never enter production credentials or real financial information.
   processes running while a payment remains pending. Do not delete those ledgers after payment.
 - Review the remaining live-acceptance gates in STEP7B_ACCEPTANCE.md before recording.
 
-## Main narrative (2:50 target, excluding login/MFA)
+## Preparation and timing assumptions
+
+Use Node.js 22, npm, curl and Python 3. Set `FINANCIAL_TIMEZONE=America/New_York` and pin
+`DEMO_TODAY=2026-11-12` for these figures; restart services after configuration changes.
+Prewarm Dashboard, Money, Shop, Goals, Vision and the storefront off camera; run the readiness
+check again after cold compilation. Prepare the Sandbox buyer session off camera. A fresh browser
+profile creates a fresh RiskPilot workspace and merchant session without deleting old payments.
+If buyer preparation needs another browser/profile, do it before the timed take.
+
+The 2:50 target below includes a ten-second Vision frame and ten seconds of contingency within
+three minutes. It excludes buyer login, MFA/CAPTCHA and unexpected provider/network delays.
+Only the product owner handles approval and final payment actions. No actual payment should be
+made merely to rehearse; use retained acceptance evidence or explicitly labeled fixture footage.
+The two Step 7B captures are historical acceptance, not new Step 8.5 payment evidence.
+
+## Main narrative (2:50 target, plus 0:10 contingency)
 
 | Time | Route / action | Spoken point |
 | --- | --- | --- |
-| 0:00–0:20 | Dashboard `/` | Show manually supplied cash, 45-day projection and buffer. Fictional history is distinct from verified payments. |
-| 0:20–0:40 | Spending Intelligence on Dashboard | Briefly open category history. Observed fictional spending suggests a plan; it does not create a commitment. |
-| 0:40–1:15 | `/money` → What-if budget preview → Shopping | Read the current category assumption. For the verified November 12 acceptance fixture, compare $90 → $30/month. Lowest cash $1,720 → $1,738; delayed-income minimum $1,540 → $1,572; capacity $90 → $122. Preview is read-only. Choose Apply to money plan explicitly. |
-| 1:15–1:30 | Northstar `http://localhost:3200` (or isolated 3201) | Start directly at the merchant. Aero 14 is server priced at $900 USD. No prior Shop visit is required. |
-| 1:30–1:50 | Check out with PayPal Sandbox → buyer Continue | The product owner signs in/selects funding and approves the order. Continue does not capture this merchant order. |
-| 1:50–2:20 | Signed RiskPilot purchase-impact review | Show full-price risk, income-late stress and goals. Do not hide an unfavorable conclusion: Alex's full-price $900 purchase can cross the $1,000 buffer. Scenarios do not select PayPal funding. |
-| 2:20–2:40 | Explicit Confirm and pay | Product owner performs the final confirmation. Only verified provider capture counts as payment success. |
-| 2:40–2:50 | Merchant receipt → Dashboard | Show capture/forecast-save status and exactly one new purchase reserve. If pending/unknown, describe recovery honestly instead of claiming success. |
+| 0:00–0:15 | Dashboard `/` | Show manually supplied cash, 45-day projection and buffer. Fictional history is distinct from verified payments. |
+| 0:15–0:30 | Spending Intelligence on Dashboard | Briefly open category history. Observed fictional spending suggests a plan; it does not create a commitment. |
+| 0:30–1:05 | `/money` → What-if budget preview → Shopping | Read the current category assumption. For the verified November 12 acceptance fixture, compare $90 → $30/month. Lowest cash $1,720 → $1,738; delayed-income minimum $1,540 → $1,572; capacity $90 → $122. Preview is read-only. Choose Apply to money plan explicitly. |
+| 1:05–1:20 | Northstar `http://localhost:3200` (or isolated 3201) | Start directly at the merchant. Aero 14 is server priced at $900 USD. No prior Shop visit is required. |
+| 1:20–1:40 | Check out with PayPal Sandbox → buyer Continue | The prepared Sandbox buyer selects funding and approves the order; login/MFA is off camera. Continue does not capture this merchant order. |
+| 1:40–2:10 | Signed RiskPilot purchase-impact review | Show full-price risk, income-late stress and goals. Do not hide an unfavorable conclusion: Alex's full-price $900 purchase can cross the $1,000 buffer. Scenarios do not select PayPal funding. |
+| 2:10–2:30 | Explicit Confirm and pay | Product owner performs the final confirmation. Only verified provider capture counts as payment success. |
+| 2:30–2:40 | Merchant receipt → Dashboard | Show capture/forecast-save status and exactly one new purchase reserve. If pending/unknown, describe recovery honestly instead of claiming success. |
+| 2:40–2:50 | `/vision` | Close on the static future concept. Label it illustrative and distinguish it from today's merchant-integrated Sandbox prototype. |
 
 The $60 monthly assumption reduction is not $60 of realized cash and does not itself become
 investment capacity. The original food $300 → $150 example also remains available, but do not
 apply both examples silently or quote a clean baseline after a recorded purchase.
+
+The goal-delay correction removes overlapping purchase/buffer charges. Read current goal dates
+from this candidate; do not narrate dates from older captures as newly calculated results. The
+shopping cash/capacity references remain unchanged. Identical daily-budget equivalents now keep
+the daily model; choose $30 explicitly for the demonstrated calendar-month conversion.
 
 ## Optional Shop path (separate acceptance clip)
 
@@ -55,5 +76,5 @@ Controlled automated recovery tests supplement, but do not replace, actual Sandb
 Public HTTPS callbacks/webhooks, physical iOS/Android payment behavior and production bank
 reconciliation are separate from local responsive-browser verification.
 
-Step 8 is the standalone future-ecosystem `/vision` concept page, after explicit approval.
-No Vision page or Devpost description is implemented in Step 7B.
+`/vision` is now implemented as a standalone static closing frame. It creates no payment and
+reads no account finances. Step 9 submission copy remains outside this remediation phase.

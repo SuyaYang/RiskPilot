@@ -40,20 +40,20 @@ export function inputHash(id: string, data: StoreData = load()) {
   // Declaring an identical baseline must not invalidate existing purchase assessments.
   const { everydaySpending, ...legacy } = persona;
   const financialPersona = everydaySpending?.categories.some(row => row.override) ? persona : legacy;
-  return crypto.createHash("sha256").update(JSON.stringify({ persona: financialPersona, payments, asOf: iso(today()), policy: "rp-v1" })).digest("hex");
+  return crypto.createHash("sha256").update(JSON.stringify({ persona: financialPersona, payments, asOf: iso(today()), policy: "rp-v1-step85" })).digest("hex");
 }
 
 export function snapshot(id: string, data: StoreData = load()) {
   const { persona, payments } = personaWithState(id, data);
   const f = forecast(persona, payments);
   const future = payments.filter((x) => x.date > iso(today()));
-  const alloc = allocateGoals(persona, persona.goals, future, Math.max(0, -f.bufferGap));
+  const alloc = allocateGoals(persona, persona.goals, future, Math.max(0, -f.bufferGap), Math.max(0, -forecast(persona, payments.filter(x => x.date <= iso(today()))).bufferGap));
   const inv = investableNow(persona, f, alloc);
   if (persona.planning) {
     // A user-entered receipt (or reduced goal reserve after replacement) must not create capacity.
     const { planning: _planning, ...withoutPlanning } = persona;
     const conservative = forecast(withoutPlanning, payments);
-    const legacyAllocation = allocateGoals(withoutPlanning, persona.goals, future, Math.max(0, -conservative.bufferGap));
+    const legacyAllocation = allocateGoals(withoutPlanning, persona.goals, future, Math.max(0, -conservative.bufferGap), Math.max(0, -forecast(withoutPlanning, payments.filter(x => x.date <= iso(today()))).bufferGap));
     inv.investable = Math.min(inv.investable, investableNow(withoutPlanning, conservative, legacyAllocation).investable);
   }
   const st = data.personas[id];

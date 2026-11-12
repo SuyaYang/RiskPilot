@@ -273,3 +273,12 @@ were inspected at 375/390/768/1280/1440/1920px. The complete desktop composition
 1440×900 and 1920×1080; mobile stacks naturally with scrolling. Screenshots and verification logs
 are outside Git in `../artifacts/step-8/`. No payment was initiated or captured in Step 8.
 Final submission, Devpost and video preparation remain separate, unperformed work.
+
+## Step 8.5 — independent audit remediation and local code freeze
+
+Step 8 is checkpointed as `57bcc9583b854a5e57c23061ab30c4f8bbe1375b` on `cynthia`.
+The [current result](STEP85_RESULT.md) records reproduced income-horizon/stress/goal-surplus defects,
+overlapping purchase/buffer charges, server-owned Shop checks, no-op budget semantics, financial
+timezones and verified refund/reversal status. Earlier live acceptance remains historical evidence.
+No actual PayPal payment was initiated or captured; existing ledgers remain unchanged. Publication
+and Step 9 are approval-gated and have not been performed.

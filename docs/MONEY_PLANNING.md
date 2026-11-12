@@ -1,5 +1,10 @@
 # Step 4 — expected income and three-month Money planning
 
+**Current correction:** [Step 8.5](STEP85_RESULT.md) supersedes earlier blanket replacement-income exclusions,
+duplicate purchase/buffer goal charges, zero-difference budget application and client-selected capture validation.
+Historical test counts and acceptance statements below describe their original checkpoints.
+
+
 Current follow-up: [Step 7A.2 category model](CATEGORY_SPENDING_MODEL.md) enables explicit, coverage-verified Alex category replacement. Unmapped/legacy budgets retain the planning-only behavior documented below.
 
 Historical implementation checkpoint: [Step 5](FORECAST_INTEGRATION.md) now adds explicit income forecast mapping. Category budgets remain planning only; the isolation statements below describe their original step.

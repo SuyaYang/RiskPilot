@@ -21,19 +21,19 @@ same working copy so they share the local server-only bridge key. [Full walkthro
 `npm run demo -- --no-open` starts/checks both without opening a browser.
 `npm run merchant-demo` starts only the merchant when RiskPilot is already running on port 3100.
 
-This branch implements a **local fictional-data demo** with Dashboard, Goals, Shop and Invest.
+This branch implements a **local fictional-data demo** with Dashboard, Goals, Shop and Money.
 See the [current implementation overview](README.md) and [original proposed architecture](docs/ARCHITECTURE_ROADMAP.md); see
 [implementation / acceptance status](docs/IMPLEMENTATION_STATUS.md) for gaps. This is not a production
 financial application and does not connect a bank or authenticate a Supabase user.
 
 ## Start
 
-Node.js 20+ (CI uses Node 22), npm, and optional PayPal Sandbox / Gemini credentials.
+Node.js 22, npm, curl, and Python 3. PayPal Sandbox credentials are required by `npm run demo`; Gemini is optional. App-only simulation is available with `npm run dev` and no PayPal keys.
 
 ```bash
 npm ci
 cp .env.example .env
-# Fill Sandbox keys for real payment; leave blank for clearly labeled local simulation.
+# Fill your own Sandbox keys for the merchant launcher; leave blank only for app-only simulation.
 npm run typecheck
 npm test
 npm run build
@@ -216,3 +216,16 @@ Step 7B completed new actual Sandbox captures for both paths. Use the
 [final acceptance record](docs/STEP7B_ACCEPTANCE.md) and
 [under-three-minute recording rehearsal](docs/STEP7B_DEMO_REHEARSAL.md) for current preparation,
 verified financial values, human confirmation steps and remaining physical-device/webhook limits.
+
+## Financial dates and final recording
+
+`FINANCIAL_TIMEZONE=America/New_York` is the financial calendar default, independent of the
+server timezone. Set `DEMO_TODAY=2026-11-12` for the recording fixture and restart both services.
+Pinned dates override the clock. Actual capture/webhook timestamps are not rewritten.
+Prewarm every recorded route and rerun `npm run demo -- --check` before filming; a cold dev
+compile may exceed the launcher's two-second health-read deadline.
+
+The [current rehearsal](docs/STEP7B_DEMO_REHEARSAL.md) supersedes older scripts. See
+[Step 8.5](docs/STEP85_RESULT.md) for corrected income, goal-cost, checkout-source and settlement
+policies. Historical payment ledgers must remain private and intact. Public HTTPS/webhook delivery,
+physical-device checkout, production identity and bank/refund reconciliation remain unaccepted.

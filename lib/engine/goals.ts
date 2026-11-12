@@ -1,6 +1,6 @@
 import type { Allocation, Goal, GoalStatus, Payment, Persona } from "../types";
 import { addDays, daysBetween, iso, monthsBetween, parseIso, today } from "../dates";
-import { monthlySurplus } from "./forecast";
+import { forecast, monthlySurplus } from "./forecast";
 
 const MONTH_DAYS = 30.4;
 const MAX_MONTHS = 48;
@@ -21,6 +21,7 @@ export function allocateGoals(
   goals: Goal[],
   futurePayments: Payment[] = [],
   bufferDeficit = 0,
+  cashBufferDeficit = Math.max(0, -forecast(p).bufferGap),
 ): Allocation {
   const t = today();
   const surplus = monthlySurplus(p);
@@ -31,6 +32,10 @@ export function allocateGoals(
     const m = Math.min(MAX_MONTHS - 1, Math.floor(d / MONTH_DAYS));
     outByMonth[m] += x.amount;
   }
+  // The scheduled purchase and its resulting buffer shortfall overlap. Protect the larger
+  // requirement, not their sum; any independent pre-existing deficit remains protected.
+  const scheduledCost = outByMonth.reduce((sum, value) => sum + value, 0);
+  const independentBufferDeficit = Math.max(cashBufferDeficit, bufferDeficit - scheduledCost);
   const active = sortGoals(goals.filter((g) => !g.paused));
   const remaining = new Map(active.map((g) => [g.id, Math.max(0, g.targetAmount - g.savedSoFar)]));
   const required = new Map(
@@ -44,7 +49,7 @@ export function allocateGoals(
   const doneMonth = new Map<string, number>();
   let carry = 0;
   for (let m = 0; m < MAX_MONTHS; m++) {
-    let avail = surplus - outByMonth[m] - (m === 0 ? bufferDeficit : 0) + carry;
+    let avail = surplus - outByMonth[m] - (m === 0 ? independentBufferDeficit : 0) + carry;
     if (avail < 0) {
       carry = avail;
       avail = 0;

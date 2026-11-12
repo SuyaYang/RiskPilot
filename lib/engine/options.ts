@@ -60,7 +60,8 @@ export function buildOptions(
   // Payments on or before today already reduce forecast.startBalance. Do not allocate them twice.
   const futureExisting = existing.filter((x) => x.date > iso(t));
   const baseF = forecast(p, existing);
-  const baselineAlloc = allocateGoals(p, goals, futureExisting, Math.max(0, -baseF.bufferGap));
+  const cashDeficit = Math.max(0, -forecast(p, existing.filter(x => x.date <= iso(t))).bufferGap);
+  const baselineAlloc = allocateGoals(p, goals, futureExisting, Math.max(0, -baseF.bufferGap), cashDeficit);
 
   const methods: MethodId[] = ["full", "pay_in_4", "pay_monthly"];
   if (alternative) methods.push("cheaper");
@@ -80,7 +81,7 @@ export function buildOptions(
     }
     const { payments, extraCost } = method === "wait" ? { payments: [], extraCost: 0 } : schedule(method, prod.price);
     const f = method === "wait" ? baseF : forecast(p, existing, payments);
-    const alloc = allocateGoals(p, goals, [...futureExisting, ...payments], Math.max(0, -f.bufferGap));
+    const alloc = allocateGoals(p, goals, [...futureExisting, ...payments], Math.max(0, -f.bufferGap), cashDeficit);
     const reasons: string[] = [];
     if (f.bufferGap < 0) reasons.push("A payment would push your balance below your cash buffer");
     else if (f.stressBufferGap < 0) reasons.push("If income arrives a week late, you would dip below your buffer");

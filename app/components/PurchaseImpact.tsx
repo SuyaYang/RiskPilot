@@ -31,7 +31,7 @@ export default function PurchaseImpact({ decision, option, buffer, onSelect, loc
     </div>}
     <details className="impact-goals"><summary>{delays.length ? `${delays.length} goals delayed · view dates` : "No additional goal delay"}</summary>{delays.length ? delays.map(g => <div className="row between small" key={g.goalId}><span>{g.name}</span><strong>+{g.delayDays} days</strong></div>) : <p className="small">This scenario adds no projected delay to your goals.</p>}</details>
     <p className="small muted">If income arrives a week late, lowest cash is {money(option.forecast.stressMinBalance)}. Evaluated through {fmtDate(option.forecast.evaluatedThrough)}.</p>
-    {option.hypothetical && <p className="warn small">Hypothetical estimate · Actual eligibility, APR and payment dates are set by PayPal. Estimated extra cost: {money(option.extraCost)}. Changing this forecast does not change the payment method selected in PayPal.</p>}
+    {option.hypothetical && <p className="warn small">Educational hypothetical estimate, not an enabled financing offer or a recommendation to borrow. Waiting may preserve your goals. This prototype captures and reserves the full price; actual eligibility, APR and payment dates are unconfirmed. Estimated extra cost: {money(option.extraCost)}. Changing this forecast does not change the payment method selected in PayPal.</p>}
     {first && <details><summary className="small">View {option.hypothetical ? "estimated" : "projected"} payment dates</summary><table><tbody>{option.payments.map(p => <tr key={p.date}><td>{fmtDate(p.date)}</td><td>{p.label}</td><td>{money(p.amount)}</td></tr>)}</tbody></table></details>}
   </section>;
 }

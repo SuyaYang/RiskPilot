@@ -87,7 +87,7 @@ export function updatePlanningBudget(ownerId: string, body: unknown) {
         const { categoryId, category, historicalMonthlyAverageCents, proposedMonthlyCents, observation, source, overlap } = suggestion;
         entry.confirmed = { monthlyCents: Number(input.monthlyCents), confirmedAt: now,
           evidence: { categoryId, category, historicalMonthlyAverageCents, proposedMonthlyCents, observation, source, overlap } };
-        if (input.action === "apply") entry.applied = { monthlyCents: Number(input.monthlyCents), effectiveFrom: prior?.applied?.monthlyCents === Number(input.monthlyCents) ? prior.applied.effectiveFrom : iso(today()), modelVersion: SPENDING_MODEL_VERSION, coverageSignature: SPENDING_COVERAGE_SIGNATURE, appliedAt: now };
+        if (input.action === "apply" && (prior?.applied || Number(input.monthlyCents) !== suggestion.forecastIntegration.currentMonthlyCents)) entry.applied = { monthlyCents: Number(input.monthlyCents), effectiveFrom: prior?.applied?.monthlyCents === Number(input.monthlyCents) ? prior.applied.effectiveFrom : iso(today()), modelVersion: SPENDING_MODEL_VERSION, coverageSignature: SPENDING_COVERAGE_SIGNATURE, appliedAt: now };
         delete entry.draftMonthlyCents;
       }
       entry.updatedAt = now;
@@ -98,6 +98,6 @@ export function updatePlanningBudget(ownerId: string, body: unknown) {
       const current = snapshot(ownerId, data);
       data.personas[ownerId].moneyPlanSnapshot = { asOf: current.asOf, financialInputHash: current.financialInputHash, forecast: current.forecast, allocation: current.allocation, investable: current.investable };
     }
-    return { budget: planningBudgetView(ownerId, data), forecastChanged, message: enableBaseline ? "Alex category model enabled. Existing budgets remain planning only; forecast unchanged." : input.action === "apply" ? "Applied money plan. Covered category replaced; shared forecast refreshed." : input.action === "restore_baseline" ? "Category baseline restored. Shared forecast refreshed." : input.action === "confirm" ? "Budget confirmed for planning only. Forecast unchanged." : input.action === "edit" ? "Draft saved. Confirm explicitly when ready; forecast unchanged." : "Unconfirmed edit reverted. Forecast unchanged." };
+    return { budget: planningBudgetView(ownerId, data), forecastChanged, message: enableBaseline ? "Alex category model enabled. Existing budgets remain planning only; forecast unchanged." : input.action === "apply" ? forecastChanged ? "Applied money plan. Covered category replaced; shared forecast refreshed." : "No financial change. Existing daily or monthly spending model retained." : input.action === "restore_baseline" ? "Category baseline restored. Shared forecast refreshed." : input.action === "confirm" ? "Budget confirmed for planning only. Forecast unchanged." : input.action === "edit" ? "Draft saved. Confirm explicitly when ready; forecast unchanged." : "Unconfirmed edit reverted. Forecast unchanged." };
   });
 }

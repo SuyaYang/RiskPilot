@@ -12,7 +12,7 @@ export type PlanningIncomeEntry = {
   };
   createdAt: string; updatedAt: string; confirmedAt: string | null; version: number;
 };
-/** Informational planning state only; not a receivable, balance or engine commitment. */
+/** Versioned user-entered expectations; only explicitly compiled mappings become model inputs. Never observed cash. */
 export type PlanningIncomeState = {
   schemaVersion: 1; version: number; epoch: string; entries: Record<string, PlanningIncomeEntry>;
 };

@@ -29,7 +29,8 @@ export function previewBudget(owner: string, body: unknown, data: StoreData = lo
   const monthlyDifferenceCents = originalMonthlyCents === null ? null : adjustedMonthlyCents - originalMonthlyCents;
   const financial = snapshot(owner, data), period = planningPeriod(financial.asOf);
   const scenarioData = { ...data, personas: { ...data.personas, [owner]: structuredClone(data.personas[owner]) } };
-  if (supported) {
+  const baselineNoOp = supported && category.forecastIntegration.appliedMonthlyCents === null && adjustedMonthlyCents === originalMonthlyCents;
+  if (supported && !baselineNoOp) {
     const state = scenarioData.personas[owner].planningBudget ??= newPlanningBudget();
     const entry = state.categories[category.categoryId] ??= { updatedAt: "preview-only" };
     entry.applied = { monthlyCents: adjustedMonthlyCents, effectiveFrom: entry.applied?.monthlyCents === adjustedMonthlyCents ? entry.applied.effectiveFrom : financial.asOf, modelVersion: SPENDING_MODEL_VERSION, coverageSignature: SPENDING_COVERAGE_SIGNATURE, appliedAt: "preview-only" };
@@ -59,7 +60,7 @@ export function previewBudget(owner: string, body: unknown, data: StoreData = lo
       minBalanceCents: Math.round(financial.forecast.minBalance * 100), stressMinBalanceCents: Math.round(financial.forecast.stressMinBalance * 100),
       bufferCents: Math.round(financial.persona.buffer * 100), availableToAllocateCents: Math.round(financial.investable.investable * 100), availableToAllocateDifferenceCents: Math.round((scenario.investable.investable - financial.investable.investable) * 100) },
     confirmation: { categoryId: category.categoryId, monthlyCents: adjustedMonthlyCents, version: budget.version, epoch: budget.epoch, basisHash: budget.basisHash, financialInputHash: financial.financialInputHash },
-    policy: supported ? "Scenario preview, not guaranteed savings. Apply to money plan explicitly replaces this covered category from today forward. Monthly cents are spread across actual calendar days; remainder cents go to the earliest days. Past days are not charged again. Current-cash, stress and goal safeguards still apply." : "Illustrative budget estimates only, not guaranteed savings or future transaction dates. The authoritative 45-day forecast and available-to-allocate amount remain unchanged. Confirm saves a planning budget only.",
+    policy: supported ? "Scenario preview, not guaranteed savings. Matching the daily baseline’s current calendar-month equivalent keeps the daily model unchanged. A different amount explicitly converts to a fixed calendar-month budget; future month lengths can change spending. Goal contributions retain the existing 30.4-day normalization for daily categories. Apply to money plan explicitly replaces this covered category from today forward. Monthly cents are spread across actual calendar days; remainder cents go to the earliest days. Past days are not charged again. Current-cash, stress and goal safeguards still apply." : "Illustrative budget estimates only, not guaranteed savings or future transaction dates. The authoritative 45-day forecast and available-to-allocate amount remain unchanged. Confirm saves a planning budget only.",
   };
 }
 export type BudgetPreview = ReturnType<typeof previewBudget>;

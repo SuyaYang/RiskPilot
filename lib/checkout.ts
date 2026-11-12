@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { load, update, type OrderRecord } from "./store";
+import { orderReview } from "./orderReview";
 import { ASSESSMENT_MAX_AGE_MS } from "./smartRecheck";
 import { inputHash } from "./state";
 import { createOrder, captureOrder, getOrder, paypalConfigured, readCapture, type PayPalOrder } from "./paypal";
@@ -113,6 +114,10 @@ export async function captureCheckout(owner: string, id: string, api = gateway, 
   if (o.merchant) throw new CheckoutError("MERCHANT_CONFIRMATION_REQUIRED", "This order must be captured by its merchant after RiskPilot confirmation.", 400);
   if (o.status === "CAPTURED") return { status: "CAPTURED", captureId: o.captureId, duplicate: true, snapshotId: o.snapshotId };
   if (o.simulated) throw new CheckoutError("SIMULATED_ORDER", "Use the explicitly labeled simulation action", 400);
+  if (o.shopPayNow === true && o.status === "CREATED" && !o.captureCommand) {
+    const review = orderReview(o);
+    if (review.recheck.status !== "unchanged" || review.decision.inputHash !== reviewedHash) throw new CheckoutError("STALE_REVIEW", "The original Shop assessment expired or changed. Review the refreshed impact before confirming payment.");
+  }
   // Preflight avoids sending an unapproved payment to the capture endpoint.
   let remote: PayPalOrder;
   try { remote = await api.get(id); }
@@ -124,6 +129,13 @@ export async function captureCheckout(owner: string, id: string, api = gateway, 
   if (done) return done;
   const unsettled = unsettledCapture(o, remote);
   if (unsettled) throw unsettled;
+  if (o.shopPayNow === true) {
+    const review = orderReview({ ...o, status: "CREATED", captureCommand: undefined });
+    if (review.recheck.status !== "unchanged" || review.decision.inputHash !== reviewedHash) throw new CheckoutError("STALE_REVIEW", "The original Shop assessment expired or changed. Review the refreshed impact before confirming payment.");
+  } else if (o.shopPayNow !== false) {
+    throw new CheckoutError("CHECKOUT_INTENT_UNKNOWN", "Unpaid legacy checkout intent cannot be verified. Preserve this order for reconciliation; do not use generic capture.");
+  }
+
   if (remote.status !== "APPROVED") {
     throw new CheckoutError(remote.status === "COMPLETED" ? "PAYMENT_PENDING" : "PAYMENT_NOT_APPROVED",
       remote.status === "COMPLETED" ? "Payment is still pending confirmation. Check again later." : "Payment not completed. Approve it in PayPal, then try again.");

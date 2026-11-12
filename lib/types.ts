@@ -38,6 +38,7 @@ export interface Persona {
     policy: "verified-planning-v1";
     incomeEvents: { id: string; name: string; date: string; amountCents: number; source: "user_confirmed_plan" }[];
     replacedIncomeIds: string[];
+    incomeSchedules?: import("./planning/effectiveIncome").EffectiveIncomeSchedule[];
   };
   recurring: RecurringItem[];
   goals: Goal[];
@@ -64,7 +65,7 @@ export interface Purchase {
 }
 
 export interface ForecastResult {
-  planningIncomePolicy?: "omitted_from_stress";
+  planningIncomePolicy?: "omitted_from_stress" | "established_replacements_capped";
   startBalance: number;
   dailyBalances: { date: string; balance: number }[];
   minBalance: number;

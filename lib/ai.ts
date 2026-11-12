@@ -78,13 +78,14 @@ export function templateExplanation(d: Decision, buffer: number): string {
   }
   const delays = rec.goalImpact.filter((g) => g.delayDays > 0).map((g) => `${g.name} by about ${g.delayDays} days`);
   const parts = [
-    `${rec.label} keeps your lowest balance at ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}, ${money(rec.forecast.bufferGap)} above your buffer.`,
+    `${rec.hypothetical ? "This educational installment estimate (not an approved offer)" : rec.label} keeps your lowest balance at ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}, ${money(rec.forecast.bufferGap)} above your buffer.`,
   ];
   if (full && full.method !== rec.method) {
     parts.push(`Paying in full would bring it to ${money(full.forecast.minBalance)}${full.forecast.bufferGap < 0 ? ", below your buffer" : ""}.`);
   }
   parts.push(delays.length ? `It would push back ${delays.join(" and ")}.` : "It does not delay any of your goals.");
   if (rec.extraCost > 0) parts.push(`It adds an estimated ${money(rec.extraCost)} in interest.`);
+  if (rec.hypothetical) parts.push("Waiting may preserve your goals. This is not a recommendation to borrow; checkout captures the full price.");
   return parts.join(" ");
 }
 
@@ -94,7 +95,7 @@ export async function explainDecision(d: Decision, personaName: string, buffer: 
   const facts: Record<string, string> = {
     recommendation: rec.method === "wait"
       ? `Waiting is the suggested scenario. Your lowest baseline projection is ${money(rec.forecast.minBalance)}.`
-      : `${rec.hypothetical ? "In this hypothetical scenario, " : ""}${rec.label} gives a lowest projected balance of ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}.`,
+      : `${rec.hypothetical ? "Educational estimate, not an approved offer or recommendation to borrow; waiting may preserve your goals. Checkout captures the full price. In this hypothetical scenario, " : ""}${rec.label} gives a lowest projected balance of ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}.`,
     buffer: `Your cash buffer is ${money(buffer)}; the scenario's minimum is ${money(Math.abs(rec.forecast.bufferGap))} ${rec.forecast.bufferGap < 0 ? "below" : "above"} it.`,
     stress: `If income arrives a week late, the lowest projection is ${money(rec.forecast.stressMinBalance)}.`,
   };

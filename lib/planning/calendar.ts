@@ -28,7 +28,7 @@ export function incomeDates(nextDate: string, frequency: IncomeFrequency, start:
   }
   return dates;
 }
-/** Current calendar-month remainder plus two complete months; all dates use the app's UTC convention. */
+/** Current calendar-month remainder plus two complete months; financial dates are represented at UTC midnight for arithmetic. */
 export function planningPeriod(asOf: string) {
   if (!validDate(asOf)) throw new Error("Invalid planning date");
   const anchor = `${asOf.slice(0, 7)}-01`;

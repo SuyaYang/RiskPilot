@@ -49,7 +49,7 @@ Both paths use the same financial engine, provider-order verification, stable ca
 
 ## Run the local demo
 
-Requires Node.js 20+ (CI uses Node 22) and npm.
+Requires **Node.js 22**, npm, `curl`, and **Python 3**. The launcher uses curl for HTTP checks and Python 3 to validate JSON responses.
 
 ```bash
 npm ci
@@ -88,7 +88,8 @@ Use [.env.example](.env.example); never commit keys or payment ledgers.
 | `APP_ORIGIN`, `RISKPILOT_ORIGIN`, `MERCHANT_ORIGIN` | Exact application/merchant URLs; launcher uses 3100/3200 locally |
 | `MERCHANT_BRIDGE_SECRET` | Shared server-only key; local demo generates a key if blank |
 | `STORE_PATH`, `MERCHANT_STORE_PATH` | Separate persistent RiskPilot and merchant JSON ledgers |
-| `DEMO_SEED_ENABLED=true`, `DEMO_TODAY=2026-11-10` | Reproducible fictional fixtures and an optional fixed scenario date |
+| `DEMO_SEED_ENABLED=true`, `DEMO_TODAY=2026-11-12` | Reproducible fictional fixtures and an optional fixed scenario date |
+| `FINANCIAL_TIMEZONE` | Financial calendar timezone; defaults to `America/New_York`. `DEMO_TODAY` overrides the clock; payment timestamps remain actual UTC instants |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | Optional AI; unavailable/invalid results fall back to labeled deterministic facts |
 
 Without PayPal credentials, supported local simulation is explicitly labeled; it is not a verified Sandbox payment. No Plaid, Supabase or Python service setup is required for the current demo.
@@ -128,7 +129,7 @@ npm test
 npm run build
 ```
 
-Current validation has **272 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
+Current validation has **289 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
 
 Browser checks cover desktop/mobile layouts, default collapsed review, Skip navigation and the single visible Shop PayPal button. These responsive viewport checks are not physical iOS/Android acceptance.
 
@@ -172,3 +173,16 @@ and the separate Shop Sandbox checkout described above. Vision is intentionally 
 - [Historical update record](docs/CHANGELOG_2026-11-10.md)
 
 Earlier phase documents record their validation at that time. The two flows above describe the current product behavior.
+
+## Final corrective audit and code freeze
+
+[Step 8.5 result](docs/STEP85_RESULT.md) is the current financial/payment policy and verification record.
+Earlier acceptance reports are historical evidence, including the two verified Sandbox captures;
+they do not establish live acceptance of later code changes. Automated mocks do not prove complete
+financial correctness or a new live payment. No new actual payment was initiated during remediation.
+
+Use [the authoritative three-minute rehearsal](docs/STEP7B_DEMO_REHEARSAL.md), including `/vision`.
+Equivalent established biweekly replacements retain capped stress/goal income and span existing
+installment evaluations; additional plans remain conservative. A daily-budget equivalent is a no-op;
+a different amount explicitly converts to a calendar-month budget. Verified refunds/reversals change
+status, while their original reserve remains until financial reconciliation is implemented.
