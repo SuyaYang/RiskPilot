@@ -2,6 +2,8 @@
 
 > **Your balance says yes. Rent says absolutely not.**
 
+![RiskPilot — pre-payment financial intelligence](docs/assets/riskpilot-hero.jpg)
+
 **Pre-payment financial intelligence for PayPal.** RiskPilot shows how a purchase could affect upcoming bills, cash reserves and savings goals before the buyer commits—then keeps the forecast consistent after a verified PayPal Sandbox capture.
 
 `PayPal Sandbox` · `Google Gemini` · `Deterministic financial engine` · `324 automated tests` · `MIT`
