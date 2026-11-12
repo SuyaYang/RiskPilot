@@ -9,12 +9,11 @@ Use **Node.js 22**, npm, `curl` and **Python 3**. The combined launcher uses cur
 ```bash
 git clone https://github.com/SuyaYang/RiskPilot.git
 cd RiskPilot
-git switch cynthia
 npm ci
 cp .env.example .env
 ```
 
-Run `cp` only in a new clone with no existing `.env`. Preserve existing configuration and ledgers. The repository is private; public open-source publication is required before submission. See [Judge Testing Access](README.md#judge-testing-access).
+Run `cp` only in a new clone with no existing `.env`. Preserve existing configuration and ledgers. See the [Judge quick start](README.md#judge-quick-start) for the shortest end-to-end test path.
 
 ## Environment
 
@@ -162,11 +161,9 @@ Use the [team checklist](docs/TEAM_ACCEPTANCE_REVIEW.md), [current rehearsal](do
 
 ## Live AI and free Sandbox account setup
 
-Use the three [Judge Testing Access modes](README.md#judge-testing-access) for full provider-account
-instructions and official sources. `GEMINI_API_KEY` is server-only; the existing `GEMINI_MODEL`
-is `gemini-3.6-flash`, whose standard API input/output currently has a free tier. Quotas, project
-verification and geographic eligibility apply. No new live API call is claimed by the access audit.
-No model, launcher or financial calculation was changed.
+Use the [Judge quick start](README.md#judge-quick-start) for the shortest provider-backed test path.
+`GEMINI_API_KEY` is server-only; the default `GEMINI_MODEL` is `gemini-3.6-flash`. Quotas,
+project verification and geographic eligibility may apply.
 
 For Sandbox, obtain your own REST app under PayPal Developer → Apps & Credentials → Sandbox.
 Use that app's ID in both `PAYPAL_CLIENT_ID` and `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, its secret only
