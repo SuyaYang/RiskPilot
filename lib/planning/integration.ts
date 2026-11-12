@@ -32,8 +32,12 @@ export function compilePlanning(base: Persona, state: PersonaState | undefined, 
     if (mapping.kind === "replace") {
       const item = income.find(item => item.id === mapping.modeledItemId);
       if (!item || modeledIncomeSignature(item) !== mapping.modeledSignature) { set("needs_review", "The identified modeled income changed or cannot be verified. Its baseline remains active."); continue; }
+      if (!equivalentCadence(item, entry.frequency, entry.nextDate, asOf)) {
+        set("needs_review", "This schedule differs from your existing modeled income. It is saved for planning only; your original income remains in the cash-flow forecast. The proposed date, cadence or income loss is not applied.");
+        continue;
+      }
+      replacement = { original: item, equivalentCadence: true };
       replacedIncomeIds.push(item.id);
-      replacement = { original: item, equivalentCadence: equivalentCadence(item, entry.frequency, entry.nextDate, asOf) };
     } else {
       const overlap = income.some(item => normalizeMerchant(item.name) === normalizeMerchant(entry.name) || (Math.round(item.amount * 100) === entry.amountCents && occurrences(item).some(day => dates.get(entry.id)!.includes(iso(addDays(new Date(`${asOf}T00:00:00Z`), day))))));
       if (overlap) { set("needs_review", "Possible modeled-income overlap. Select its exact replacement ID or keep this entry planning only."); continue; }

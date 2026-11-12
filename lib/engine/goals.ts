@@ -82,6 +82,22 @@ export function allocateGoals(
   return { monthlySurplus: surplus, goals: statuses };
 }
 
+/** One economic view for authoritative reserves and hypothetical schedules. On/before-today
+ * outflows reduce starting cash once; only later outflows consume future contribution buckets.
+ * The remaining cash-buffer deficit is protected by the existing allocator, not added as a bill.
+ * This creates no reserve and never edits goal balances or schedules.
+ */
+export function projectGoals(p: Persona, goals: Goal[], existing: Payment[] = [], candidate: Payment[] = []) {
+  const payments = [...existing, ...candidate];
+  const asOf = iso(today());
+  const paid = payments.filter(payment => payment.date <= asOf);
+  const future = payments.filter(payment => payment.date > asOf);
+  const projected = forecast(p, payments);
+  const cashDeficit = Math.max(0, -forecast(p, paid).bufferGap);
+  const allocation = allocateGoals(p, goals, future, Math.max(0, -projected.bufferGap), cashDeficit);
+  return { forecast: projected, allocation };
+}
+
 function base(
   g: Goal,
   remaining: number,

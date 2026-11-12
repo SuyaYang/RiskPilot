@@ -1,5 +1,9 @@
 # STEP 8.5 RESULT
 
+**Historical checkpoint.** [Step 8.6](STEP86_RESULT.md) supersedes this report’s partial replacement
+eligibility and its disclosed pre/post-purchase goal inconsistency. Retain the original results below
+as evidence of commit `0cf0f93`; they are not the current goal or replacement contract.
+
 **Status: Completed. Final verdict: Ready for Step 9 within the local fictional/Sandbox prototype scope.**
 Step 9 and GitHub publication have not begun. No actual payment was initiated or captured.
 

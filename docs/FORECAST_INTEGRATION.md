@@ -1,8 +1,9 @@
 # Step 5 — financial-model audit and verified planning integration
 
-**Current correction:** [Step 8.5](STEP85_RESULT.md) supersedes earlier blanket replacement-income exclusions,
-duplicate purchase/buffer goal charges, zero-difference budget application and client-selected capture validation.
-Historical test counts and acceptance statements below describe their original checkpoints.
+**Current correction:** [Step 8.6](STEP86_RESULT.md) restricts replacements to supported timing,
+preserves original income for unsupported schedules, and unifies hypothetical/completed goal projections.
+[Step 8.5](STEP85_RESULT.md) retains the security, budget no-op and settlement corrections.
+Historical counts and policy descriptions below describe their original checkpoints.
 
 
 Current follow-up: [Step 7A.2 category model](CATEGORY_SPENDING_MODEL.md) enables explicit, coverage-verified Alex category replacement. Unmapped/legacy budgets retain the planning-only behavior documented below.
@@ -124,3 +125,25 @@ The [What-if and explanation implementation](MONEY_WHAT_IF.md) re-investigates c
 and retains the unresolved baseline fallback. Monthly differences and illustrative proration are
 read-only; category confirmation still does not change authoritative forecasts or payment hashes.
 No full replacement is supported without a provable expense-coverage contract.
+
+## Current shared financial contract (Step 8.6)
+
+Before suppressing an original modeled income, `compilePlanning` verifies the exact source signature
+and `equivalentCadence`: biweekly recurrence and the same next effective receipt. Shifted, calendar-
+monthly, quarterly and one-time replacements remain Needs review, do not create additional income,
+and preserve original normal/stress/goal inputs. Only compatible lower/higher amounts are supported;
+established stress and goal income are capped at the original amount. Additional income's independent
+calendar recurrence and conservative allocation cap are unchanged. Supported schedules expand through
+existing installment evaluation horizons; the displayed forecast remains 45 days.
+
+Every production goal path now calls `engine/goals.projectGoals`. It combines existing reserves and
+an optional in-memory candidate schedule, deducts on/before-today outflows from starting cash once,
+and passes only future outflows to the existing monthly contribution allocator. Cash-buffer pressure
+and independent pre-existing deficits retain the Step 8.5 overlap protection. This is the existing
+cash-funded policy, not an allocation of excess checking to goals. Priorities, deadlines, saved goal
+balances, 30.4-day funding buckets and 48-month goal evaluation remain unchanged.
+
+`state.snapshot`, purchase options and after-income previews share that helper. Actual capture still
+records one full-price reserve and one immutable snapshot. Future or installment scenarios differ in
+schedule and need not match a full-price capture. Later valid changes recompute from inputs; no ETAs
+are cached or copied into goal records. See the exact tables and regression evidence in Step 8.6.

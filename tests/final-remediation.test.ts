@@ -8,7 +8,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { buildPersonas } from "../lib/personas";
 import { forecast, monthlySurplus } from "../lib/engine/forecast";
 import { buildOptions, schedule } from "../lib/engine/options";
-import { allocateGoals } from "../lib/engine/goals";
+import { allocateGoals, projectGoals } from "../lib/engine/goals";
 import { getProduct } from "../lib/catalog";
 import { iso, today } from "../lib/dates";
 import { paymentStatusView } from "../lib/paymentStatus";
@@ -51,21 +51,16 @@ test("Step 8.5 isolated financial and checkout regressions", async t => {
     const owner=fresh();replace(owner,{amountCents:300000});const p=personaWithState(owner).persona,base=buildPersonas()[0];
     assert.equal(forecast(p).stressMinBalance,forecast(base).stressMinBalance);assert.equal(monthlySurplus(p),monthlySurplus(base));assert.ok(snapshot(owner).investable.investable<=90);
   });
-  await t.test("changed dates are different; pausing replacement restores original income", () => {
+  await t.test("unsupported changed dates remain planning only and preserve original income", () => {
     const owner=fresh(),b=snapshot(owner); const {id,cmd}=replace(owner,{frequency:"monthly",nextDate:"2026-11-30",amountCents:140001});
-    assert.notDeepEqual(snapshot(owner).forecast.dailyBalances,b.forecast.dailyBalances);assert.ok(snapshot(owner).investable.investable<=90);
+    assert.deepEqual(snapshot(owner),b);assert.equal(moneyPlanView(owner).entries[0].forecastIntegration.status,"needs_review");
     cmd("pause",{id});assert.deepEqual(snapshot(owner).forecast,b.forecast);
   });
-  await t.test("calendar monthly/quarterly replacements expand beyond 45 days without claiming fixed-30-day equivalence", async () => {
-    const {effectiveIncomeEvents}=await import("../lib/planning/effectiveIncome");
-    const {incomeDates}=await import("../lib/planning/calendar");
+  await t.test("unsupported monthly/quarterly/one-time replacements preserve salary rather than erasing goal income", () => {
     for(const frequency of ["monthly","quarterly","once"] as const) {
-      const owner=fresh();replace(owner,{frequency,nextDate:"2026-11-30"});const p=personaWithState(owner).persona;
-      const events=effectiveIncomeEvents(p,361);assert.deepEqual(events.map(e=>e.date),incomeDates("2026-11-30",frequency,"2026-11-10","2027-11-05"));
-      assert.equal(p.planning!.incomeSchedules![0].replacement!.equivalentCadence,false);
-      assert.equal(monthlySurplus(p),-2608); // Changed recurrence is not established long-term salary.
-      if(frequency!=="once")assert.ok(events.some(e=>e.date>"2027-08-01"));
-      assert.equal(p.planning!.replacedIncomeIds.length,1);assert.equal(events.filter(e=>e.date==="2026-11-30").length,1);
+      const owner=fresh(),before=snapshot(owner);replace(owner,{frequency,nextDate:"2026-11-30"});
+      assert.deepEqual(snapshot(owner),before);assert.equal(monthlySurplus(personaWithState(owner).persona),642);
+      assert.equal(moneyPlanView(owner).entries[0].forecastIntegration.status,"needs_review");
     }
   });
   await t.test("a lower equivalent replacement reduces established stress and surplus; drafts/hypotheticals do not replace salary", () => {
@@ -78,7 +73,7 @@ test("Step 8.5 isolated financial and checkout regressions", async t => {
   await t.test("purchase cost and its resulting buffer deficit are one overlapping funding loss", () => {
     const p=buildPersonas()[0],result=buildOptions(p,p.goals,[],getProduct("aero-14")!);
     const trip=(a:ReturnType<typeof allocateGoals>)=>a.goals.find(g=>g.goalId==="a-trip")!.eta;
-    const once=allocateGoals(p,p.goals,schedule("full",900).payments),full=result.options.find(o=>o.method==="full")!;
+    const once=projectGoals(p,p.goals,schedule("full",900).payments).allocation,full=result.options.find(o=>o.method==="full")!;
     console.log("GOAL_REPRO",JSON.stringify({baseline:trip(result.baselineAlloc),once:trip(once),current:trip(full.goalPlan!),price:900,bufferDeficit:-full.forecast.bufferGap}));
     assert.equal(trip(result.baselineAlloc),"2027-03-12");assert.equal(trip(full.goalPlan!),trip(once));
     assert.deepEqual(allocateGoals(p,p.goals,schedule("full",249).payments,0),allocateGoals(p,p.goals,schedule("full",249).payments,100));

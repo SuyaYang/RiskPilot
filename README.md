@@ -129,7 +129,7 @@ npm test
 npm run build
 ```
 
-Current validation has **289 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
+Current validation has **313 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
 
 Browser checks cover desktop/mobile layouts, default collapsed review, Skip navigation and the single visible Shop PayPal button. These responsive viewport checks are not physical iOS/Android acceptance.
 
@@ -176,7 +176,8 @@ Earlier phase documents record their validation at that time. The two flows abov
 
 ## Final corrective audit and code freeze
 
-[Step 8.5 result](docs/STEP85_RESULT.md) is the current financial/payment policy and verification record.
+[Step 8.6 result](docs/STEP86_RESULT.md) is the current financial consistency and verification record.
+[Step 8.5](docs/STEP85_RESULT.md) remains historical security/remediation evidence.
 Earlier acceptance reports are historical evidence, including the two verified Sandbox captures;
 they do not establish live acceptance of later code changes. Automated mocks do not prove complete
 financial correctness or a new live payment. No new actual payment was initiated during remediation.
@@ -186,3 +187,17 @@ Equivalent established biweekly replacements retain capped stress/goal income an
 installment evaluations; additional plans remain conservative. A daily-budget equivalent is a no-op;
 a different amount explicitly converts to a calendar-month budget. Verified refunds/reversals change
 status, while their original reserve remains until financial reconciliation is implemented.
+
+Only timing-compatible biweekly replacements with the same next effective receipt become authoritative.
+Shifted dates, monthly/biweekly conversions and one-time replacements remain Needs review; the original
+modeled salary remains active, and the proposed change is not reflected as an income loss or new cash.
+Compatible lower amounts reduce established assumptions; higher amounts retain existing caps.
+Additional income keeps its existing explicit mapping and conservative treatment.
+
+Immediate full-price purchase previews and completed reserves now use the same effective financial
+state through `projectGoals`: today's cost reduces projected starting cash once, future payments
+consume future contribution buckets, and independent buffer pressure remains protected. No predicted
+dates are copied into goals. On clean Alex, November 12, a $900 purchase retains Japan Trip's March 14
+and Emergency Fund's April 13 estimates in both paths while reducing this month's total goal allocation
+$642 → $462 and capacity $90 → $0. The cash minimum still falls $1,720 → $820. These estimates do not
+make a buffer-breaching purchase safe. Installment/future-date schedules are different economic inputs.

@@ -2,8 +2,7 @@ import type { Allocation, Goal, MethodId, OptionResult, Payment, Persona, Purcha
 import type { Product } from "../catalog";
 import { purchaseAfterIncome } from "./purchaseTiming";
 import { addDays, iso, today } from "../dates";
-import { forecast } from "./forecast";
-import { allocateGoals, goalImpact } from "./goals";
+import { projectGoals, goalImpact } from "./goals";
 
 // PayPal US Pay Later ranges (paypal.com/payin4/faq). Final terms are decided by PayPal at checkout.
 export const PAY_IN_4 = { min: 10, max: 2000 };
@@ -56,12 +55,7 @@ export function buildOptions(
   product: Product,
   alternative?: Product,
 ): { baselineAlloc: Allocation; options: OptionResult[]; recommended: MethodId; afterIncome: PurchaseTiming } {
-  const t = today();
-  // Payments on or before today already reduce forecast.startBalance. Do not allocate them twice.
-  const futureExisting = existing.filter((x) => x.date > iso(t));
-  const baseF = forecast(p, existing);
-  const cashDeficit = Math.max(0, -forecast(p, existing.filter(x => x.date <= iso(t))).bufferGap);
-  const baselineAlloc = allocateGoals(p, goals, futureExisting, Math.max(0, -baseF.bufferGap), cashDeficit);
+  const { allocation: baselineAlloc } = projectGoals(p, goals, existing);
 
   const methods: MethodId[] = ["full", "pay_in_4", "pay_monthly"];
   if (alternative) methods.push("cheaper");
@@ -80,8 +74,7 @@ export function buildOptions(
       ineligibleReason = `Pay Monthly covers $${PAY_MONTHLY.min}–$${PAY_MONTHLY.max} purchases`;
     }
     const { payments, extraCost } = method === "wait" ? { payments: [], extraCost: 0 } : schedule(method, prod.price);
-    const f = method === "wait" ? baseF : forecast(p, existing, payments);
-    const alloc = allocateGoals(p, goals, [...futureExisting, ...payments], Math.max(0, -f.bufferGap), cashDeficit);
+    const { forecast: f, allocation: alloc } = projectGoals(p, goals, existing, payments);
     const reasons: string[] = [];
     if (f.bufferGap < 0) reasons.push("A payment would push your balance below your cash buffer");
     else if (f.stressBufferGap < 0) reasons.push("If income arrives a week late, you would dip below your buffer");

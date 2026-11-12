@@ -9,8 +9,9 @@ export type EffectiveIncomeSchedule = {
 };
 /** Legacy monthly means 30 days, never calendar-month equivalence. Compare the actual next event. */
 export function equivalentCadence(original: RecurringItem, frequency: IncomeFrequency, nextDate: string, asOf: string) {
-  return original.frequency === "biweekly" && frequency === "biweekly" && nextDate <= iso(addDays(parseIso(asOf), original.firstInDays)) &&
-    daysBetween(parseIso(nextDate), addDays(parseIso(asOf), original.firstInDays)) % 14 === 0;
+  const nextModeled = iso(addDays(parseIso(asOf), original.firstInDays));
+  return original.frequency === "biweekly" && frequency === "biweekly" &&
+    incomeDates(nextDate, frequency, asOf, nextModeled)[0] === nextModeled;
 }
 /** Expand only for the simulator's requested horizon; the visible forecast stays 45 days. */
 export function effectiveIncomeEvents(p: Persona, horizon: number, stressDays = 0) {

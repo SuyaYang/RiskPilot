@@ -27,7 +27,7 @@ export default function PurchaseImpact({ decision, option, buffer, onSelect, loc
     {variant === "full" && <div className="impact-metrics">
       <div><span className="small muted">Lowest projected cash</span><strong>{money(option.forecast.minBalance)}</strong><span className="small muted">on {fmtDate(option.forecast.minBalanceDate)}</span></div>
       <div><span className="small muted">{option.forecast.bufferGap < 0 ? "Below your safety buffer" : "Above your safety buffer"}</span><strong className={option.forecast.bufferGap < 0 ? "negative" : "positive"}>{money(Math.abs(option.forecast.bufferGap))}</strong><span className="small muted">Protected buffer {money(buffer)}</span></div>
-      <div><span className="small muted">Effect on your goals</span><strong>{delays.length ? `${delays.length} delayed` : "No extra delay"}</strong><span className="small muted">Versus skipping this purchase</span></div>
+      <div><span className="small muted">Estimated goal impact</span><strong>{delays.length ? `${delays.length} delayed` : "No extra delay"}</strong><span className="small muted">Versus skipping this purchase</span></div>
     </div>}
     <details className="impact-goals"><summary>{delays.length ? `${delays.length} goals delayed · view dates` : "No additional goal delay"}</summary>{delays.length ? delays.map(g => <div className="row between small" key={g.goalId}><span>{g.name}</span><strong>+{g.delayDays} days</strong></div>) : <p className="small">This scenario adds no projected delay to your goals.</p>}</details>
     <p className="small muted">If income arrives a week late, lowest cash is {money(option.forecast.stressMinBalance)}. Evaluated through {fmtDate(option.forecast.evaluatedThrough)}.</p>

@@ -1,4 +1,4 @@
-# Authoritative three-minute recording rehearsal (updated Step 8.5)
+# Authoritative three-minute recording rehearsal (updated Step 8.6)
 
 Use a fresh browser profile for the recording, never Reset demo in an account with Sandbox
 orders. Keep the product owner's current Alex/Sam/Jordan workspaces intact. Fixed fictional
@@ -54,10 +54,23 @@ The $60 monthly assumption reduction is not $60 of realized cash and does not it
 investment capacity. The original food $300 → $150 example also remains available, but do not
 apply both examples silently or quote a clean baseline after a recorded purchase.
 
-The goal-delay correction removes overlapping purchase/buffer charges. Read current goal dates
-from this candidate; do not narrate dates from older captures as newly calculated results. The
-shopping cash/capacity references remain unchanged. Identical daily-budget equivalents now keep
-the daily model; choose $30 explicitly for the demonstrated calendar-month conversion.
+The current shared model makes an immediate full-price preview agree with its saved outcome.
+For the clean November 12 Alex fixture **after Shopping $90 → $30**, the $900 laptop gives
+lowest cash $838, income-late minimum $672 and capacity $0 in both paths. Japan Trip remains
+March 14, Emergency Fund April 13, and Start investing moves March 14 → April 13, 2027.
+This is a 30-day investment-goal estimate change, not a guarantee or evidence of actual investing.
+Normal buffer pressure remains $162; do not imply the purchase is safe because some goal dates hold.
+
+For clean Alex **without** the budget adjustment, preview and capture both retain Japan Trip
+March 14, Emergency Fund April 13 and Start investing April 13; this month's total modeled goal
+allocation changes $642 → $462. Do not narrate the old April 13 Japan Trip preview as current behavior.
+The corrected cash-funded scenario no longer charges today's purchase against future contributions
+as well as reducing starting cash. Installment scenarios use a different hypothetical schedule.
+
+Do not add income editing to the timed story. If shown separately, unsupported date/cadence changes
+remain Needs review, with original salary still active; only timing-compatible replacements apply.
+Identical daily-budget equivalents keep the daily model; choose $30 explicitly for the illustrated
+conversion. Earlier captures retain their historical snapshots and are not refreshed to new figures.
 
 ## Optional Shop path (separate acceptance clip)
 

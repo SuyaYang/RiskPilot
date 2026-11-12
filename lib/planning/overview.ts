@@ -36,7 +36,7 @@ export function planningOverview(persona: Persona, payments: Payment[], entries:
     id: `${entry.id}:${date}`, sourceId: entry.id, name: entry.name, date, amountCents: entry.amountCents,
     direction: "in" as const, kind: "planning" as const, reliability: entry.reliability,
     status: entry.status, overlap: entry.overlap.length > 0,
-    included: entry.status === "confirmed" && entry.reliability === "expected" && entry.sourceType !== "hypothetical" && (entry.overlap.length === 0 || entry.forecastIntegration.status === "included"),
+    included: entry.status === "confirmed" && entry.reliability === "expected" && entry.sourceType !== "hypothetical" && (entry.forecastMapping?.kind !== "replace" || entry.forecastIntegration.status === "included") && (entry.overlap.length === 0 || entry.forecastIntegration.status === "included"),
   })));
   const reserveEvents = payments.filter(payment => payment.date > asOf && payment.date <= period.end).map((payment, index) => ({
     id: `reserve:${index}`, sourceId: "purchase-reserve", name: payment.label, date: payment.date,

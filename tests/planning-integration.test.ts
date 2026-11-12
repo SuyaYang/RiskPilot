@@ -64,17 +64,17 @@ test("verified planning inputs share forecast, goal, decision and payment-safety
     }
   });
   await t.test("explicit source-ID replacement removes only the identified modeled income and preserves all old expense timing", () => {
-    id = create({ name: "Paycheck", frequency: "monthly", amountCents: 140001, nextDate: "2026-11-30" });
+    id = create({ name: "Paycheck", frequency: "biweekly", amountCents: 140001, nextDate: "2026-11-19" });
     const result = updatePlanningIncome(owner, command("confirm", { id, forecastUse: "replace", modeledItemId: "a-pay" }));
     assert.equal(result.plan.entries[0].forecastIntegration.status, "included"); assert.deepEqual(snapshot(owner).planning!.replacedIncomeIds, ["a-pay"]);
-    const current = snapshot(owner); assert.equal(Math.round((current.forecast.dailyBalances[9].balance - baseline.forecast.dailyBalances[9].balance) * 100), -150000);
-    assert.equal(Math.round((current.forecast.dailyBalances[20].balance - baseline.forecast.dailyBalances[20].balance) * 100), -150000 + 140001);
+    const current = snapshot(owner); assert.equal(Math.round((current.forecast.dailyBalances[9].balance - baseline.forecast.dailyBalances[9].balance) * 100), -9999);
+    assert.equal(Math.round((current.forecast.dailyBalances[20].balance - baseline.forecast.dailyBalances[20].balance) * 100), -9999);
     assert.ok(current.investable.investable <= baseline.investable.investable);
     assert.deepEqual(current.persona.recurring, baseline.persona.recurring);
     const { persona, payments } = personaWithState(owner);
     const timing = buildOptions(persona, persona.goals, payments, getProduct("aero-14")!).afterIncome;
     assert.equal(timing.available, true);
-    if (timing.available) { assert.equal(timing.purchaseDate, "2026-12-01"); assert.equal(timing.income.uncertain, true); }
+    if (timing.available) { assert.equal(timing.purchaseDate, "2026-11-20"); assert.equal(timing.income.uncertain, true); }
     assert.ok(result.plan.events.every(event => event.sourceId !== "a-pay"));
     clearIncome(); unchanged();
   });
@@ -121,7 +121,7 @@ test("verified planning inputs share forecast, goal, decision and payment-safety
   await t.test("calendar month-end integration preserves January/February dates without converting old cadence", () => {
     process.env.DEMO_TODAY = "2027-01-30";
     id = create({ name: "Month-end income", frequency: "monthly", nextDate: "2027-01-31" });
-    updatePlanningIncome(owner, command("confirm", { id, forecastUse: "replace", modeledItemId: "a-pay" }));
+    updatePlanningIncome(owner, command("confirm", { id, forecastUse: "additional" }));
     assert.deepEqual(snapshot(owner).planning!.incomeEvents.map(event => event.date), ["2027-01-31", "2027-02-28"]);
     clearIncome(); process.env.DEMO_TODAY = "2026-11-10"; unchanged();
   });

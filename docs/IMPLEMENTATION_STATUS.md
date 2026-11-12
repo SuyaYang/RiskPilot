@@ -282,3 +282,13 @@ overlapping purchase/buffer charges, server-owned Shop checks, no-op budget sema
 timezones and verified refund/reversal status. Earlier live acceptance remains historical evidence.
 No actual PayPal payment was initiated or captured; existing ledgers remain unchanged. Publication
 and Step 9 are approval-gated and have not been performed.
+
+## Step 8.6 — final financial consistency and local submission freeze
+
+Starting commit `0cf0f93f7695eb5da62aa1f37696e7d087a40e1a` on clean `cynthia` was verified.
+Both remaining findings were reproduced and corrected: unsupported income replacements now retain
+original salary and become Needs review, while immediate hypothetical purchases and recorded captures
+share `projectGoals` and agree on financial/goal inputs. No payment authorization code changed.
+See [the current result](STEP86_RESULT.md) for exact values, changed historical assertions, screenshots,
+full regression results and limits. No actual payment, workspace reset or remote publication occurred.
+The next gate is targeted independent Claude recheck; Step 9 has not begun.

@@ -1,8 +1,9 @@
 # Step 7A.2 — explicit fictional category spending coverage
 
-**Current correction:** [Step 8.5](STEP85_RESULT.md) supersedes earlier blanket replacement-income exclusions,
-duplicate purchase/buffer goal charges, zero-difference budget application and client-selected capture validation.
-Historical test counts and acceptance statements below describe their original checkpoints.
+**Current correction:** [Step 8.6](STEP86_RESULT.md) restricts replacements to supported timing,
+preserves original income for unsupported schedules, and unifies hypothetical/completed goal projections.
+[Step 8.5](STEP85_RESULT.md) retains the security, budget no-op and settlement corrections.
+Historical counts and policy descriptions below describe their original checkpoints.
 
 
 ## Provenance, migration and compatibility

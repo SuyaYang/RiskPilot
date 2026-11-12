@@ -41,7 +41,8 @@ test("legacy payment UI does not invent before-purchase figures",()=>{
 test("compact merchant review preserves critical risk and gives one concise grounded explanation",()=>{
   const current=decision(),facts=reviewFacts({decision:current,buffer:1000} as PurchaseReview,"full","overview");
   const critical=renderToStaticMarkup(createElement(PurchaseConclusion,{decision:current,buffer:1000,compact:true,onAfterIncome:()=>{},onSkip:()=>{}}));
-  assert.match(critical,/\$820/);assert.match(critical,/\$640/);assert.match(critical,/3 goals/);assert.match(critical,/buffer/);
+  assert.match(critical,/\$820/);assert.match(critical,/\$640/);// Goal dates now share the post-capture cash-funded model; cash risk stays explicit.
+  assert.match(critical,/No additional goal delay is projected/);assert.match(critical,/buffer/);
   assert.doesNotMatch(critical,/Compare buying on/);
   const explanation=renderToStaticMarkup(createElement(ReviewInsights,{orderId:"fixture",inputHash:"ui",method:"full",compact:true,fallback:facts.facts.checkout_summary}));
   assert.match(explanation,/Before you confirm/);assert.match(explanation,/current and late-income forecasts/);assert.match(explanation,/Funding and loan terms remain unconfirmed/);
