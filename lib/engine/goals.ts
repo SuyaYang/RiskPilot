@@ -12,8 +12,8 @@ function sortGoals(goals: Goal[]): Goal[] {
 
 /**
  * Month-by-month funding simulation. Each month the monthly surplus, minus any purchase payments
- * falling in that month, is allocated to goals by priority then deadline, each up to the amount it
- * needs per month; anything left accelerates the same goals in order. A shortfall (including
+ * falling in that month (residual obligations after cash funding via projectGoals), is allocated
+ * to goals by priority then deadline, each up to the amount it needs per month; anything left accelerates the same goals in order. A shortfall (including
  * restoring the cash buffer) carries forward and must be repaid before goals get money again.
  */
 export function allocateGoals(
@@ -83,7 +83,8 @@ export function allocateGoals(
 }
 
 /** One economic view for authoritative reserves and hypothetical schedules. On/before-today
- * outflows reduce starting cash once; only later outflows consume future contribution buckets.
+ * outflows reduce starting cash once; later outflows consume safe cash headroom first, then
+ * future contribution buckets.
  * The remaining cash-buffer deficit is protected by the existing allocator, not added as a bill.
  * This creates no reserve and never edits goal balances or schedules.
  */
@@ -91,9 +92,27 @@ export function projectGoals(p: Persona, goals: Goal[], existing: Payment[] = []
   const payments = [...existing, ...candidate];
   const asOf = iso(today());
   const paid = payments.filter(payment => payment.date <= asOf);
-  const future = payments.filter(payment => payment.date > asOf);
+  const scheduled = payments.filter(payment => payment.date > asOf)
+    .sort((a, b) => a.date.localeCompare(b.date));
   const projected = forecast(p, payments);
-  const cashDeficit = Math.max(0, -forecast(p, paid).bufferGap);
+  // A zero-value horizon marker evaluates the no-future-payment baseline through the SAME
+  // final installment as the purchase forecast, without deducting that installment twice.
+  const horizon = scheduled.length ? [{ ...scheduled[scheduled.length - 1], amount: 0 }] : [];
+  const cash = forecast(p, paid, horizon);
+  const cashDeficit = Math.max(0, -cash.bufferGap);
+  // Headroom is existing cash, not permission to spend new planned receipts or a raise.
+  // Taking the smaller baseline also preserves supported lower-income replacements.
+  const { planning: _planning, ...established } = p;
+  const conservative = forecast({ ...established,
+    recurring: established.recurring.filter(item => item.direction !== "in" || !item.uncertain),
+  }, paid, horizon);
+  let headroom = Math.max(0, Math.min(cash.bufferGap, conservative.bufferGap, cash.startBalance - p.buffer));
+  const future = scheduled.flatMap(payment => {
+    const used = Math.min(headroom, payment.amount);
+    headroom = round2(headroom - used);
+    const residual = round2(payment.amount - used);
+    return residual > 0 ? [{ ...payment, amount: residual }] : [];
+  });
   const allocation = allocateGoals(p, goals, future, Math.max(0, -projected.bufferGap), cashDeficit);
   return { forecast: projected, allocation };
 }

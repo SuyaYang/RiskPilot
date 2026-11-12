@@ -289,6 +289,16 @@ Starting commit `0cf0f93f7695eb5da62aa1f37696e7d087a40e1a` on clean `cynthia` wa
 Both remaining findings were reproduced and corrected: unsupported income replacements now retain
 original salary and become Needs review, while immediate hypothetical purchases and recorded captures
 share `projectGoals` and agree on financial/goal inputs. No payment authorization code changed.
-See [the current result](STEP86_RESULT.md) for exact values, changed historical assertions, screenshots,
+See [the Step 8.6 result](STEP86_RESULT.md) for exact values, changed historical assertions, screenshots,
 full regression results and limits. No actual payment, workspace reset or remote publication occurred.
 The next gate is targeted independent Claude recheck; Step 9 has not begun.
+
+## Step 8.7 — purchase timing and cash-funded goals
+
+The [current result](STEP87_RESULT.md) records the final narrow correction from freeze
+`98200a276f1a3622bd7a2b42b949629e039c9804` on `cynthia`. Future full-price and educational
+installment schedules now consume safe existing cash headroom once before reducing contributions.
+Headroom uses the full existing payment horizon and conservative income/current-cash caps. Immediate
+preview/captured results, income replacement eligibility and both checkout journeys are preserved.
+The stale replacement disclosure is corrected. No payment, workspace reset, publication or Step 9
+work occurred. This step is committed locally; independent recheck remains available.

@@ -1,4 +1,4 @@
-# Authoritative three-minute recording rehearsal (updated Step 8.6)
+# Authoritative three-minute recording rehearsal (updated Step 8.7)
 
 Use a fresh browser profile for the recording, never Reset demo in an account with Sandbox
 orders. Keep the product owner's current Alex/Sam/Jordan workspaces intact. Fixed fictional
@@ -65,7 +65,15 @@ For clean Alex **without** the budget adjustment, preview and capture both retai
 March 14, Emergency Fund April 13 and Start investing April 13; this month's total modeled goal
 allocation changes $642 → $462. Do not narrate the old April 13 Japan Trip preview as current behavior.
 The corrected cash-funded scenario no longer charges today's purchase against future contributions
-as well as reducing starting cash. Installment scenarios use a different hypothetical schedule.
+as well as reducing starting cash. Future and installment simulations now use the same cash-funded
+policy: safe existing headroom is consumed once before residual future contributions are reduced.
+After the Shopping adjustment, buying tomorrow has minimum $838 / stress $672 (red); buying
+November 22 has $1,334.54 / $672 (yellow). Both project March 14 / April 13 / April 13 for
+Japan / Emergency / investing. Pay in 4 projects $1,513 / $1,122 (green), with the same goal dates;
+Pay Monthly projects $1,738 / $1,572 (green), with March 14 / April 13 / March 14 goal dates.
+These are educational schedules, not confirmed PayPal financing or the actual full-price capture.
+The monthly estimate adds $100.44 interest and evaluates through November 7, 2027; the chart
+stays 45 days. See [Step 8.7](STEP87_RESULT.md) for clean-versus-adjusted tables and limits.
 
 Do not add income editing to the timed story. If shown separately, unsupported date/cadence changes
 remain Needs review, with original salary still active; only timing-compatible replacements apply.

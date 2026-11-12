@@ -1,6 +1,7 @@
 # Step 5 — financial-model audit and verified planning integration
 
-**Current correction:** [Step 8.6](STEP86_RESULT.md) restricts replacements to supported timing,
+**Current correction:** [Step 8.7](STEP87_RESULT.md) extends cash-funded goals to future and
+installment payments. [Step 8.6](STEP86_RESULT.md) restricts replacements to supported timing,
 preserves original income for unsupported schedules, and unifies hypothetical/completed goal projections.
 [Step 8.5](STEP85_RESULT.md) retains the security, budget no-op and settlement corrections.
 Historical counts and policy descriptions below describe their original checkpoints.
@@ -126,7 +127,7 @@ and retains the unresolved baseline fallback. Monthly differences and illustrati
 read-only; category confirmation still does not change authoritative forecasts or payment hashes.
 No full replacement is supported without a provable expense-coverage contract.
 
-## Current shared financial contract (Step 8.6)
+## Current shared financial contract (Steps 8.6–8.7)
 
 Before suppressing an original modeled income, `compilePlanning` verifies the exact source signature
 and `equivalentCadence`: biweekly recurrence and the same next effective receipt. Shifted, calendar-
@@ -138,7 +139,8 @@ existing installment evaluation horizons; the displayed forecast remains 45 days
 
 Every production goal path now calls `engine/goals.projectGoals`. It combines existing reserves and
 an optional in-memory candidate schedule, deducts on/before-today outflows from starting cash once,
-and passes only future outflows to the existing monthly contribution allocator. Cash-buffer pressure
+and funds future outflows from existing safe cash headroom before passing residual obligations to
+the existing monthly contribution allocator. Cash-buffer pressure
 and independent pre-existing deficits retain the Step 8.5 overlap protection. This is the existing
 cash-funded policy, not an allocation of excess checking to goals. Priorities, deadlines, saved goal
 balances, 30.4-day funding buckets and 48-month goal evaluation remain unchanged.
@@ -147,3 +149,19 @@ balances, 30.4-day funding buckets and 48-month goal evaluation remain unchanged
 records one full-price reserve and one immutable snapshot. Future or installment scenarios differ in
 schedule and need not match a full-price capture. Later valid changes recompute from inputs; no ETAs
 are cached or copied into goal records. See the exact tables and regression evidence in Step 8.6.
+
+Step 8.7 consumes headroom once in chronological payment order with cent rounding. The no-future-
+payment baseline includes already-paid reserves, all scheduled bills and normal spending through the
+last payment date (at least 45 days). A zero-value horizon marker uses the existing forecast extension;
+it creates no expense. Headroom is the nonnegative minimum of that baseline buffer gap, current
+starting cash less buffer, and the same-horizon baseline without planning income or uncertain modeled
+receipts. Comparing both baselines preserves supported lower salaries and excludes proposed raises
+and additional planned receipts from cash funding. It does not reserve future salary growth as cash.
+
+Only uncovered future cents enter their original 30.4-day contribution bucket. Independent baseline
+deficits remain a separate floor under the existing overlap rule. The full economic payment schedule
+always remains in the normal/stress forecast, including the 361-day Pay Monthly evaluation; displayed
+daily balances and no-schedule Dashboard forecasts remain 45 days. This is a bounded liquidity test
+under existing fictional income/bill assumptions, not a guarantee of future receipts or goal dates.
+`rp-v1-step87` invalidates assessments from the earlier allocation policy without changing capture
+architecture, ownership, expiry, settlement, reserve idempotency or income replacement eligibility.

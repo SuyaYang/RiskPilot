@@ -129,7 +129,7 @@ npm test
 npm run build
 ```
 
-Current validation has **313 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
+Current validation has **324 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
 
 Browser checks cover desktop/mobile layouts, default collapsed review, Skip navigation and the single visible Shop PayPal button. These responsive viewport checks are not physical iOS/Android acceptance.
 
@@ -176,7 +176,8 @@ Earlier phase documents record their validation at that time. The two flows abov
 
 ## Final corrective audit and code freeze
 
-[Step 8.6 result](docs/STEP86_RESULT.md) is the current financial consistency and verification record.
+[Step 8.7 result](docs/STEP87_RESULT.md) is the current purchase-timing consistency and verification record.
+[Step 8.6](docs/STEP86_RESULT.md) records the retained income guard and immediate/captured equivalence.
 [Step 8.5](docs/STEP85_RESULT.md) remains historical security/remediation evidence.
 Earlier acceptance reports are historical evidence, including the two verified Sandbox captures;
 they do not establish live acceptance of later code changes. Automated mocks do not prove complete
@@ -195,8 +196,10 @@ Compatible lower amounts reduce established assumptions; higher amounts retain e
 Additional income keeps its existing explicit mapping and conservative treatment.
 
 Immediate full-price purchase previews and completed reserves now use the same effective financial
-state through `projectGoals`: today's cost reduces projected starting cash once, future payments
-consume future contribution buckets, and independent buffer pressure remains protected. No predicted
+state through `projectGoals`: today's cost reduces projected starting cash once. Future payments
+consume existing safe cash headroom once in date order; only residual costs consume future contribution
+buckets. Headroom is checked through the final installment, capped by current cash, and excludes
+additional planned receipts, proposed raises and uncertain income. Independent buffer pressure remains protected. No predicted
 dates are copied into goals. On clean Alex, November 12, a $900 purchase retains Japan Trip's March 14
 and Emergency Fund's April 13 estimates in both paths while reducing this month's total goal allocation
 $642 → $462 and capacity $90 → $0. The cash minimum still falls $1,720 → $820. These estimates do not

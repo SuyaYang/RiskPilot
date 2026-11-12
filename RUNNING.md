@@ -226,7 +226,8 @@ Prewarm every recorded route and rerun `npm run demo -- --check` before filming;
 compile may exceed the launcher's two-second health-read deadline.
 
 The [current rehearsal](docs/STEP7B_DEMO_REHEARSAL.md) supersedes older scripts. See
-[Step 8.6](docs/STEP86_RESULT.md) for current income eligibility and shared goal projections;
+[Step 8.7](docs/STEP87_RESULT.md) for current purchase timing/goal treatment and
+[Step 8.6](docs/STEP86_RESULT.md) for retained income eligibility and immediate/captured equivalence;
 [Step 8.5](docs/STEP85_RESULT.md) records the retained checkout-source and settlement corrections. Historical payment ledgers must remain private and intact. Public HTTPS/webhook delivery,
 physical-device checkout, production identity and bank/refund reconciliation remain unaccepted.
 

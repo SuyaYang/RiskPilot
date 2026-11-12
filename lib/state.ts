@@ -39,7 +39,7 @@ export function inputHash(id: string, data: StoreData = load()) {
   // Declaring an identical baseline must not invalidate existing purchase assessments.
   const { everydaySpending, ...legacy } = persona;
   const financialPersona = everydaySpending?.categories.some(row => row.override) ? persona : legacy;
-  return crypto.createHash("sha256").update(JSON.stringify({ persona: financialPersona, payments, asOf: iso(today()), policy: "rp-v1-step86" })).digest("hex");
+  return crypto.createHash("sha256").update(JSON.stringify({ persona: financialPersona, payments, asOf: iso(today()), policy: "rp-v1-step87" })).digest("hex");
 }
 
 export function snapshot(id: string, data: StoreData = load()) {
