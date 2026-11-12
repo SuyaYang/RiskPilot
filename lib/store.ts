@@ -1,0 +1,108 @@
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import type { Decision, Goal, MethodId, Purchase } from "./types";
+import type { FinancialProfileState } from "./financialProfile/types";
+import type { SpendingPreferences } from "./spending/types";
+import type { PlanningBudgetState } from "./planning/types";
+import type { PlanningIncomeState } from "./planning/incomeTypes";
+import type { snapshot } from "./state";
+import { buildPersonas } from "./personas";
+
+export interface GoalChange { at: string; action: "create" | "update" | "delete"; goalId: string; name: string; summary: string }
+export interface PersonaState {
+  goals: Goal[]; goalHistory: GoalChange[]; purchases: Purchase[];
+  spending?: SpendingPreferences;
+  planningBudget?: PlanningBudgetState;
+  moneyPlanSnapshot?: Pick<ReturnType<typeof snapshot>, "asOf" | "financialInputHash" | "forecast" | "allocation" | "investable">;
+  spendingBaseline?: { modelVersion: "alex-everyday-v1" };
+  planningIncome?: PlanningIncomeState;
+  financialProfile?: FinancialProfileState;
+  prefs: { horizon: "short" | "medium" | "long"; risk: "conservative" | "balanced" | "growth"; custom?: { cash: number; bonds: number; index: number } };
+}
+export interface OrderRecord {
+  orderId: string; personaId: string; decisionId: string; productId: string; productName: string;
+  method: MethodId; amount: number; currency: "USD"; status: "CREATED" | "CAPTURED" | "FAILED" | "UNKNOWN";
+  captureId?: string; createdAt: string; simulated?: boolean; shopPayNow?: boolean;
+  captureRequestId: string; captureCommand?: "STARTED" | "UNKNOWN" | "COMPLETED"; captureStartedAt?: number;
+  approvalUrl?: string; projectionStatus?: "PENDING" | "UPDATED"; snapshotId?: string;
+  settlementReview?: string;
+  settlementEvents?: { id: string; type: "refund" | "reversal"; amount?: number; currency?: string }[];
+  priorAssessmentId?: string; reviewIntentId?: string;
+  merchant?: { id: "northstar-demo"; checkoutId: string; name: string };
+}
+export interface CreateCommand {
+  requestId: string; personaId: string; decisionId: string; method: MethodId;
+  state: "STARTED" | "UNKNOWN" | "COMPLETED"; orderId?: string; simulated?: boolean; shopPayNow?: boolean; startedAt: number; firstAttemptAt: number;
+}
+export interface WebhookRecord { type: string; state: "RECEIVED" | "PROCESSED" | "IGNORED"; raw: string }
+export interface ReviewIntent { owner:string; decisionId:string; merchantId:"northstar-demo"; productId:"northstar:aero-14"; currency:"USD"; expiresAt:number }
+export interface StoreData {
+  reviewIntents?: Record<string, ReviewIntent>;
+  version: 2;
+  personas: Record<string, PersonaState>;
+  decisions: Record<string, Decision>;
+  orders: Record<string, OrderRecord>;
+  commands: Record<string, CreateCommand>;
+  webhookEvents: Record<string, WebhookRecord>;
+  snapshots: Record<string, { id: string; personaId: string; orderId: string; inputHash: string; schemaVersion: "rp-v1"; createdAt: string; before?: ReturnType<typeof snapshot>; data: ReturnType<typeof snapshot> }>;
+}
+const STORE_PATH = process.env.STORE_PATH || path.join(process.cwd(), "data", "store.json");
+const fresh = (): StoreData => ({ version: 2, personas: {}, decisions: {}, orders: {}, commands: {}, webhookEvents: {}, snapshots: {} });
+
+export function newPersona(id: string): PersonaState {
+  const base = buildPersonas().find(p => p.id === id.split(":").at(-1));
+  if (!base) throw new Error("Unknown demo persona");
+  return { ...(base.id === "alex" ? { spendingBaseline: { modelVersion: "alex-everyday-v1" as const } } : {}), goals: base.goals.map(g => ({ ...g, version: 1 })), goalHistory: [], purchases: [], prefs: { horizon: "medium", risk: "balanced" } };
+}
+export function ensurePersona(id: string) {
+  if (!load().personas[id]) update(d => { d.personas[id] ??= newPersona(id); });
+}
+export function load(): StoreData {
+  try {
+    const data = JSON.parse(fs.readFileSync(STORE_PATH, "utf8"));
+    // Never silently erase captures from an old or corrupt store.
+    if (data.version !== 2) throw new Error("Legacy store: keep a backup and use a new STORE_PATH. Never reset verified payment records.");
+    return data as StoreData;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return fresh();
+    throw e;
+  }
+}
+function save(data: StoreData) {
+  const tmp = `${STORE_PATH}.${crypto.randomUUID()}.tmp`;
+  const fd = fs.openSync(tmp, "wx", 0o600);
+  try { fs.writeFileSync(fd, JSON.stringify(data)); fs.fsyncSync(fd); }
+  finally { fs.closeSync(fd); }
+  fs.renameSync(tmp, STORE_PATH);
+}
+/** Local demo transaction: reread under an exclusive process lock; publish only after success. */
+export function update<T>(fn: (d: StoreData) => T): T {
+  fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
+  const lock = `${STORE_PATH}.lock`;
+  // Fail closed rather than break a potentially active writer's lock.
+  const fd = fs.openSync(lock, "wx", 0o600);
+  try {
+    fs.writeFileSync(fd, `${process.pid}`);
+    const d = load();
+    const out = fn(d);
+    save(d);
+    return out;
+  } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
+}
+export function reset(personaId: string) {
+  update(d => {
+    if (Object.values(d.orders).some(o => o.personaId === personaId && !o.simulated)) {
+      throw new Error("This workspace has Sandbox orders. Use a new browser workspace to preserve payment records.");
+    }
+    if (Object.values(d.commands).some(command => command.personaId === personaId && command.simulated !== true && command.state !== "COMPLETED")) {
+      throw new Error("This workspace has an unconfirmed provider request. Preserve it for recovery before resetting.");
+    }
+    d.personas[personaId] = newPersona(personaId);
+    for (const [id, x] of Object.entries(d.decisions)) if (x.personaId === personaId) delete d.decisions[id];
+    for (const [id, x] of Object.entries(d.orders)) if (x.personaId === personaId) delete d.orders[id];
+    for (const [id, x] of Object.entries(d.commands)) if (x.personaId === personaId) delete d.commands[id];
+    for (const [id, intent] of Object.entries(d.reviewIntents || {})) if (intent.owner === personaId) delete d.reviewIntents![id];
+    for (const [id, x] of Object.entries(d.snapshots)) if (x.personaId === personaId) delete d.snapshots[id];
+  });
+}

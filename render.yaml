@@ -1,0 +1,87 @@
+# Optional paid, single-instance Sandbox deployment. Review docs/DEPLOYMENT.md before creating.
+services:
+  - type: web
+    name: riskpilot-review
+    runtime: node
+    plan: starter
+    branch: cynthia
+    autoDeploy: false
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start -- --hostname 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    disk:
+      name: riskpilot-ledger
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: sandbox
+      - key: DEMO_SEED_ENABLED
+        value: "true"
+      - key: DEMO_TODAY
+        value: '2026-11-10'
+      - key: STORE_PATH
+        value: /var/data/demo-v2.json
+      - key: APP_ORIGIN
+        sync: false
+      - key: RISKPILOT_ORIGIN
+        sync: false
+      - key: MERCHANT_ORIGIN
+        sync: false
+      - key: MERCHANT_BRIDGE_ALLOWED_ORIGINS
+        sync: false
+      - key: MERCHANT_BRIDGE_SECRET
+        generateValue: true
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+  - type: web
+    name: northstar-sandbox
+    runtime: node
+    plan: starter
+    branch: cynthia
+    autoDeploy: false
+    buildCommand: npm ci --include=dev
+    startCommand: node --import tsx merchant-demo/start.ts
+    healthCheckPath: /api/health
+    disk:
+      name: northstar-ledger
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: sandbox
+      - key: HOST
+        value: 0.0.0.0
+      - key: MERCHANT_STORE_PATH
+        value: /var/data/merchant-demo.json
+      - key: RISKPILOT_ORIGIN
+        sync: false
+      - key: MERCHANT_ORIGIN
+        sync: false
+      - key: MERCHANT_BRIDGE_ALLOWED_ORIGINS
+        sync: false
+      - key: MERCHANT_BRIDGE_SECRET
+        fromService:
+          type: web
+          name: riskpilot-review
+          envVarKey: MERCHANT_BRIDGE_SECRET
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false

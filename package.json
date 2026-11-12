@@ -1,0 +1,30 @@
+{
+  "name": "riskpilot-checkout",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "next typegen && tsc --noEmit",
+    "demo": "bash scripts/demo-merchant.sh",
+    "build:extension": "node scripts/build-checkout-extension.mjs",
+    "merchant-demo": "node --env-file=.env --import tsx merchant-demo/start.ts",
+    "demo:shop": "bash scripts/demo-sandbox.sh"
+  },
+  "dependencies": {
+    "next": "15.5.29",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "esbuild": "0.25.12",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3"
+  }
+}
