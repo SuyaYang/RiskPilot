@@ -153,7 +153,8 @@ artifacts are separate unfinished demo-delivery tasks; see the current README ch
 Configure `GEMINI_API_KEY` in the ignored `.env`, with `GEMINI_MODEL=gemini-3.6-flash`, then restart.
 `bash scripts/set-keys.sh gemini` accepts hidden input. Ask RiskPilot now accepts free-text questions
 on main pages and order review; the key stays server-only. The model selects verified fact sentences,
-not new financial calculations. AI goal drafts require confirmation. Missing-key and provider errors
+not new financial calculations. Shop decision explanations use two 5-second attempts before
+deterministic fallback, within the 40-second assessment request deadline. AI goal drafts require confirmation. Missing-key and provider errors
 are explicit; suggested read-only page facts remain available without Gemini.
 
 For a public Sandbox demo, use [the HTTPS deployment guide](docs/DEPLOYMENT.md) and `render.yaml`.
@@ -179,7 +180,7 @@ explicit `DEMO_SEED_ENABLED=true` even when `APP_ENV=local`.
 With `DEMO_SEED_ENABLED=true`, open Dashboard and expand Spending Intelligence's category and recurring
 sections. No Plaid credentials are required: histories are explicitly simulated. Pin `DEMO_TODAY`
 for repeatable coverage/totals. Confirm/Edit/Not recurring affect only reviewed pattern estimates;
-existing financial bills and PayPal reserves are unchanged. Switch personas to see different histories.
+existing financial bills and PayPal reserves are unchanged. Sign into another fixed demo account in a separate workspace to see different histories.
 Reset in a simulation-only workspace restores pattern reviews; real Sandbox payment records retain
 existing reset protection. See [Phase 3 details and sample values](docs/SPENDING_INTELLIGENCE.md).
 
@@ -204,8 +205,14 @@ approval automatically opens RiskPilot review through the signed handoff. Stop/c
 
 The in-account persona dropdown remains retired. Open `/login` and enter `alex@riskpilot.demo`
 or `jordan@riskpilot.demo`; each account has one fixed financial profile and full feature access.
-There are no Basic/Premium tiers or upgrade controls. For Explore → Buy, assess Aero 14 in Shop,
-use **Continue at Northstar**, then choose PayPal at the merchant. A verified prior decision
-produces Smart Recheck; expired/unavailable associations produce a fresh full review.
-Restart an older merchant server to load signed-intent support, preserving its ledger/key.
-See [repeatable scenarios and verification](docs/FINAL_PURCHASE_EXPERIENCE.md).
+There are no Basic/Premium tiers or upgrade controls. For Explore → Buy, assess a product in Shop,
+then use its single **PayPal Checkout** action. PayPal's final Pay Now confirms the new Shop order;
+there is no redundant RiskPilot confirmation when the assessment remains current. Start the
+independent Northstar flow directly at the merchant: Continue → signed RiskPilot impact review →
+explicit Confirm and pay → verified merchant receipt. A prior Shop assessment is optional.
+Preserve both journeys and their distinct confirmation steps.
+
+Step 7B completed new actual Sandbox captures for both paths. Use the
+[final acceptance record](docs/STEP7B_ACCEPTANCE.md) and
+[under-three-minute recording rehearsal](docs/STEP7B_DEMO_REHEARSAL.md) for current preparation,
+verified financial values, human confirmation steps and remaining physical-device/webhook limits.

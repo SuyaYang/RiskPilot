@@ -32,6 +32,24 @@ test("AI cannot introduce unsupported financial sentences; outage uses template"
       const out = await explainDecision(d, p.name, p.buffer); assert.equal(out.source, "template");
       assert.equal(calls, 2, "A transient Gemini outage gets one bounded retry");
     });
+    await t.test("unresponsive decision AI falls back before the Shop client's request deadline", async () => {
+      const originalTimeout = globalThis.setTimeout, delays: number[] = [], before = structuredClone(d);
+      let calls = 0;
+      // Keep real abort-signal behavior while advancing only provider attempt deadlines quickly.
+      globalThis.setTimeout = ((handler: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+        delays.push(Number(delay)); return originalTimeout(handler, 0, ...args);
+      }) as typeof setTimeout;
+      globalThis.fetch = async (_url, options) => {
+        calls++;
+        return new Promise((_resolve, reject) => options!.signal!.addEventListener("abort", () => reject(new Error("fixture provider deadline")), { once: true }));
+      };
+      try {
+        const out = await explainDecision(d, p.name, p.buffer);
+        assert.equal(out.source, "template"); assert.equal(calls, 2);
+        assert.ok(delays.reduce((sum, delay) => sum + delay, 0) <= 10_000, "Optional AI must finish within 10 seconds, before the 40-second Shop request deadline");
+        assert.deepEqual(d, before); assert.match(out.text, /buffer/);
+      } finally { globalThis.setTimeout = originalTimeout; }
+    });
     await t.test("invalid calendar date in an AI goal draft is rejected", async () => {
       respond({ name: "Trip", type: "spend", targetAmount: 1000, targetDate: "2027-02-30", priority: 2 });
       assert.equal(await parseGoal("Trip next February", "2026-11-10"), null);

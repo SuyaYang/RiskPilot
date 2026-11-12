@@ -230,3 +230,27 @@ AI uses server facts and deterministic fallback. Payment endpoint implementation
 build and browser evidence are recorded with the Step 7A.2 result. No actual payment or
 existing-workspace reset was performed. See [coverage, migration, cent timing and limits](CATEGORY_SPENDING_MODEL.md).
 Step 7B live Sandbox acceptance and Vision remain unimplemented.
+
+## Step 7B — final local Sandbox acceptance (November 12, 2026)
+
+Step 7A.2 is checkpointed as `0008f283960d98bbee5b36d6229c7214953212de` on `cynthia`.
+Both live Sandbox journeys completed with product-owner participation in an isolated acceptance
+ledger: Northstar $900 (order `0B055045PW155242U`, capture `0FL65682BP995802J`) and Shop
+$249 (order `3LJ35188YL886274D`, capture `58119035695595002`). Read-only provider verification,
+merchant receipt/Shop success and exactly one reserve/saved forecast per capture agree.
+No original demo workspace was reset; payment and financial implementations were unchanged.
+Final failure-case QA reproduced decision AI's 50-second maximum exceeding Shop's 40-second
+client deadline. Its optional explanation now falls back after at most two 5-second attempts;
+a focused abort-signal regression fails before the fix and passes afterward.
+
+Shopping $90 → $30/month changed actual clean-fixture lowest cash $1,720 → $1,738, stress
+$1,540 → $1,572 and capacity $90 → $122. Subsequent verified payments correctly reduced
+capacity to $0. All current pages share the final hash/forecast. Stale assessment rejection,
+non-capturing exploration/skip, actual receipt refresh and controlled cancellation/failure/recovery
+coverage passed. Live Gemini outputs and deterministic fallback/grounding tests passed.
+
+272 tests, TypeScript, production build and whitespace checks pass. Actual measured responsive
+browser widths 375/390/768/1280px and screenshots cover the main pages, review, merchant and
+saved payment outcomes. Physical devices/public webhook delivery remain separate. See the
+[precise live-versus-mock evidence and limits](STEP7B_ACCEPTANCE.md) and [2:50 rehearsal](STEP7B_DEMO_REHEARSAL.md).
+Step 8 `/vision`, new product features and Devpost copy were not implemented.

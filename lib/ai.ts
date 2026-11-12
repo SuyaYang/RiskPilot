@@ -105,8 +105,9 @@ export async function explainDecision(d: Decision, personaName: string, buffer: 
   const fallback = { text: templateExplanation(d, buffer), source: "template" as const };
   // Gemini chooses useful facts; only server-owned sentences enter the explanation. Numeric matching
   // alone cannot catch an AI assigning the right dollar amount to the wrong payment method.
+  // Optional explanation: two 5-second attempts fit safely inside Shop's 40-second request.
   const raw = await gemini(JSON.stringify({ person: personaName, facts }),
-    'Select 2 to 4 useful fact IDs for a short buyer explanation. Start with recommendation, include buffer. Return only JSON {"factIds":[...]}. Do not calculate or write new claims.', true);
+    'Select 2 to 4 useful fact IDs for a short buyer explanation. Start with recommendation, include buffer. Return only JSON {"factIds":[...]}. Do not calculate or write new claims.', true, 5000);
   if (!raw) return fallback;
   try {
     const ids: unknown = JSON.parse(raw).factIds;

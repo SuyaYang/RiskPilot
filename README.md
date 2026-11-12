@@ -128,16 +128,21 @@ npm test
 npm run build
 ```
 
-Current validation has **271 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
+Current validation has **272 automated tests passing**, with type checking and the production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery, provider-error parsing, grounded-AI retry behavior and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
 
 Browser checks cover desktop/mobile layouts, default collapsed review, Skip navigation and the single visible Shop PayPal button. These responsive viewport checks are not physical iOS/Android acceptance.
 
-A real Northstar Sandbox capture, merchant receipt and saved forecast were observed in Phase 2; see [the evidence and limits](docs/DEMO_RELIABILITY_PHASE_2.md). **The latest Shop Pay Now path has been tested with deterministic provider mocks, but still needs a new actual Sandbox end-to-end payment.** Prior merchant payments do not count as live validation of this new path.
+Step 7B completed new actual Sandbox transactions for **both** purchase journeys, with product-owner
+participation: Northstar $900 and Shop $249. Provider capture status, receipts/success pages and
+exactly one reserve/saved forecast per payment were verified. Failure/recovery and duplicate-confirm
+scenarios additionally use controlled mocks; responsive browser checks are not physical-device acceptance.
+See [the final acceptance evidence and limits](docs/STEP7B_ACCEPTANCE.md) and [the 2:50 demo rehearsal](docs/STEP7B_DEMO_REHEARSAL.md).
 
 Before the final demonstration:
 
-- [ ] Complete a real Sandbox Shop Pay Now → verified capture → saved forecast walkthrough, including cancellation and same-order recovery.
-- [ ] Recheck Northstar’s direct review/confirm, Skip-to-Dashboard and Cancel-to-store paths in the final environment.
+- [x] Complete live Sandbox Shop Pay Now → verified capture → saved forecast acceptance.
+- [x] Complete live Northstar review/confirm → verified capture → merchant receipt acceptance.
+- [x] Verify skip/future/cancellation navigation and controlled failure/idempotency/recovery regressions.
 - [ ] Verify PayPal popup/redirect behavior on physical mobile devices.
 - [ ] Configure and validate public HTTPS hosting, callback origins, persistent ledgers and webhook delivery if an external demo URL is required.
 
