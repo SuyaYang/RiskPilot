@@ -1332,3 +1332,13 @@ summary { font-size:14px; }
   .money-months header>p { min-height:38px;margin-bottom:8px; }
   .money-breakdowns { grid-template-columns:1fr; }
 }
+
+/* Existing What-if disclosure: compact, engine-owned current/scenario facts. */
+.budget-forecast-comparison { width:100%;border-collapse:collapse;margin:16px 0;font-size:13px; }
+.budget-forecast-comparison caption { text-align:left;font-weight:650;padding:0 0 8px;color:var(--ink); }
+.budget-forecast-comparison th,.budget-forecast-comparison td { padding:9px 8px;border-bottom:1px solid var(--line);text-align:right; }
+.budget-forecast-comparison th:first-child { text-align:left;padding-left:0; }
+.budget-forecast-comparison thead th { font-weight:500;color:var(--muted); }
+.budget-forecast-comparison tbody th { font-weight:500; }
+.budget-forecast-comparison td { white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:650; }
+@media(max-width:650px) { .budget-forecast-comparison { font-size:12px; } .budget-forecast-comparison th,.budget-forecast-comparison td { padding:8px 4px; } }

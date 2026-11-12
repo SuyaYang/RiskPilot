@@ -14,6 +14,8 @@ export interface PersonaState {
   goals: Goal[]; goalHistory: GoalChange[]; purchases: Purchase[];
   spending?: SpendingPreferences;
   planningBudget?: PlanningBudgetState;
+  moneyPlanSnapshot?: Pick<ReturnType<typeof snapshot>, "asOf" | "financialInputHash" | "forecast" | "allocation" | "investable">;
+  spendingBaseline?: { modelVersion: "alex-everyday-v1" };
   planningIncome?: PlanningIncomeState;
   financialProfile?: FinancialProfileState;
   prefs: { horizon: "short" | "medium" | "long"; risk: "conservative" | "balanced" | "growth"; custom?: { cash: number; bonds: number; index: number } };
@@ -50,7 +52,7 @@ const fresh = (): StoreData => ({ version: 2, personas: {}, decisions: {}, order
 export function newPersona(id: string): PersonaState {
   const base = buildPersonas().find(p => p.id === id.split(":").at(-1));
   if (!base) throw new Error("Unknown demo persona");
-  return { goals: base.goals.map(g => ({ ...g, version: 1 })), goalHistory: [], purchases: [], prefs: { horizon: "medium", risk: "balanced" } };
+  return { ...(base.id === "alex" ? { spendingBaseline: { modelVersion: "alex-everyday-v1" as const } } : {}), goals: base.goals.map(g => ({ ...g, version: 1 })), goalHistory: [], purchases: [], prefs: { horizon: "medium", risk: "balanced" } };
 }
 export function ensurePersona(id: string) {
   if (!load().personas[id]) update(d => { d.personas[id] ??= newPersona(id); });

@@ -1,5 +1,7 @@
 # Step 5 — financial-model audit and verified planning integration
 
+Current follow-up: [Step 7A.2 category model](CATEGORY_SPENDING_MODEL.md) enables explicit, coverage-verified Alex category replacement. Unmapped/legacy budgets retain the planning-only behavior documented below.
+
 ## Calculation path audited before implementation
 
 - `state.personaWithState` combines the fixed demo persona, saved goals and recorded purchase

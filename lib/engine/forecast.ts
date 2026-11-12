@@ -1,6 +1,8 @@
 import type { ForecastResult, Payment, Persona, RecurringItem } from "../types";
 import { addDays, iso, parseIso, today, daysBetween } from "../dates";
 
+import { everydayCents, everydayMonthlyAmount } from "../planning/spendingTiming";
+
 export const HORIZON_DAYS = 45;
 export const STRESS_DELAY_DAYS = 7;
 
@@ -23,7 +25,7 @@ export function monthlySurplus(p: Persona): number {
     const perMonth = r.frequency === "biweekly" ? (r.amount * 26) / 12 : r.amount;
     net += r.direction === "in" ? perMonth : -perMonth;
   }
-  net -= p.dailySpend * 30.4;
+  net -= everydayMonthlyAmount(p);
   return round2(net);
 }
 
@@ -51,7 +53,7 @@ function simulate(p: Persona, existing: Payment[], extra: Payment[], shiftIncome
     const day = daysBetween(t, parseIso(event.date));
     if (day >= 0 && day < Math.min(HORIZON_DAYS, horizon)) deltas[day] += event.amountCents;
   }
-  for (let d = 0; d < horizon; d++) deltas[d] -= cents(p.dailySpend);
+  for (let d = 0; d < horizon; d++) deltas[d] -= everydayCents(p, iso(addDays(t, d)));
   // existing future payments (already-paid ones are in the starting balance)
   for (const x of existing) {
     const d = daysBetween(t, parseIso(x.date));

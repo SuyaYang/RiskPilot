@@ -33,6 +33,7 @@ export interface Persona {
   savingsBalance: number;
   buffer: number;
   dailySpend: number;
+  everydaySpending?: import("./planning/spendingBaseline").EverydaySpending;
   planning?: {
     policy: "verified-planning-v1";
     incomeEvents: { id: string; name: string; date: string; amountCents: number; source: "user_confirmed_plan" }[];

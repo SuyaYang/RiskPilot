@@ -7,6 +7,7 @@ import type { Payment, Persona } from "./types";
 import { forecast } from "./engine/forecast";
 import { allocateGoals } from "./engine/goals";
 import { investableNow } from "./engine/investable";
+import { compileSpending } from "./planning/spendingBaseline";
 import { compilePlanning } from "./planning/integration";
 import { iso, today } from "./dates";
 
@@ -28,14 +29,18 @@ export function personaWithState(id: string, data: StoreData = load()): { person
   if (!base) throw new Error("Unknown persona");
   const st = data.personas[id];
   const compiled = compilePlanning(base, st);
-  const persona: Persona = { ...base, goals: st?.goals ?? base.goals, ...(compiled.planning ? { planning: compiled.planning } : {}) };
+  const everydaySpending = compileSpending(base, st);
+  const persona: Persona = { ...base, ...(everydaySpending ? { everydaySpending } : {}), goals: st?.goals ?? base.goals, ...(compiled.planning ? { planning: compiled.planning } : {}) };
   const payments = (st?.purchases ?? []).flatMap((x) => x.payments);
   return { persona, payments };
 }
 
 export function inputHash(id: string, data: StoreData = load()) {
   const { persona, payments } = personaWithState(id, data);
-  return crypto.createHash("sha256").update(JSON.stringify({ persona, payments, asOf: iso(today()), policy: "rp-v1" })).digest("hex");
+  // Declaring an identical baseline must not invalidate existing purchase assessments.
+  const { everydaySpending, ...legacy } = persona;
+  const financialPersona = everydaySpending?.categories.some(row => row.override) ? persona : legacy;
+  return crypto.createHash("sha256").update(JSON.stringify({ persona: financialPersona, payments, asOf: iso(today()), policy: "rp-v1" })).digest("hex");
 }
 
 export function snapshot(id: string, data: StoreData = load()) {

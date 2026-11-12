@@ -40,6 +40,6 @@ export function compilePlanning(base: Persona, state: PersonaState | undefined, 
   }
   events.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)); replacedIncomeIds.sort();
   const planning = events.length || replacedIncomeIds.length ? { policy: "verified-planning-v1" as const, incomeEvents: events, replacedIncomeIds } : undefined;
-  const budgets = Object.fromEntries(Object.entries(state?.planningBudget?.categories || {}).filter(([, entry]) => entry.confirmed).map(([id]) => [id, { status: "needs_review" as const, reason: "The daily-spend baseline has no verified category split. Scheduled bills, card repayments and purchase reserves remain active; this budget is not added or subtracted." }]));
-  return { planning, income: statuses, budgets };
+  // Category integration is resolved by the category-coverage service, separately from income mappings.
+  return { planning, income: statuses };
 }

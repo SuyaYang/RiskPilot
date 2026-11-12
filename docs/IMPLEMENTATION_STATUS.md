@@ -212,3 +212,21 @@ checked at 375/390/768/1280px. Live Gemini budget-change and capacity explanatio
 mocked outage/timeout fallback and stale-input rejection passed. No payment, order or existing-data
 reset was performed. See [the coverage audit, preview/AI contracts and verification](MONEY_WHAT_IF.md).
 Final PayPal Sandbox acceptance and demo readiness remain separate, approval-gated work.
+
+## Step 7A.2 — category-aware spending integration (November 11, 2026)
+
+The approved Step 6/7A checkpoint is `c5115f4`. Alex's declared fictional category model
+partitions the same $20/day; migration preserves balances, risk, goals, capacity and hashes.
+New Alex profiles opt in by default; existing Alex profiles can enable it explicitly without
+resetting data or activating saved planning-only budgets. Sam/Jordan retain legacy behavior.
+
+Food, shopping and entertainment support explicit What-if application. Recurring transport,
+bills, health and unknown categories remain planning only. Calendar-day integer-cent
+replacement feeds the shared forecast, goals, readiness and purchase reviews. Current/scenario
+engine facts, application status and restoration use the existing compact Money UI. Grounded
+AI uses server facts and deterministic fallback. Payment endpoint implementations are unchanged.
+
+271 automated tests pass, including 32 category-integration tests/subtests. Final TypeScript,
+build and browser evidence are recorded with the Step 7A.2 result. No actual payment or
+existing-workspace reset was performed. See [coverage, migration, cent timing and limits](CATEGORY_SPENDING_MODEL.md).
+Step 7B live Sandbox acceptance and Vision remain unimplemented.

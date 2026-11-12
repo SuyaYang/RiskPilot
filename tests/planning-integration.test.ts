@@ -26,6 +26,8 @@ test("verified planning inputs share forecast, goal, decision and payment-safety
   const { recordCapture } = await import("../lib/purchases");
   const owner = "integration-a:alex", other = "integration-b:alex", sam = "integration-a:sam";
   for (const id of [owner, other, sam]) ensurePersona(id);
+  // Preserve the legacy-workspace coverage regressions; new category coverage is tested separately.
+  update(data => { delete data.personas[owner].spendingBaseline; });
   const baseline = snapshot(owner), baselineHash = inputHash(owner);
   const otherBefore = load().personas[other], samBefore = load().personas[sam];
   const values = { name: "Additional family allowance", amountCents: 12345, currency: "USD", frequency: "once", nextDate: "2026-11-11", sourceType: "user_entered", reliability: "expected" };

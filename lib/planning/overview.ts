@@ -1,4 +1,5 @@
 import { addDays, daysBetween, iso, parseIso } from "../dates";
+import { everydayPeriodCents } from "./spendingBaseline";
 import { occurrences } from "../engine/forecast";
 import type { Payment, Persona } from "../types";
 import { normalizeMerchant } from "../spending/recurring";
@@ -44,24 +45,29 @@ export function planningOverview(persona: Persona, payments: Payment[], entries:
   }));
   const events = [...modeledEvents, ...additionalEvents, ...reserveEvents].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
   const confirmed = budget.categories.filter(row => row.confirmedMonthlyCents !== null);
+  const separate = confirmed.filter(row => row.forecastIntegration?.status !== "included");
   const monthlyBudgetCents = confirmed.reduce((sum, row) => sum + row.confirmedMonthlyCents!, 0);
+  const separateMonthlyBudgetCents = separate.reduce((sum, row) => sum + row.confirmedMonthlyCents!, 0);
   const months = period.months.map(month => {
     const rows = events.filter(event => event.date >= month.start && event.date <= month.end);
     const sum = (filter: (event: typeof events[number]) => boolean) => rows.filter(filter).reduce((total, event) => total + event.amountCents, 0);
     const expectedIncomeCents = sum(event => event.direction === "in" && event.included);
     const scheduledExpensesCents = sum(event => event.direction === "out" && event.kind === "modeled");
     const purchaseReservesCents = sum(event => event.kind === "purchase_reserve");
-    const everydayEstimateCents = Math.round(persona.dailySpend * 100) * month.days;
+    const everydayEstimateCents = everydayPeriodCents(persona, month.start, month.days);
     const modeledOutgoingCents = scheduledExpensesCents + purchaseReservesCents + everydayEstimateCents;
     return { ...month, expectedIncomeCents, scheduledExpensesCents, purchaseReservesCents, everydayEstimateCents, modeledOutgoingCents,
+      planningOnlyBudgetEstimateCents: roundedRatio(BigInt(separateMonthlyBudgetCents) * BigInt(month.days), BigInt(month.calendarDays)),
       confirmedBudgetEstimateCents: roundedRatio(BigInt(monthlyBudgetCents) * BigInt(month.days), BigInt(month.calendarDays)),
       excludedIncomeCents: sum(event => event.direction === "in" && !event.included),
       partialDifferenceCents: expectedIncomeCents - modeledOutgoingCents,
       combinedOutgoingCents: null, // No invented budget-to-bill or budget-to-daily-spend reconciliation.
     };
   });
-  return { period, months, events, entries: viewedEntries, confirmedBudgetCount: confirmed.length, monthlyBudgetCents,
-    expenseReview: confirmed.map(row => ({ categoryId: row.categoryId, category: row.category,
+  return { period, months, events, entries: viewedEntries, confirmedBudgetCount: confirmed.length, monthlyBudgetCents, separateMonthlyBudgetCents,
+    appliedBudgetCount: confirmed.filter(row => row.forecastIntegration?.status === "included").length,
+    separateBudgetCount: separate.length,
+    expenseReview: separate.map(row => ({ categoryId: row.categoryId, category: row.category,
       observation: row.confirmation!.evidence.observation, scheduledBills: row.overlap.scheduledBills,
       possibleEverydayOverlap: persona.dailySpend > 0, requiresReview: true as const })),
     modeledIncome: persona.recurring.filter(item => item.direction === "in").map(item => ({ id: item.id, name: item.name, amountCents: Math.round(item.amount * 100), currency: "USD" as const,

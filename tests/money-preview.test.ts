@@ -25,6 +25,8 @@ test("Money What-if and grounded explanations preserve financial and payment bou
   const { orderReview } = await import("../lib/orderReview");
   const owner = "preview-a:alex", other = "preview-b:alex", sam = "preview-a:sam";
   [owner, other, sam].forEach(ensurePersona);
+  // Preserve the legacy-workspace coverage regressions; new category coverage is tested separately.
+  update(data => { delete data.personas[owner].spendingBaseline; delete data.personas[other].spendingBaseline; });
   const baseline = snapshot(owner), baseHash = inputHash(owner), others = { a: load().personas[other], b: load().personas[sam] };
   const request = (monthlyCents = 12345, categoryId = "food-and-dining", who = owner) => { const budget = planningBudgetView(who); return { categoryId, monthlyCents, version: budget.version, epoch: budget.epoch, basisHash: budget.basisHash, financialInputHash: inputHash(who) }; };
   const insight = (topic: string, extra = {}, who = owner) => ({ topic, insightBasis: moneyPlanView(who).insightBasis, ...extra });

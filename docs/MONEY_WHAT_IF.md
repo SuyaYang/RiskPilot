@@ -1,5 +1,7 @@
 # Step 6 — budget What-if and evidence-grounded Money explanations
 
+Current follow-up: [Step 7A.2 category model](CATEGORY_SPENDING_MODEL.md) enables explicit, coverage-verified Alex category replacement. Unmapped/legacy budgets retain the planning-only behavior documented below.
+
 ## Spending-replacement investigation
 
 The source audit still finds only `Persona.dailySpend`, an unclassified aggregate scalar. No baseline
