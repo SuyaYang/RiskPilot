@@ -1,6 +1,9 @@
 import type { ForecastResult, Payment, Persona, RecurringItem } from "../types";
 import { addDays, iso, parseIso, today, daysBetween } from "../dates";
 
+import { effectiveIncomeEvents, establishedReplacementMonthly } from "../planning/effectiveIncome";
+import { everydayCents, everydayMonthlyAmount } from "../planning/spendingTiming";
+
 export const HORIZON_DAYS = 45;
 export const STRESS_DELAY_DAYS = 7;
 
@@ -19,10 +22,12 @@ export function occurrences(item: RecurringItem, horizon = HORIZON_DAYS, shiftIn
 export function monthlySurplus(p: Persona): number {
   let net = 0;
   for (const r of p.recurring) {
+    if (r.direction === "in" && p.planning?.replacedIncomeIds.includes(r.id)) continue;
     const perMonth = r.frequency === "biweekly" ? (r.amount * 26) / 12 : r.amount;
     net += r.direction === "in" ? perMonth : -perMonth;
   }
-  net -= p.dailySpend * 30.4;
+  net += establishedReplacementMonthly(p);
+  net -= everydayMonthlyAmount(p);
   return round2(net);
 }
 
@@ -42,9 +47,15 @@ function simulate(p: Persona, existing: Payment[], extra: Payment[], shiftIncome
   const cents = (n: number) => Math.round(n * 100);
   const deltas = new Array<number>(horizon).fill(0);
   for (const r of p.recurring) {
+    if (r.direction === "in" && p.planning?.replacedIncomeIds.includes(r.id)) continue;
     for (const d of occurrences(r, horizon, shiftIncome)) deltas[d] += r.direction === "in" ? cents(r.amount) : -cents(r.amount);
   }
-  for (let d = 0; d < horizon; d++) deltas[d] -= cents(p.dailySpend);
+  // Expand mapped schedules through the actual safety horizon, with capped established stress.
+  for (const event of effectiveIncomeEvents(p, horizon, shiftIncome)) {
+    const day = daysBetween(t, parseIso(event.date));
+    if (day >= 0 && day < horizon) deltas[day] += event.amountCents;
+  }
+  for (let d = 0; d < horizon; d++) deltas[d] -= everydayCents(p, iso(addDays(t, d)));
   // existing future payments (already-paid ones are in the starting balance)
   for (const x of existing) {
     const d = daysBetween(t, parseIso(x.date));
@@ -76,6 +87,7 @@ export function forecast(p: Persona, existing: Payment[] = [], extra: Payment[] 
   const sGap = round2(sMin.balance - p.buffer);
   const risk = gap < 0 ? "red" : sGap < 0 ? "yellow" : "green";
   return {
+    ...(p.planning ? { planningIncomePolicy: "established_replacements_capped" as const } : {}),
     startBalance: normal.start,
     dailyBalances: normal.daily.slice(0, HORIZON_DAYS),
     minBalance: min.balance,

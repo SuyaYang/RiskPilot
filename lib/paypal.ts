@@ -8,6 +8,35 @@ export function paypalConfigured(): boolean {
 
 let token: { value: string; expires: number } | null = null;
 
+function paypalError(message: string, res: Response, body?: Record<string, any>) {
+  const debugId = res.headers.get("paypal-debug-id") || (typeof body?.debug_id === "string" ? body.debug_id : undefined);
+  const error = new Error(`${message}${debugId ? ` [debug-id: ${debugId}]` : ""}`) as Error & {
+    status?: number; code?: string; debugId?: string; retryable?: boolean;
+  };
+  error.status = res.status;
+  error.code = body?.details?.[0]?.issue ?? body?.name ?? "PROVIDER_ERROR";
+  error.debugId = debugId;
+  error.retryable = res.status === 429 || res.status >= 500;
+  return error;
+}
+
+async function readPayPalResponse<T extends Record<string, any> = Record<string, any>>(res: Response, label = "PayPal request"): Promise<T> {
+  const text = await res.text();
+  let body: Record<string, any> | undefined;
+  if (text) {
+    try { body = JSON.parse(text); }
+    catch {
+      if (res.ok) throw paypalError(`${label} returned an invalid JSON response (${res.status})`, res);
+    }
+  }
+  body ??= {};
+  if (!res.ok) {
+    const issue = body.details?.[0]?.issue ?? body.name ?? "PROVIDER_ERROR";
+    throw paypalError(`${label} failed (${res.status}): ${issue}`, res, body);
+  }
+  return body as T;
+}
+
 async function accessToken(): Promise<string> {
   if (token && Date.now() < token.expires - 60_000) return token.value;
   const auth = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64");
@@ -18,13 +47,16 @@ async function accessToken(): Promise<string> {
     signal: AbortSignal.timeout(8000),
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`PayPal auth failed (${res.status}). Check PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET.`);
-  const j = await res.json();
-  token = { value: j.access_token, expires: Date.now() + j.expires_in * 1000 };
+  const j = await readPayPalResponse<{ access_token?: string; expires_in?: number }>(res, "PayPal auth");
+  const expiresIn = Number(j.expires_in);
+  if (typeof j.access_token !== "string" || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+    throw paypalError("PayPal auth returned an incomplete token response", res, j);
+  }
+  token = { value: j.access_token, expires: Date.now() + expiresIn * 1000 };
   return token.value;
 }
 
-async function call(pathname: string, init: RequestInit & { requestId?: string } = {}) {
+async function call<T extends Record<string, any> = Record<string, any>>(pathname: string, init: RequestInit & { requestId?: string } = {}): Promise<T> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${await accessToken()}`,
     "Content-Type": "application/json",
@@ -34,14 +66,7 @@ async function call(pathname: string, init: RequestInit & { requestId?: string }
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
     const res = await fetch(`${BASE}${pathname}`, { ...init, headers, signal: ctrl.signal, cache: "no-store" });
-    const text = await res.text();
-    const body = text ? JSON.parse(text) : {};
-    if (!res.ok) {
-      const err = new Error(`PayPal request failed (${res.status}): ${body?.details?.[0]?.issue ?? body?.name ?? "PROVIDER_ERROR"}`);
-      (err as Error & { status?: number }).status = res.status;
-      throw err;
-    }
-    return body;
+    return await readPayPalResponse<T>(res);
   } finally {
     clearTimeout(timer);
   }
@@ -52,7 +77,7 @@ export async function createOrder(opts: {
   experience?: { origin: string; brandName: string; userAction: "CONTINUE" | "PAY_NOW" };
 }) {
   const value = opts.amount.toFixed(2);
-  return call("/v2/checkout/orders", {
+  return call<PayPalOrder>("/v2/checkout/orders", {
     method: "POST",
     requestId: opts.requestId,
     body: JSON.stringify({
@@ -82,12 +107,12 @@ export async function createOrder(opts: {
 }
 
 export async function getOrder(orderId: string) {
-  return call(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, { method: "GET" });
+  return call<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, { method: "GET" });
 }
 
 /** Capture with a fixed request id, so a retry of the same capture is not charged twice. */
 export async function captureOrder(orderId: string) {
-  return call(`/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
+  return call<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
     method: "POST",
     requestId: `capture-${orderId}`,
     body: "{}",

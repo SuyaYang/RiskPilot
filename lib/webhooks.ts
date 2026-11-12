@@ -26,6 +26,13 @@ export function processVerifiedWebhook(raw: string) {
       // Late pending/declined events cannot undo a completed capture or its conservative reserve.
       if (event.event_type.endsWith("REFUNDED") || event.event_type.endsWith("REVERSED") || o.status !== "CAPTURED") {
         o.settlementReview = event.event_type;
+        if (event.event_type.endsWith("REFUNDED") || event.event_type.endsWith("REVERSED")) {
+          if (typeof resource?.id !== "string" || !resource.id) throw new Error("Settlement resource id missing");
+          const amount = Number(resource.amount?.value), currency = resource.amount?.currency_code;
+          if (resource.amount && (!Number.isFinite(amount) || amount <= 0 || currency !== o.currency)) throw new Error("Settlement amount/currency mismatch");
+          o.settlementEvents ??= [];
+          if (!o.settlementEvents.some(item => item.id === resource.id && item.type === (event.event_type.endsWith("REVERSED") ? "reversal" : "refund"))) o.settlementEvents.push({ id: resource.id, type: event.event_type.endsWith("REVERSED") ? "reversal" : "refund", ...(resource.amount ? { amount, currency } : {}) });
+        }
       }
     });
     state = "PROCESSED";

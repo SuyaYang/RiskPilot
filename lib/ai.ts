@@ -4,10 +4,10 @@ import { fmtDate } from "./dates";
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** Select ordering of server-authored facts; never accept model-authored financial claims. */
-export async function explainReviewFacts(facts: Record<string, string>, required: string[], question: string) {
+export async function explainReviewFacts(facts: Record<string, string>, required: string[], question: string, timeoutMs = 25000) {
   const fallback = { text: required.map(id => facts[id]).join(" "), source: "template" as const };
   const raw = await gemini(JSON.stringify({ question, facts, required }),
-    'Arrange the required fact IDs into a clear buyer explanation. Return only JSON {"factIds":[...]}. Include each required ID exactly once. Do not calculate, write claims, or perform actions.', true);
+    'Arrange the required fact IDs into a clear buyer explanation. Return only JSON {"factIds":[...]}. Include each required ID exactly once. Do not calculate, write claims, or perform actions.', true, timeoutMs);
   if (!raw) return fallback;
   try {
     const ids: unknown = JSON.parse(raw).factIds;
@@ -16,38 +16,43 @@ export async function explainReviewFacts(facts: Record<string, string>, required
   } catch { return fallback; }
 }
 
-async function gemini(prompt: string, system: string, json = false): Promise<string | null> {
+async function gemini(prompt: string, system: string, json = false, timeoutMs = 25000): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 25000);
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1024, ...(json ? { responseMimeType: "application/json" } : {}) },
-        }),
-        signal: ctrl.signal,
-      },
-    );
-    if (!res.ok) {
-      console.warn("Gemini request rejected", res.status);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 1024, ...(json ? { responseMimeType: "application/json" } : {}) },
+          }),
+          signal: ctrl.signal,
+        },
+      );
+      if (!res.ok) {
+        if (attempt === 0 && [429, 502, 503].includes(res.status)) continue;
+        console.warn("Gemini request rejected", res.status);
+        return null;
+      }
+      const body = await res.json();
+      return body?.candidates?.[0]?.content?.parts?.filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text ?? "").join("") ?? null;
+    } catch (e) {
+      if (attempt === 0) continue;
+      console.warn("Gemini request failed", (e as Error).message);
       return null;
+    } finally {
+      clearTimeout(timer);
     }
-    const body = await res.json();
-    return body?.candidates?.[0]?.content?.parts?.filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text ?? "").join("") ?? null;
-  } catch (e) {
-    console.warn("Gemini request failed", (e as Error).message);
-    return null;
-  } finally {
-    clearTimeout(timer);
   }
+  return null;
 }
 
 /** Every number in the text must match a number the engine produced (or a small known constant). */
@@ -73,13 +78,14 @@ export function templateExplanation(d: Decision, buffer: number): string {
   }
   const delays = rec.goalImpact.filter((g) => g.delayDays > 0).map((g) => `${g.name} by about ${g.delayDays} days`);
   const parts = [
-    `${rec.label} keeps your lowest balance at ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}, ${money(rec.forecast.bufferGap)} above your buffer.`,
+    `${rec.hypothetical ? "This educational installment estimate (not an approved offer)" : rec.label} keeps your lowest balance at ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}, ${money(rec.forecast.bufferGap)} above your buffer.`,
   ];
   if (full && full.method !== rec.method) {
     parts.push(`Paying in full would bring it to ${money(full.forecast.minBalance)}${full.forecast.bufferGap < 0 ? ", below your buffer" : ""}.`);
   }
   parts.push(delays.length ? `It would push back ${delays.join(" and ")}.` : "It does not delay any of your goals.");
   if (rec.extraCost > 0) parts.push(`It adds an estimated ${money(rec.extraCost)} in interest.`);
+  if (rec.hypothetical) parts.push("Waiting may preserve your goals. This is not a recommendation to borrow; checkout captures the full price.");
   return parts.join(" ");
 }
 
@@ -89,7 +95,7 @@ export async function explainDecision(d: Decision, personaName: string, buffer: 
   const facts: Record<string, string> = {
     recommendation: rec.method === "wait"
       ? `Waiting is the suggested scenario. Your lowest baseline projection is ${money(rec.forecast.minBalance)}.`
-      : `${rec.hypothetical ? "In this hypothetical scenario, " : ""}${rec.label} gives a lowest projected balance of ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}.`,
+      : `${rec.hypothetical ? "Educational estimate, not an approved offer or recommendation to borrow; waiting may preserve your goals. Checkout captures the full price. In this hypothetical scenario, " : ""}${rec.label} gives a lowest projected balance of ${money(rec.forecast.minBalance)} on ${fmtDate(rec.forecast.minBalanceDate)}.`,
     buffer: `Your cash buffer is ${money(buffer)}; the scenario's minimum is ${money(Math.abs(rec.forecast.bufferGap))} ${rec.forecast.bufferGap < 0 ? "below" : "above"} it.`,
     stress: `If income arrives a week late, the lowest projection is ${money(rec.forecast.stressMinBalance)}.`,
   };
@@ -100,8 +106,9 @@ export async function explainDecision(d: Decision, personaName: string, buffer: 
   const fallback = { text: templateExplanation(d, buffer), source: "template" as const };
   // Gemini chooses useful facts; only server-owned sentences enter the explanation. Numeric matching
   // alone cannot catch an AI assigning the right dollar amount to the wrong payment method.
+  // Optional explanation: two 5-second attempts fit safely inside Shop's 40-second request.
   const raw = await gemini(JSON.stringify({ person: personaName, facts }),
-    'Select 2 to 4 useful fact IDs for a short buyer explanation. Start with recommendation, include buffer. Return only JSON {"factIds":[...]}. Do not calculate or write new claims.', true);
+    'Select 2 to 4 useful fact IDs for a short buyer explanation. Start with recommendation, include buffer. Return only JSON {"factIds":[...]}. Do not calculate or write new claims.', true, 5000);
   if (!raw) return fallback;
   try {
     const ids: unknown = JSON.parse(raw).factIds;

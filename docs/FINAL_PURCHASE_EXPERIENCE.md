@@ -1,5 +1,10 @@
 # Final purchase experience — November 10, 2026
 
+**Current correction:** [Step 8.5](STEP85_RESULT.md) supersedes earlier blanket replacement-income exclusions,
+duplicate purchase/buffer goal charges, zero-difference budget application and client-selected capture validation.
+Historical test counts and acceptance statements below describe their original checkpoints.
+
+
 RiskPilot has two purchase entry points. Direct merchant checkout reviews impact after PayPal approval; Shop displays the assessment before PayPal and uses PayPal’s final Pay Now confirmation. There are no subscription tiers, Protection toggles, locked dashboards or upgrade prompts. Every fixed demo account receives the full purchase-impact review. Earlier Basic/Premium checkout restrictions have been removed.
 
 ## User journeys

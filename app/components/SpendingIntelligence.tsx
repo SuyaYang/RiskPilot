@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { SpendingView } from "@/lib/spending/service";
 import type { SpendingFrequency } from "@/lib/spending/types";
@@ -75,6 +76,7 @@ export default function SpendingIntelligence() {
   }
   return <section className="card spending-intelligence" aria-labelledby="spending-title">
     <header className="row between"><div><span className="page-kicker">Understand your everyday</span><h2 id="spending-title">Spending intelligence</h2></div><span className="badge gray">Simulated history</span></header>
+    <Link href="/money#spending-plan" className="small">Review spending plan →</Link>
     <p className="spending-coverage">No bank connected · {coverageLabel}. {analysis.analyzedCount} spending/refund records.</p>
     <div className="spending-analysis-grid"><div className="spending-trend"><div className="spending-metrics"><div><span>Avg. monthly spending</span><strong>{analysis.averageMonthlyCents === null ? "Unavailable" : formatCents(analysis.averageMonthlyCents)}</strong><small>{analysis.averageMonthCount} fully covered months</small></div>{latest && <div><span>{monthLabel(latest.month)} net spending</span><strong>{formatCents(latest.netCents)}</strong><small>{latest.changeBasisPoints === null ? "Comparable prior month unavailable" : `${monthLabel(latest.month)}: ${percentage(latest.changeBasisPoints)} vs prior full month`}</small></div>}</div>
       {analysis.months.length ? <div className="spending-bars" role="img" aria-label={analysis.months.map(month => `${monthLabel(month.month)}: ${formatCents(month.netCents)} net spending${month.complete ? "" : ", partial coverage"}`).join("; ")}>{analysis.months.map(month => <div className="spending-month" key={month.month}><span>{formatCents(month.netCents)}</span><div><i className={month.complete ? "" : "partial"} style={{ height: `${Math.max(2, Math.abs(month.netCents) / max * 100)}%` }} /></div><span>{monthLabel(month.month)}{!month.complete && <small>Partial</small>}</span></div>)}</div> : <p className="small muted">No posted history in this coverage period. No months or totals have been invented.</p>}

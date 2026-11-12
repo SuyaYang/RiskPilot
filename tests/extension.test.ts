@@ -52,7 +52,8 @@ test("extension reuses the financial kernel and keeps loans hypothetical", () =>
   const four = result.options.find(o => o.method === "pay_in_4")!;
   assert.equal(full.forecast.minBalance, 7995); assert.equal(four.forecast.minBalance, 8670);
   assert.equal(full.forecast.bufferGap, 5995); assert.equal(four.hypothetical, true);
-  assert.equal(full.goalImpact.find(g => g.name === "Wedding")?.delayDays, 30);
+  // Immediate cash-funded purchase matches the recorded-reserve goal model.
+  assert.equal(full.goalImpact.find(g => g.name === "Wedding")?.delayDays, 0);
   assert.throws(() => assessExternalPurchase(-1, "sam"));
   assert.throws(() => assessExternalPurchase(900, "missing"));
 });

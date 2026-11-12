@@ -1,6 +1,6 @@
 import type { Allocation, Goal, GoalStatus, Payment, Persona } from "../types";
 import { addDays, daysBetween, iso, monthsBetween, parseIso, today } from "../dates";
-import { monthlySurplus } from "./forecast";
+import { forecast, monthlySurplus } from "./forecast";
 
 const MONTH_DAYS = 30.4;
 const MAX_MONTHS = 48;
@@ -12,8 +12,8 @@ function sortGoals(goals: Goal[]): Goal[] {
 
 /**
  * Month-by-month funding simulation. Each month the monthly surplus, minus any purchase payments
- * falling in that month, is allocated to goals by priority then deadline, each up to the amount it
- * needs per month; anything left accelerates the same goals in order. A shortfall (including
+ * falling in that month (residual obligations after cash funding via projectGoals), is allocated
+ * to goals by priority then deadline, each up to the amount it needs per month; anything left accelerates the same goals in order. A shortfall (including
  * restoring the cash buffer) carries forward and must be repaid before goals get money again.
  */
 export function allocateGoals(
@@ -21,6 +21,7 @@ export function allocateGoals(
   goals: Goal[],
   futurePayments: Payment[] = [],
   bufferDeficit = 0,
+  cashBufferDeficit = Math.max(0, -forecast(p).bufferGap),
 ): Allocation {
   const t = today();
   const surplus = monthlySurplus(p);
@@ -31,6 +32,10 @@ export function allocateGoals(
     const m = Math.min(MAX_MONTHS - 1, Math.floor(d / MONTH_DAYS));
     outByMonth[m] += x.amount;
   }
+  // The scheduled purchase and its resulting buffer shortfall overlap. Protect the larger
+  // requirement, not their sum; any independent pre-existing deficit remains protected.
+  const scheduledCost = outByMonth.reduce((sum, value) => sum + value, 0);
+  const independentBufferDeficit = Math.max(cashBufferDeficit, bufferDeficit - scheduledCost);
   const active = sortGoals(goals.filter((g) => !g.paused));
   const remaining = new Map(active.map((g) => [g.id, Math.max(0, g.targetAmount - g.savedSoFar)]));
   const required = new Map(
@@ -44,7 +49,7 @@ export function allocateGoals(
   const doneMonth = new Map<string, number>();
   let carry = 0;
   for (let m = 0; m < MAX_MONTHS; m++) {
-    let avail = surplus - outByMonth[m] - (m === 0 ? bufferDeficit : 0) + carry;
+    let avail = surplus - outByMonth[m] - (m === 0 ? independentBufferDeficit : 0) + carry;
     if (avail < 0) {
       carry = avail;
       avail = 0;
@@ -75,6 +80,41 @@ export function allocateGoals(
     return base(g, rem, required.get(g.id) ?? 0, round2(firstMonth.get(g.id) ?? 0), eta, delay > 0 ? "delayed" : "on_track", delay);
   });
   return { monthlySurplus: surplus, goals: statuses };
+}
+
+/** One economic view for authoritative reserves and hypothetical schedules. On/before-today
+ * outflows reduce starting cash once; later outflows consume safe cash headroom first, then
+ * future contribution buckets.
+ * The remaining cash-buffer deficit is protected by the existing allocator, not added as a bill.
+ * This creates no reserve and never edits goal balances or schedules.
+ */
+export function projectGoals(p: Persona, goals: Goal[], existing: Payment[] = [], candidate: Payment[] = []) {
+  const payments = [...existing, ...candidate];
+  const asOf = iso(today());
+  const paid = payments.filter(payment => payment.date <= asOf);
+  const scheduled = payments.filter(payment => payment.date > asOf)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const projected = forecast(p, payments);
+  // A zero-value horizon marker evaluates the no-future-payment baseline through the SAME
+  // final installment as the purchase forecast, without deducting that installment twice.
+  const horizon = scheduled.length ? [{ ...scheduled[scheduled.length - 1], amount: 0 }] : [];
+  const cash = forecast(p, paid, horizon);
+  const cashDeficit = Math.max(0, -cash.bufferGap);
+  // Headroom is existing cash, not permission to spend new planned receipts or a raise.
+  // Taking the smaller baseline also preserves supported lower-income replacements.
+  const { planning: _planning, ...established } = p;
+  const conservative = forecast({ ...established,
+    recurring: established.recurring.filter(item => item.direction !== "in" || !item.uncertain),
+  }, paid, horizon);
+  let headroom = Math.max(0, Math.min(cash.bufferGap, conservative.bufferGap, cash.startBalance - p.buffer));
+  const future = scheduled.flatMap(payment => {
+    const used = Math.min(headroom, payment.amount);
+    headroom = round2(headroom - used);
+    const residual = round2(payment.amount - used);
+    return residual > 0 ? [{ ...payment, amount: residual }] : [];
+  });
+  const allocation = allocateGoals(p, goals, future, Math.max(0, -projected.bufferGap), cashDeficit);
+  return { forecast: projected, allocation };
 }
 
 function base(

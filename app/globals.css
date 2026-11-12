@@ -248,6 +248,10 @@ body { font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont,
 .review-merchant > div { display: flex; flex-direction: column; gap: 4px; }
 .review-merchant strong { font-size: 15px; }
 .review-merchant > div > span { font-size: var(--text-detail); color: var(--muted); }
+.verification-strip { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-10px 0 18px; }
+.verification-strip>span { display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:var(--green-soft);color:var(--green);font-size:12px;font-weight:650; }
+.verification-strip>span.verification-warning { background:var(--amber-soft);color:var(--amber); }
+.verification-strip>span.verification-pending { background:var(--hover);color:var(--muted); }
 .review-overview { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); margin-bottom: 26px; overflow: hidden; }
 .review-overview > div { display: flex; flex-direction: column; gap: 9px; padding: 22px; min-width: 0; }
 .review-overview > div + div { border-left: 1px solid var(--line); }
@@ -332,6 +336,7 @@ body { font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont,
 .success-seal { width: 68px; height: 68px; background: var(--green-soft); color: var(--success); display: grid; place-items: center; border-radius: 50%; margin-bottom: 5px; }
 .status-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 17px 0; border-bottom: 1px solid var(--line); font-size: var(--text-detail); }
 .status-row > span { display: flex; align-items: center; gap: 9px; }
+.reference-row strong { max-width:58%;font-size:12px;text-align:right;overflow-wrap:anywhere; }
 .success-details > p { margin-top: 17px; }
 .saved-outlook { background: var(--bg); padding: 20px; border-radius: 14px; margin-top: 20px; }
 .saved-outlook .big { margin: 7px 0; }
@@ -472,12 +477,6 @@ input[type=range] { padding:0;min-height:32px;accent-color:var(--accent); }
 .goals-hero { display:grid;grid-template-columns:1.5fr 1fr;align-items:center;gap:30px;padding:8px 0 28px;border-bottom:1px solid var(--line); }
 .goals-hero h1 { font-size:clamp(36px,4vw,52px); }
 .goals-hero .sub { max-width:450px;margin:18px 0 22px; }
-.overall-progress { position:relative;text-align:center;justify-self:center;width:250px; }
-.overall-progress svg { width:180px;height:180px; }
-.overall-progress>div { position:absolute;top:50px;left:0;right:0;display:flex;flex-direction:column; }
-.overall-progress>div strong { font-size:34px;letter-spacing:-1px; }
-.overall-progress span { display:block;font-size:13px;color:var(--muted); }
-.overall-progress p { font-weight:650;font-size:15px;margin:6px 0 0; }
 .goals-composition { display:grid;grid-template-columns:1.35fr 1fr;gap:40px; }
 .goal-project { padding:28px;background:var(--card);border:1px solid var(--line);border-radius:20px;min-width:0; }
 .featured-goal { padding:32px; }
@@ -530,10 +529,12 @@ input[type=range] { padding:0;min-height:32px;accent-color:var(--accent); }
 .product-selector>button { justify-content:flex-start;text-align:left;padding:12px 16px;gap:16px;min-width:0; }
 .product-selector>button[aria-pressed=true] { border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent); }
 .product-selector .product-art { width:65px;height:58px;flex-shrink:0;margin:0;border-radius:8px; }
-.product-selector .product-art svg { width:60px;height:50px; }
+.product-selector .product-art svg { width:60px;max-width:100%;height:50px; }
 .product-selector>button>span { display:flex;flex-direction:column;gap:5px;font-size:14px; }
 .product-selector>button>span>span { color:var(--muted);font-weight:500; }
-.scenario-comparison { padding-top:26px;border-top:1px solid var(--line); }
+.scenario-comparison { padding-top:18px;border-top:1px solid var(--line); }
+.scenario-comparison>summary { min-height:44px;display:flex;align-items:center;font-size:14px; }
+.scenario-comparison>.warn { margin:12px 0 20px; }
 .scenario-table-viewport { overflow-x:auto;border:1px solid var(--line);border-radius:18px;background:var(--card);margin-top:20px; }
 .scenario-table { min-width:820px; }
 .scenario-table th,.scenario-table td { padding:20px 16px!important;vertical-align:top; }
@@ -636,12 +637,6 @@ input[type=range] { padding:0;min-height:32px;accent-color:var(--accent); }
   .activity-list li { flex-wrap:wrap;gap:12px; }
   .activity-list li>a { margin-left:56px;min-height:44px;display:flex;align-items:center; }
   .goals-hero { grid-template-columns:1fr;gap:28px; }
-  .overall-progress { justify-self:start;width:100%;display:flex;align-items:center;text-align:left;gap:18px; }
-  .overall-progress svg { width:140px;height:140px;flex-shrink:0; }
-  .overall-progress>div { top:39px;left:0;right:auto;width:140px;text-align:center; }
-  .overall-progress>div strong { font-size:27px; }
-  .overall-progress>div span { max-width:105px;align-self:center;font-size:12px; }
-  .overall-progress p { min-width:0; }
   .other-goals,.shop-editorial,.readiness-hero,.allocation-studio-grid,.invest-learning { grid-template-columns:1fr; }
   .goal-project,.featured-goal { padding:24px 20px; }
   .goal-project h2 { font-size:26px; }
@@ -667,7 +662,6 @@ input[type=range] { padding:0;min-height:32px;accent-color:var(--accent); }
   *,*::before,*::after { animation:none!important;transition:none!important;scroll-behavior:auto!important; }
 }
 .shop-product-stage .product-art::before { display:none; }
-@media(max-width:600px) { .overall-progress>div span { font-size:13px; } }
 .copilot-composer { border-top:1px solid var(--line);padding:14px 16px;display:flex;gap:10px;align-items:flex-end;flex-shrink:0; }
 .copilot-composer textarea { min-width:0;flex:1;resize:vertical;max-height:120px;min-height:64px;font:inherit;font-size:14px;line-height:1.6;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink); }
 .copilot-composer button { padding:11px 14px; }
@@ -763,9 +757,15 @@ input[type=range] { min-height:44px; }
 .agenda-list li { padding-block:12px; }
 .goals-hero { padding:0 0 20px; }
 .goals-hero .sub { margin:10px 0 16px; }
-.overall-progress svg { width:144px;height:144px; }
-.overall-progress>div { top:36px; }
-.overall-progress>div strong { font-size:28px; }
+.overall-progress { text-align:center;justify-self:center;width:250px;max-width:100%; }
+.goal-progress-ring { display:grid;place-items:center;width:144px;height:144px;margin-inline:auto; }
+.goal-progress-ring svg,.goal-progress-ring>div { grid-area:1 / 1; }
+.goal-progress-ring svg { display:block;width:100%;height:100%; }
+.goal-progress-ring>div { display:flex;flex-direction:column;align-items:center;gap:3px;max-width:100px;text-align:center; }
+.goal-progress-ring strong { font-size:28px;line-height:1.1;letter-spacing:-1px; }
+.goal-progress-ring span { font-size:12px;line-height:1.25;color:var(--muted); }
+.overall-progress p { font-weight:650;font-size:15px;margin:6px 0 0; }
+.overall-progress p>span { display:block;font-size:13px;color:var(--muted); }
 .goals-composition { gap:26px;align-items:start; }
 .goal-project,.featured-goal { padding:var(--card-padding); }
 .goal-project h2,.featured-goal h2 { font-size:22px;margin:12px 0; }
@@ -783,11 +783,15 @@ input[type=range] { min-height:44px; }
 .milestone-timeline { margin-top:16px; }
 .milestone-timeline li { padding-bottom:18px; }
 .shop-editorial { gap:36px; }
-.shop-product-stage { min-height:310px;padding:24px; }
-.shop-product-copy h2 { font-size:30px; }
-.shop-description { font-size:15px; }
-.shop-price { font-size:34px;margin:14px 0; }
-.shop-purchase-promise { padding-top:16px; }
+.shop-product-stage { min-height:260px;padding:20px 24px 44px; }
+.shop-product-stage .product-art { aspect-ratio:auto; }
+.shop-product-stage .product-art svg { display:block;width:100%;max-width:400px;height:auto;aspect-ratio:1.2; }
+.shop-product-copy h2 { font-size:30px;margin-bottom:8px; }
+.shop-description { font-size:15px;margin-bottom:10px; }
+.shop-price { font-size:34px;margin:10px 0; }
+.shop-purchase-promise { padding-top:12px; }
+.shop-purchase-promise p { margin-bottom:10px; }
+.shop-purchase-promise>span { margin-top:8px; }
 .shop-purchase-promise h3 { display:none; }
 .readiness-hero { padding:26px 30px;gap:30px; }
 .readiness-amount { font-size:40px;letter-spacing:-1.4px;margin:8px 0; }
@@ -854,12 +858,12 @@ summary { font-size:14px; }
   .goal-brief { padding:0; }
   .goals-hero { grid-template-columns:1fr;gap:16px;padding-bottom:16px; }
   .goals-hero .sub { margin:8px 0 12px; }
-  .overall-progress { width:100%;display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;text-align:left;justify-self:stretch; }
-  .overall-progress svg { width:64px;height:64px; }
-  .overall-progress>div { top:19px;left:0;width:64px;right:auto;text-align:center; }
-  .overall-progress>div strong { font-size:17px;line-height:1.5; }
-  .overall-progress>div>span { display:none; }
-  .overall-progress p { margin:0;font-size:15px; }
+  .overall-progress { width:100%;display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;align-items:center;text-align:left;justify-self:stretch; }
+  .goal-progress-ring { width:104px;height:104px; }
+  .goal-progress-ring>div { max-width:72px; }
+  .goal-progress-ring strong { font-size:23px; }
+  .goal-progress-ring span { font-size:11px; }
+  .overall-progress p { margin:0; }
   .goals-composition { gap:12px; }
   .goal-purpose { font-size:12px; }
   .goal-project h2,.featured-goal h2 { font-size:19px;margin:10px 0; }
@@ -869,9 +873,9 @@ summary { font-size:14px; }
   .other-goals { gap:12px;margin-top:12px; }
   .goal-dates { gap:12px; }
   .shop-editorial { grid-template-columns:1fr;gap:16px; }
-  .shop-product-stage { min-height:0;height:180px;padding:12px;border-radius:18px; }
-  .shop-product-stage .product-art { max-width:240px;height:145px;aspect-ratio:auto; }
-  .shop-product-stage .product-art svg { max-width:220px;height:120px; }
+  .shop-product-stage { min-height:0;height:150px;padding:2px 12px 20px;border-radius:18px; }
+  .shop-product-stage .product-art { max-width:240px;height:auto;aspect-ratio:auto; }
+  .shop-product-stage .product-art svg { max-width:240px;height:128px; }
   .shop-product-stage>span { bottom:10px;left:16px;font-size:12px; }
   .shop-product-copy>.page-kicker { display:none; }
   .shop-product-copy h2 { font-size:24px;margin-bottom:6px; }
@@ -987,9 +991,9 @@ summary { font-size:14px; }
 .spending-metrics>div { display:flex;flex-direction:column;gap:4px;min-width:0; }
 .spending-metrics span,.spending-metrics small { font-size:13px;color:var(--muted); }
 .spending-metrics strong { font-size:26px;line-height:1.25;letter-spacing:-.8px;font-variant-numeric:tabular-nums; }
-.spending-bars { display:flex;gap:14px;align-items:end;margin-top:18px; }
+.spending-bars { display:flex;gap:14px;align-items:flex-end;margin-top:18px; }
 .spending-month { flex:1;min-width:0;text-align:center;font-size:12px; }
-.spending-month>div { height:96px;display:flex;justify-content:center;align-items:end;border-bottom:1px solid var(--line);margin:6px 0; }
+.spending-month>div { height:96px;display:flex;justify-content:center;align-items:flex-end;border-bottom:1px solid var(--line);margin:6px 0; }
 .spending-month i { display:block;width:48%;background:var(--accent);border-radius:4px 4px 0 0; }
 .spending-month i.partial { background:var(--accent-soft);border:1px dashed var(--accent); }
 .spending-month>span { display:block;color:var(--muted); }
@@ -1008,7 +1012,7 @@ summary { font-size:14px; }
 .spending-method { padding:0; }
 .recurring-patterns,.rejected-patterns { list-style:none;padding:0;margin:0; }
 .recurring-pattern { padding:14px 0;border-top:1px solid var(--line); }
-.pattern-heading { display:flex;justify-content:space-between;gap:12px;align-items:start; }
+.pattern-heading { display:flex;justify-content:space-between;gap:12px;align-items:flex-start; }
 .pattern-heading>div { min-width:0;display:flex;flex-direction:column;gap:4px; }
 .pattern-heading strong { font-size:15px; }
 .pattern-heading>div>span { font-size:13px;color:var(--muted); }
@@ -1059,7 +1063,7 @@ summary { font-size:14px; }
 .profile-subtitle { margin-bottom:0; }
 .profile-summary { font-size:15px;margin:16px 0 10px;font-weight:600; }
 .profile-insights { padding:0;margin:0 0 12px;list-style:none; }
-.profile-insights li { display:flex;align-items:start;gap:14px;padding:8px 0;font-size:14px;border-bottom:1px solid var(--divider); }
+.profile-insights li { display:flex;align-items:flex-start;gap:14px;padding:8px 0;font-size:14px;border-bottom:1px solid var(--divider); }
 .profile-insights li>span { flex:1; }
 .profile-insights button { flex-shrink:0;padding:4px 8px;min-height:44px; }
 .profile-next { display:inline-flex;align-items:center;min-height:44px;font-size:14px; }
@@ -1176,3 +1180,165 @@ summary { font-size:14px; }
 }
 
 .shop-payment .paypal-checkout-actions { grid-template-columns:minmax(0,1fr); }
+
+/* Money planning assumptions stay distinct from the authoritative readiness surfaces. */
+.spending-plan { min-width:0;scroll-margin-top:24px; }
+.spending-plan header h2 { margin:4px 0 6px; }
+.spending-plan-policy { padding:10px 12px;background:var(--accent-soft);border-radius:10px; }
+.budget-column-headings,.budget-row { display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(2,minmax(100px,.8fr)) minmax(160px,1.1fr) auto;gap:16px;align-items:center; }
+.budget-column-headings { font-size:12px;color:var(--muted);padding:8px 0; }
+.budget-item { padding:10px 0;border-top:1px solid var(--line); }
+.budget-category,.budget-status,.budget-value { min-width:0;display:flex;flex-direction:column; }
+.budget-row strong { font-size:14px;overflow-wrap:anywhere; }
+.budget-category>span,.budget-status>span { font-size:12px;color:var(--muted); }
+.budget-mobile-label { display:none; }
+.budget-row>button { min-height:44px; }
+.budget-evidence { margin-top:2px;padding:0;border:0; }
+.budget-evidence summary { min-height:30px;font-size:12px;color:var(--muted); }
+.budget-evidence p { font-size:13px;color:var(--muted);margin:8px 0; }
+.budget-editor { margin:10px 0;padding:12px;background:var(--hover);border-radius:10px; }
+.budget-editor label { max-width:260px; }
+.budget-editor p { margin:8px 0; }
+.budget-editor .row { flex-wrap:wrap; }
+.budget-method { margin-top:12px; }
+.budget-method summary { min-height:44px; }
+@media(max-width:760px) {
+  .budget-column-headings { display:none; }
+  .budget-evidence summary { min-height:44px; }
+  .budget-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px 12px; }
+  .budget-category { grid-column:1;grid-row:1; }
+  .budget-mobile-label { display:block;font-size:12px;color:var(--muted); }
+  .budget-status { grid-column:2;grid-row:1; }
+  .budget-row>button { grid-column:3;grid-row:1 / 3; }
+  .budget-value { grid-row:2; }
+  .budget-value:nth-child(2) { grid-column:1; }
+  .budget-value:nth-child(3) { grid-column:2; }
+}
+
+/* Informational planning uses the existing Money composition and restrained palette. */
+.money-planning { min-width:0; }
+.money-planning>header h2 { margin:4px 0 6px; }
+.money-plan-period { margin:10px 0 16px;color:var(--muted); }
+.money-month-selector { display:none; }
+.money-months { list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0;margin:0 0 16px; }
+.money-months>li { min-width:0;padding:18px;background:var(--card,#fff);border:1px solid var(--line);border-radius:14px; }
+.money-months h3 { margin:0;font-size:16px; }
+.money-months header>p { margin:3px 0 16px;font-size:12px;color:var(--muted); }
+.money-months dl { margin:0; }
+.money-months dl>div { display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin:8px 0;font-size:13px; }
+.money-months dt { min-width:0;color:var(--muted); }
+.money-months dd { margin:0;text-align:right;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap; }
+.money-months .money-month-difference { border-top:1px solid var(--line);padding-top:12px;margin-top:12px;margin-bottom:0; }
+.money-month-difference dd { font-size:19px;letter-spacing:-.5px; }
+.money-month-difference dt { color:var(--ink);font-size:12px; }
+.income-dot,.outgoing-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:6px; }
+.outgoing-dot { background:var(--ink); }
+.money-movements { margin:0;padding:18px;background:#fff;border:1px solid var(--line);border-radius:14px; }
+.money-movements figcaption { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap; }
+.money-movements h3 { margin:0;font-size:14px; }
+.money-chart-legend { display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted); }
+.money-movements ul { list-style:none;padding:0;margin:14px 0 0;display:grid;gap:12px; }
+.money-movements li { display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:16px; }
+.money-chart-month strong,.money-chart-month>span { display:block;font-size:12px; }
+.money-chart-month>span { color:var(--muted);font-size:11px; }
+.money-chart-bars { display:grid;gap:4px; }
+.money-chart-bars>div { display:grid;grid-template-columns:minmax(0,1fr) 84px;gap:12px;align-items:center;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.2; }
+.money-bar-track { height:7px;background:var(--hover);border-radius:4px;overflow:hidden; }
+.money-bar-track>span { display:block;height:100%;background:var(--accent);border-radius:4px; }
+.money-chart-bars>div+div .money-bar-track>span { background:var(--ink); }
+.money-planning-note { margin:12px 0 16px; }
+.money-plan-evidence,.adjust-money-plan { padding:0;margin-top:8px; }
+.money-planning>details>summary { min-height:48px;display:list-item;align-content:center; }
+.money-breakdowns { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:12px 0; }
+.money-breakdowns>section { min-width:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px; }
+.money-breakdowns h3 { margin:0;font-size:14px; }
+.money-breakdowns p { margin:2px 0 12px; }
+.money-breakdowns dl { margin:0; }
+.money-breakdowns dl>div { display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line);font-size:12px; }
+.money-breakdowns dd { margin:0;text-align:right;font-weight:650;font-variant-numeric:tabular-nums; }
+.money-breakdowns small { display:block;color:var(--muted);font-size:11px; }
+@media(max-width:650px) {
+  .money-month-selector { display:flex;gap:4px;background:var(--hover);padding:4px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px; }
+  .money-month-selector button { flex:1;min-width:0;min-height:44px;padding:6px;font-size:12px;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:8px; }
+  .money-month-selector button[aria-pressed="true"] { background:#fff;color:var(--navy);border-color:var(--line);font-weight:650; }
+  .money-months { grid-template-columns:1fr;gap:0; }
+  .money-months>li:not(.is-selected) { display:none; }
+  .money-months>li { padding:16px; }
+  .money-movements { padding:16px; }
+  .money-movements li { grid-template-columns:76px minmax(0,1fr);gap:10px; }
+  .money-chart-bars>div { grid-template-columns:minmax(0,1fr) 72px;gap:8px;font-size:11px; }
+  .money-chart-month strong { font-size:11px; }
+  .money-chart-month>span { font-size:10px; }
+  .money-breakdowns { grid-template-columns:1fr;gap:10px; }
+}
+.money-event-list,.income-list { list-style:none;padding:0;margin:8px 0; }
+.money-event-list li { display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px; }
+.money-event-list small { display:block;color:var(--muted);font-size:12px; }
+.adjust-money-plan[open]>.income-plan { margin-top:12px; }
+.adjust-money-plan>.spending-plan { margin-top:24px; }
+.income-row { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0; }
+.income-row>div { flex:1;min-width:180px; }
+.income-row strong,.income-row>div>span { display:block;overflow-wrap:anywhere; }
+.income-row>div>span { font-size:13px;color:var(--muted); }
+.income-entry { padding:10px 0;border-top:1px solid var(--line); }
+.income-entry .income-row { padding:0 0 6px; }
+.income-actions { flex-wrap:wrap;gap:8px; }
+.income-overlap { padding:8px 10px;background:var(--amber-soft);color:var(--amber);border-radius:8px; }
+.income-editor { margin:12px 0;padding:16px;background:var(--hover);border-radius:12px; }
+.income-form-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+.income-editor p { margin:12px 0; }
+@media(max-width:850px) {
+  .money-event-list li { grid-template-columns:minmax(0,1fr) auto;gap:4px 12px; }
+  .money-event-list time { grid-column:1 / -1;color:var(--muted); }
+}
+@media(max-width:760px) {
+  .income-form-grid { grid-template-columns:1fr; }
+  .income-plan>.row { align-items:flex-start;flex-wrap:wrap; }
+}
+.income-mapping { margin:10px 0;padding:12px;background:var(--hover);border-radius:10px; }
+.income-mapping label { max-width:440px; }
+.income-mapping p { margin:10px 0; }
+
+/* Collapsed, read-only planning comparisons retain the existing Money density. */
+.budget-what-if,.money-plan-insights { padding:0;margin-top:12px; }
+.budget-what-if>summary,.money-plan-insights>summary { min-height:44px; }
+.budget-what-if-controls { display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;align-items:end;gap:12px;margin:12px 0; }
+.budget-preview-result { padding:12px 0; }
+.budget-preview-result dl { margin:12px 0; }
+.budget-preview-result dl>div { display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px; }
+.budget-preview-result dt { min-width:0; }
+.budget-preview-result dd { margin:0;font-weight:650;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums; }
+.budget-preview-actions { flex-wrap:wrap;gap:8px;margin:12px 0; }
+.budget-scenario-period { padding:0;margin:10px 0; }
+.budget-scenario-period summary { min-height:44px; }
+.budget-scenario-period ul { list-style:none;padding:0; }
+.budget-scenario-period li { display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;padding:8px 0;border-top:1px solid var(--line);font-size:13px; }
+.budget-scenario-period li>span:first-child { flex-basis:100%;color:var(--muted); }
+.money-explanation { padding:12px 0; }
+.money-explanation>label { max-width:440px;margin-bottom:10px; }
+.money-explanation>p { margin:8px 0; }
+.money-explanation details { padding:0;margin:10px 0; }
+.money-explanation summary { min-height:44px; }
+.money-explanation li { margin:10px 0; }
+@media(max-width:760px) {
+  .budget-what-if-controls { grid-template-columns:1fr;gap:10px; }
+  .budget-preview-result dl>div { font-size:13px;gap:12px; }
+}
+
+@media(min-width:651px) and (max-width:900px) {
+  .money-months>li { padding:14px; }
+  .money-months dl>div { display:block;margin:10px 0; }
+  .money-months dd { text-align:left;margin-top:2px; }
+  .money-months header>p { min-height:38px;margin-bottom:8px; }
+  .money-breakdowns { grid-template-columns:1fr; }
+}
+
+/* Existing What-if disclosure: compact, engine-owned current/scenario facts. */
+.budget-forecast-comparison { width:100%;border-collapse:collapse;margin:16px 0;font-size:13px; }
+.budget-forecast-comparison caption { text-align:left;font-weight:650;padding:0 0 8px;color:var(--ink); }
+.budget-forecast-comparison th,.budget-forecast-comparison td { padding:9px 8px;border-bottom:1px solid var(--line);text-align:right; }
+.budget-forecast-comparison th:first-child { text-align:left;padding-left:0; }
+.budget-forecast-comparison thead th { font-weight:500;color:var(--muted); }
+.budget-forecast-comparison tbody th { font-weight:500; }
+.budget-forecast-comparison td { white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:650; }
+@media(max-width:650px) { .budget-forecast-comparison { font-size:12px; } .budget-forecast-comparison th,.budget-forecast-comparison td { padding:8px 4px; } }

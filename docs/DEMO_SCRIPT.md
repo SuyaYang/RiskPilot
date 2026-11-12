@@ -1,14 +1,20 @@
-# Decision-to-outcome presentation (about 2½ minutes)
+# Historical decision-to-outcome presentation
 
-Use fictional data with `DEMO_TODAY=2026-11-10` on a dedicated demo workspace. Keep existing
+**Superseded for recording.** Use [the authoritative current three-minute rehearsal](STEP7B_DEMO_REHEARSAL.md),
+including the clean Alex budget example, prewarming, human payment actions and `/vision` closing frame.
+The script below is retained as historical evidence. Its dates, financial policy and timing predate
+[Step 8.5 corrections](STEP85_RESULT.md); do not mix it with the current sequence.
+
+
+Use only the **Northstar → PayPal → RiskPilot → Capture** path in the presentation. Use fictional data with `DEMO_TODAY=2026-11-10` on a dedicated demo workspace. Keep existing
 Sandbox ledgers intact: a fresh browser profile gives a separate RiskPilot workspace and a fresh
 merchant session, without resetting verified captures. Run `npm run demo` and keep both servers
 open. Check your server-only Gemini and Sandbox configuration before presenting.
 
 ## 0:00–0:30 — Understand the decision
 
-Use Alex and assess the $900 Aero 14 on Shop (or open the independent Northstar checkout and
-approve Continue/Review Order to enter RiskPilot). Read the concise conclusion: paying in full
+Use Alex and start the $900 Aero 14 checkout at Northstar. Approve Continue/Review Order in PayPal
+to enter RiskPilot. Point out the checked PayPal order, locked amount and recalculated forecast. Read the concise conclusion: paying in full
 now leaves $820 at the minimum versus the $1,000 buffer. The outcome is a projection, not a bank
 observation or a PayPal lending decision.
 
@@ -17,7 +23,8 @@ observation or a PayPal lending decision.
 Choose “Compare buying on Nov 20”. The expected income is Nov 19 and the hypothetical purchase
 is one day later. For the untouched Alex fixture, minimum cash improves to $1,260, while the
 late-income minimum remains $640: the scenario is still cautionary. Open predicted goal dates.
-Ask “What happens if I wait until after my next income?” The assistant uses these computed facts.
+Ask “What happens if I wait until after my next income?” Explain that grounded AI selects only
+verified engine facts and cannot change calculations or initiate payment.
 
 The preview cannot pay and does not schedule anything. Return to the current checkout or skip
 and return to the merchant. “Don't buy now” is a separate no-purchase baseline; an arbitrary
@@ -30,12 +37,13 @@ income. On the independent merchant, approve the Sandbox buyer selection and ret
 Show the merchant total, current-date assessment and explicit Confirm and pay action. Actually
 confirm only when ready to complete a Sandbox purchase. No real funds move.
 
-If showing Pay Later, identify forecast schedules as hypothetical and use the methods PayPal
-actually returns as eligible. Do not claim a loan or funding schedule from capture alone.
+Do not open the hypothetical Pay Later comparison during the main video. It remains available as
+secondary analysis but is not evidence of eligibility, actual loan terms or a funding schedule.
 
 ## 2:00–2:30 — Show what was recorded
 
-After a new verified capture or explicit local simulation, show “Here's what changed”: minimum
+After a new verified capture, show the PayPal order, Capture ID, locked amount and duplicate-capture
+protection, then show “Here's what changed”: minimum
 cash, available allocation and saved goal plans before/after the full-price reserve. The result
 uses immutable capture-time model snapshots. An older order with no saved before snapshot will
 show a clear unavailable message; use a newly completed demo order to demonstrate the comparison.

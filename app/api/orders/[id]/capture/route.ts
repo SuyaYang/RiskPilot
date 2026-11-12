@@ -16,6 +16,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
     return NextResponse.json(order.merchant
       ? await confirmMerchantCheckout(owner, id, body.inputHash)
-      : body.checkoutSource === "shop" ? await captureShopCheckout(owner, id, body.inputHash) : await captureCheckout(owner, id, undefined, body.inputHash));
+      : order.shopPayNow === true ? await captureShopCheckout(owner, id, body.inputHash) : await captureCheckout(owner, id, undefined, body.inputHash));
   } catch (e) { return apiError(e); }
 }

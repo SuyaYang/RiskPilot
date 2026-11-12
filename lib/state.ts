@@ -4,9 +4,10 @@ import { buildPersonas } from "./personas";
 import { load, ensurePersona, type StoreData } from "./store";
 import crypto from "node:crypto";
 import type { Payment, Persona } from "./types";
-import { forecast } from "./engine/forecast";
-import { allocateGoals } from "./engine/goals";
+import { projectGoals } from "./engine/goals";
 import { investableNow } from "./engine/investable";
+import { compileSpending } from "./planning/spendingBaseline";
+import { compilePlanning } from "./planning/integration";
 import { iso, today } from "./dates";
 
 export const PERSONA_COOKIE = "rp_persona";
@@ -26,24 +27,36 @@ export function personaWithState(id: string, data: StoreData = load()): { person
   const base = buildPersonas().find((p) => p.id === id.split(":").at(-1));
   if (!base) throw new Error("Unknown persona");
   const st = data.personas[id];
-  const persona: Persona = { ...base, goals: st?.goals ?? base.goals };
+  const compiled = compilePlanning(base, st);
+  const everydaySpending = compileSpending(base, st);
+  const persona: Persona = { ...base, ...(everydaySpending ? { everydaySpending } : {}), goals: st?.goals ?? base.goals, ...(compiled.planning ? { planning: compiled.planning } : {}) };
   const payments = (st?.purchases ?? []).flatMap((x) => x.payments);
   return { persona, payments };
 }
 
 export function inputHash(id: string, data: StoreData = load()) {
   const { persona, payments } = personaWithState(id, data);
-  return crypto.createHash("sha256").update(JSON.stringify({ persona, payments, asOf: iso(today()), policy: "rp-v1" })).digest("hex");
+  // Declaring an identical baseline must not invalidate existing purchase assessments.
+  const { everydaySpending, ...legacy } = persona;
+  const financialPersona = everydaySpending?.categories.some(row => row.override) ? persona : legacy;
+  return crypto.createHash("sha256").update(JSON.stringify({ persona: financialPersona, payments, asOf: iso(today()), policy: "rp-v1-step87" })).digest("hex");
 }
 
 export function snapshot(id: string, data: StoreData = load()) {
   const { persona, payments } = personaWithState(id, data);
-  const f = forecast(persona, payments);
+  const { forecast: f, allocation: alloc } = projectGoals(persona, persona.goals, payments);
   const future = payments.filter((x) => x.date > iso(today()));
-  const alloc = allocateGoals(persona, persona.goals, future, Math.max(0, -f.bufferGap));
   const inv = investableNow(persona, f, alloc);
+  if (persona.planning) {
+    // A user-entered receipt (or reduced goal reserve after replacement) must not create capacity.
+    const { planning: _planning, ...withoutPlanning } = persona;
+    const { forecast: conservative, allocation: legacyAllocation } = projectGoals(withoutPlanning, persona.goals, payments);
+    inv.investable = Math.min(inv.investable, investableNow(withoutPlanning, conservative, legacyAllocation).investable);
+  }
   const st = data.personas[id];
   return {
+    financialInputHash: inputHash(id, data),
+    ...(persona.planning ? { planning: persona.planning } : {}),
     persona: {
       id: persona.id,
       name: persona.name,

@@ -4,6 +4,8 @@ import crypto from "node:crypto";
 import type { Decision, Goal, MethodId, Purchase } from "./types";
 import type { FinancialProfileState } from "./financialProfile/types";
 import type { SpendingPreferences } from "./spending/types";
+import type { PlanningBudgetState } from "./planning/types";
+import type { PlanningIncomeState } from "./planning/incomeTypes";
 import type { snapshot } from "./state";
 import { buildPersonas } from "./personas";
 
@@ -11,6 +13,10 @@ export interface GoalChange { at: string; action: "create" | "update" | "delete"
 export interface PersonaState {
   goals: Goal[]; goalHistory: GoalChange[]; purchases: Purchase[];
   spending?: SpendingPreferences;
+  planningBudget?: PlanningBudgetState;
+  moneyPlanSnapshot?: Pick<ReturnType<typeof snapshot>, "asOf" | "financialInputHash" | "forecast" | "allocation" | "investable">;
+  spendingBaseline?: { modelVersion: "alex-everyday-v1" };
+  planningIncome?: PlanningIncomeState;
   financialProfile?: FinancialProfileState;
   prefs: { horizon: "short" | "medium" | "long"; risk: "conservative" | "balanced" | "growth"; custom?: { cash: number; bonds: number; index: number } };
 }
@@ -21,6 +27,7 @@ export interface OrderRecord {
   captureRequestId: string; captureCommand?: "STARTED" | "UNKNOWN" | "COMPLETED"; captureStartedAt?: number;
   approvalUrl?: string; projectionStatus?: "PENDING" | "UPDATED"; snapshotId?: string;
   settlementReview?: string;
+  settlementEvents?: { id: string; type: "refund" | "reversal"; amount?: number; currency?: string }[];
   priorAssessmentId?: string; reviewIntentId?: string;
   merchant?: { id: "northstar-demo"; checkoutId: string; name: string };
 }
@@ -46,7 +53,7 @@ const fresh = (): StoreData => ({ version: 2, personas: {}, decisions: {}, order
 export function newPersona(id: string): PersonaState {
   const base = buildPersonas().find(p => p.id === id.split(":").at(-1));
   if (!base) throw new Error("Unknown demo persona");
-  return { goals: base.goals.map(g => ({ ...g, version: 1 })), goalHistory: [], purchases: [], prefs: { horizon: "medium", risk: "balanced" } };
+  return { ...(base.id === "alex" ? { spendingBaseline: { modelVersion: "alex-everyday-v1" as const } } : {}), goals: base.goals.map(g => ({ ...g, version: 1 })), goalHistory: [], purchases: [], prefs: { horizon: "medium", risk: "balanced" } };
 }
 export function ensurePersona(id: string) {
   if (!load().personas[id]) update(d => { d.personas[id] ??= newPersona(id); });

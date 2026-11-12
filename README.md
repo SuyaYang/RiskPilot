@@ -1,159 +1,183 @@
-# RiskPilot Checkout
+# RiskPilot
 
-**Understand a purchase before paying. Update your forecast from a verified PayPal Sandbox capture.**
+**Financial intelligence at the moment of PayPal payment.**
 
-RiskPilot is a hackathon demo with compact Dashboard, Goals, Shop and Invest pages, a shared deterministic financial assessment engine, spending insights and an AI Financial Profile. All personal finances are fictional. No live bank is connected and no real-money functionality is enabled.
+RiskPilot connects planning with checkout: understand your finances, explore what a purchase could change, and see your updated outlook after a verified PayPal Sandbox capture.
 
-## Built on Sheryl’s MVP
+## The problem
 
-Sheryl’s baseline [`3d1543e`](https://github.com/SuyaYang/RiskPilot/commit/3d1543e) established the financial engine, core pages, PayPal Sandbox checkout/recovery and the integrated Northstar merchant flow. Cynthia’s follow-up builds on that implementation rather than replacing it.
+Checkout tells us the price. It rarely tells us whether upcoming bills, a delayed paycheck, an emergency reserve or an important savings goal make that purchase difficult. RiskPilot brings that context to the decision, while the user remains in control of whether to pay.
 
-| Area | Baseline | Added or refined |
-| --- | --- | --- |
-| Financial experience | Cash flow, cash buffer, goals, investment capacity | Compact mobile UI, clearer risk conclusions, income-date What-if and before/after purchase comparisons |
-| Purchases | Server-priced Sandbox orders, signed merchant handoff, capture and recovery | Separate Shop and merchant experiences, verified reassessment, payment/forecast/funding status, duplicate-capture and reset protection |
-| Spending | Manual financial fixtures and schedules | Deterministic fictional transaction history, monthly/category insights and recurring-pattern confirmation/edit/rejection |
-| AI | Engine-grounded explanation and goal drafting | Simplified Financial Profile, fact sources, planning preferences and personalized purchase explanations with labeled fallback |
-| Demo accounts | Fictional personas | One fixed financial profile per demo account; no in-account persona switch or subscription tiers |
-| Demo reliability | Local startup and payment tests | Responsive checks, failure/recovery tests, repeat merchant sessions that preserve payment records, and deployment preparation |
+## What you can do
 
-See [PR #1](https://github.com/SuyaYang/RiskPilot/pull/1) for attribution and the complete change summary. The [original architecture roadmap](docs/ARCHITECTURE_ROADMAP.md) is retained as a historical proposal; its planned services are not all implemented.
+- **Dashboard:** inspect a fictional financial snapshot, 45-day cash-flow forecast, upcoming income/bills, protected cash buffer, available-to-allocate capacity and historical spending insights.
+- **Goals:** set savings priorities and review dynamic contributions, completion estimates and purchase-related changes.
+- **Money:** explore spending history, category suggestions and budget What-if previews; explicitly apply supported category replacements. Plan monthly, biweekly, quarterly or one-time income where supported. Additional planned income is treated conservatively. Only timing-compatible income replacements become authoritative; unsupported date/cadence changes remain planning-only, with original modeled salary active.
+- **Shop:** explore a purchase without creating a payment; compare buying now, after expected income, waiting and educational Pay in 4 / Pay Monthly scenarios. Installment scenarios are simulations, not approved or enabled financing. Actual checkout captures the full price.
+- **Grounded explanations:** ask about engine-calculated financial facts, inspect sources and use confirmed explanation preferences.
+- **Vision:** open `/vision`, a standalone concept for a possible deeper PayPal experience. It is not an official PayPal interface or a current native integration.
 
-## Two complementary purchase flows
+## PayPal is part of the decision journey
 
-### Explore in RiskPilot, then optionally buy
+### A. Explore in RiskPilot Shop, then buy
 
-**Shop → Explore purchase impact → compare scenarios → PayPal Checkout → final Pay Now in PayPal → verified capture → saved forecast and success page.**
+**Shop → payment-free impact analysis → PayPal Checkout (`PAY_NOW`, `commit:true`) → final buyer confirmation in PayPal → server-verified capture → saved forecast.**
 
-- Exploration needs no PayPal authorization and creates no payment or order.
-- The assessment starts with the current full-price purchase. Engine suggestions, scenario comparisons and income-date What-if remain available. Choosing no purchase or a future-date preview does not submit payment.
-- A single **PayPal Checkout** button appears directly below the essential risk conclusion, with no expandable checkout section.
-- New Shop orders use PayPal `PAY_NOW` and SDK `commit:true`: the buyer explicitly confirms payment in PayPal. There is no repeated Quick Review when the trusted assessment is unchanged.
-- Before capture, the server checks the original assessment and current financial facts. Changed, expired or unverifiable assessments pause for review; uncertain outcomes use recovery on the same order. Legacy Continue orders retain their original review confirmation.
-- Verified capture saves the conservative purchase reserve and forecast once. Merely returning from PayPal is not evidence that capture succeeded.
+An unchanged, current assessment does not require another mandatory RiskPilot confirmation after PayPal's final Pay Now. Changed or expired assessments pause for review; uncertain outcomes use recovery on the same order.
 
-### Buy directly from an integrated merchant
+### B. Start at the independent Northstar merchant
 
-**Northstar → merchant-priced PayPal order → buyer approval → automatic signed RiskPilot review → explicit Confirm and pay → verified capture → updated forecast → merchant receipt.**
+**Northstar → server-priced PayPal order → buyer approval (`CONTINUE`, `commit:false`) → signed RiskPilot impact review → explicit Confirm and Pay → verified capture → updated outlook → merchant receipt.**
 
-- Start at **Northstar Electronics**, the independent demo storefront. A prior Shop visit or Explore step is not required.
-- This path retains `CONTINUE` / SDK `commit:false`. Buyer approval does **not** capture payment; the buyer confirms in RiskPilot afterward.
-- The signed, expiring handoff binds the server-verified order to the current fictional workspace. The merchant retains its own PayPal credentials and captures through the signed server-to-server bridge.
-- Amount, cash-buffer risk, late-income stress and goal impact remain visible first. Full analysis starts collapsed: checkout sits horizontally below it; expanding restores desktop analysis/checkout columns.
-- **Skip and enter RiskPilot** skips payment and opens Dashboard. The separate **Cancel and back to store** link returns to Northstar. PayPal cancellation and uncertain payments have their own status/recovery paths.
-- Northstar must explicitly integrate RiskPilot. This does not intercept arbitrary third-party PayPal transactions; no browser extension is required.
+Approval alone does not capture this merchant order. The review gives the buyer financial context before the final payment action.
 
-Both paths use the same financial engine, provider-order verification, stable capture keys and exactly-once forecast saving. Comparison scenarios never select a real PayPal loan or change its terms.
+Both paths validate order ownership, current financial inputs, assessment expiry, amount and USD currency. Server-owned checkout intent determines the confirmation path; signed merchant handoffs protect the connection between store and review. Stable capture identifiers and recovery record one economic purchase and one saved forecast. These are local prototype safeguards, not production identity or complete payment infrastructure. [Purchase flows](docs/PURCHASE_FLOWS.md) · [Merchant integration](docs/MERCHANT_CHECKOUT.md)
 
-[Detailed purchase experience](docs/FINAL_PURCHASE_EXPERIENCE.md) · [Merchant walkthrough](docs/MERCHANT_CHECKOUT.md)
+## How the AI works
 
-## Run the local demo
+**Deterministic engine for financial truth. Generative AI for personalized understanding.**
 
-Requires Node.js 20+ (CI uses Node 22) and npm.
+The TypeScript engine calculates balances, income/expenses, cash-buffer risk, allocation capacity, goal contributions and dates, purchase timing and educational installment comparisons. Gemini receives server-generated evidence to select and organize explanations. In purchase and Money reviews, the model orders approved fact IDs; the application renders server-authored statements. Other explanation paths validate output against engine evidence. Optional goal drafts require user confirmation.
 
-```bash
-npm ci
-cp .env.example .env
-# Configure your own Sandbox credentials in .env, then:
-npm run demo
-```
+Gemini does not set authoritative balances, determine payment amounts, authorize payments or execute purchases. Purchase and Money explanations use labeled deterministic fallback for missing credentials, provider errors or invalid responses. Free-text questions need a configured Gemini key; guided page facts and manual goal editing remain available without one.
 
-| Entry | Local URL |
-| --- | --- |
-| Northstar external merchant | http://localhost:3200 |
-| RiskPilot Dashboard | http://localhost:3100 |
-| Proactive purchase exploration | http://localhost:3100/shop |
-| Fixed fictional account sign-in | http://localhost:3100/login |
+## Financial intelligence engine
 
-The launcher starts/checks both services and opens Northstar. Keep its terminal running; Ctrl+C stops only processes it started. Both services must run from the same working copy with matching bridge configuration.
+The dashboard displays 45 daily balances and a seven-day income-delay stress check. Longer payment schedules extend existing affordability evaluation through their final payment, while the chart stays 45 days. Goal estimates use priority-based contributions and 30.4-day monthly funding buckets.
 
-```bash
-npm run demo -- --check     # Read-only readiness check
-npm run demo -- --no-open   # Start/check without opening a browser
-npm run demo:shop           # Open the Shop entry instead
-```
+Immediate purchases reduce projected starting cash once. Future and hypothetical installment payments consume safe existing cash headroom once in date order, then reduce contributions only for uncovered costs. Headroom is evaluated through the payment horizon, capped by current cash and conservative income assumptions. Independent deficits and protected-goal priorities remain intact. Equivalent immediate previews and completed reserves agree under unchanged assumptions. [Current financial contract](docs/FORECAST_INTEGRATION.md) · [Step 8.7 results](docs/STEP87_RESULT.md)
 
-For RiskPilot alone, `npm run dev` defaults to port 3000; set `APP_ORIGIN` to its exact URL. The demo launcher configures port 3100. Restart services after editing environment values.
+## Example: fictional Alex, November 12, 2026
 
-### Configuration
+Alex starts with **$3,500 checking cash**, a **$1,720** minimum forecast, **$1,540** delayed-income minimum and **$90** available to allocate.
 
-Use [.env.example](.env.example); never commit keys or payment ledgers.
+Explicitly applying Shopping **$90 → $30/month** changes the minimum to **$1,738**, delayed-income minimum to **$1,572** and allocation capacity to **$122**, without increasing checking cash.
 
-| Setting | Purpose |
-| --- | --- |
-| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Sandbox server credentials; required for actual Sandbox checkout |
-| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | Optional browser override; must match the server’s Sandbox app |
-| `PAYPAL_API_BASE` | Sandbox only: `https://api-m.sandbox.paypal.com`; live endpoints are rejected |
-| `PAYPAL_WEBHOOK_ID` | Registered listener ID for verified PayPal webhook delivery |
-| `APP_ORIGIN`, `RISKPILOT_ORIGIN`, `MERCHANT_ORIGIN` | Exact application/merchant URLs; launcher uses 3100/3200 locally |
-| `MERCHANT_BRIDGE_SECRET` | Shared server-only key; local demo generates a key if blank |
-| `STORE_PATH`, `MERCHANT_STORE_PATH` | Separate persistent RiskPilot and merchant JSON ledgers |
-| `DEMO_SEED_ENABLED=true`, `DEMO_TODAY=2026-11-10` | Reproducible fictional fixtures and an optional fixed scenario date |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Optional AI; unavailable/invalid results fall back to labeled deterministic facts |
+From that **shopping-adjusted** workspace, a $900 laptop gives:
 
-Without PayPal credentials, supported local simulation is explicitly labeled; it is not a verified Sandbox payment. No Plaid, Supabase or Python service setup is required for the current demo.
+| Scenario | Lowest cash | Delayed-income minimum | Risk |
+| --- | ---: | ---: | --- |
+| Buy today | $838 | $672 | Red |
+| Buy after payday (Nov 22) | $1,334.54 | $672 | Yellow |
+| Hypothetical Pay in 4 | $1,513 | $1,122 | Green |
+| Hypothetical Pay Monthly | $1,738 | $1,572 | Green |
 
-Demo accounts include `alex@riskpilot.demo`, `sam@riskpilot.demo` and `jordan@riskpilot.demo`. Each has one fixed fictional financial situation, isolated by browser workspace; these are not real inboxes or production authentication. PayPal’s Sandbox buyer login is separate.
+Pay Monthly includes $100.44 modeled financing cost; neither installment comparison establishes eligibility or actual terms. Green describes the modeled buffer checks, not guaranteed affordability.
 
-## Current implementation
+For the immediate full-price purchase, projected starting cash becomes **$2,600** and available to allocate becomes **$0**. Japan Trip stays **March 14, 2027**, Emergency Fund stays **April 13**, and Start investing moves **March 14 → April 13**. An equivalent verified full-price capture produces matching forecasts and goal projections. These are fictional scenario results, not real customer outcomes.
+
+## Technical architecture
+
+**Next.js 15.5.29 · React 19.1.1 · TypeScript 5.8.3 · Google Gemini API · PayPal JavaScript SDK and Orders v2 API · local JSON demo persistence.** The independent merchant uses Node.js HTTP; tests use `node:test` with `tsx`.
 
 ```mermaid
 flowchart LR
-  Browser[RiskPilot UI] --> Web[Next.js API]
-  Browser --> SDK[PayPal SDK v6]
-  SDK --> PayPal[PayPal Sandbox]
-  Web --> Engine[TypeScript financial engine]
-  Web --> Ledger[Local JSON ledger and snapshots]
-  Web --> PayPal
-  Web --> Gemini[Optional Gemini fact selection]
-  Northstar[Independent Northstar merchant] <-->|Signed bridge| Web
-  Northstar --> PayPal
-  PayPal -->|Verified webhook| Web
+  UI[Dashboard, Goals, Money, Shop] --> Engine[Deterministic TypeScript engine]
+  Engine --> Facts[Server-generated financial evidence]
+  Facts --> AI[Gemini or deterministic fallback]
+  AI --> UI
+  Checkout[Shop or Northstar checkout] --> PayPal[PayPal Sandbox]
+  PayPal --> Verify[Server capture verification]
+  Verify --> Store[Exactly-once local purchase record]
+  Store --> Engine
 ```
 
-- **Finance:** the engine computes forecasts, risk, goal effects and educational investment capacity. AI cannot change authoritative figures or submit payments. Invest does not place trades.
-- **Spending:** deterministic fictional histories power trends, categories and recurring detection. Confirm/edit/reject saves informational patterns; it does not automatically add a bill or double-count an existing obligation. [Feature guide](docs/SPENDING_INTELLIGENCE.md).
-- **Financial Profile:** summaries and personalized purchase explanations use available server facts and confirmed preferences. Sources and uncertainty remain inspectable; preferences do not overwrite financial calculations.
-- **Payments:** ownership, frozen product/amount/currency, approval and capture results are checked on the server. Pending/unknown/local-save-failure states retain same-order recovery. Merchant capture does not identify a consumer funding account or confirm an installment schedule.
-- **Demo data:** reset is for disposable fictional state. Verified/uncertain payment records are protected. Northstar’s **Start another demo checkout** rotates a completed merchant session only after verification and preserves earlier records.
+There is no connected bank feed, Python forecasting service or Supabase database in the running prototype. [Implementation details](docs/IMPLEMENTATION_STATUS.md)
 
-Actual code lives in `app/`, `lib/`, `merchant-demo/` and `tests/`. Development uses `.next-dev` so production builds do not overwrite running development chunks.
+## Judge Testing Access
 
-## Validation and remaining work
+RiskPilot is a working application judges can run locally. The [official rules](https://paypalaihackathon.devpost.com/rules) allow setup instructions instead of hosting and require free testing access plus a **public, open-source repository**. This repository is private; the owner must make it public before submission.
+
+Requires **Node.js 22**, npm, `curl`, Python 3 and Bash. In a fresh clone:
 
 ```bash
-npm run typecheck
-npm test
-npm run build
+git clone https://github.com/SuyaYang/RiskPilot.git
+cd RiskPilot
+git switch cynthia
+npm ci
+cp .env.example .env
 ```
 
-At the latest functional change (`675fbe9`), **155 automated tests passed**, with type checking and production build passing. Tests cover financial calculations, isolation, merchant handoff, Shop direct capture, stale assessments, missing approval, legacy orders, payment recovery and duplicate capture/forecast prevention. GitHub Actions runs these checks on pushes and pull requests.
+Do not overwrite an existing `.env`. Use a fresh browser profile and isolated ledger paths as described in [RUNNING.md](RUNNING.md).
 
-Browser checks cover desktop/mobile layouts, default collapsed review, Skip navigation and the single visible Shop PayPal button. These responsive viewport checks are not physical iOS/Android acceptance.
+### Mode 1 — Financial Demo, No Gemini Key Required
 
-A real Northstar Sandbox capture, merchant receipt and saved forecast were observed in Phase 2; see [the evidence and limits](docs/DEMO_RELIABILITY_PHASE_2.md). **The latest Shop Pay Now path has been tested with deterministic provider mocks, but still needs a new actual Sandbox end-to-end payment.** Prior merchant payments do not count as live validation of this new path.
+Leave `GEMINI_API_KEY`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and `NEXT_PUBLIC_PAYPAL_CLIENT_ID` blank in your new `.env`. Keep `DEMO_SEED_ENABLED=true`, then run:
 
-Before the final demonstration:
+```bash
+DEMO_TODAY=2026-11-12 npm run dev
+```
 
-- [ ] Complete a real Sandbox Shop Pay Now → verified capture → saved forecast walkthrough, including cancellation and same-order recovery.
-- [ ] Recheck Northstar’s direct review/confirm, Skip-to-Dashboard and Cancel-to-store paths in the final environment.
-- [ ] Verify PayPal popup/redirect behavior on physical mobile devices.
-- [ ] Configure and validate public HTTPS hosting, callback origins, persistent ledgers and webhook delivery if an external demo URL is required.
+Open [localhost:3000](http://localhost:3000) and select fictional `alex@riskpilot.demo` at `/login`; no password or paid account is needed. Runtime-verified features include Dashboard and its 45-day forecast, Goals and completion estimates, Money Planning, category budget preview/application, Shop purchase-impact comparisons and [Vision](http://localhost:3000/vision). Shopping $90 → $30 increases allocation capacity $90 → $122 while checking stays $3,500.
 
-**Not implemented:** Plaid connection/bank reconciliation, Supabase Auth/RLS/Postgres, a Python engine service/background worker, production identity or multi-instance storage, actual Pay Later eligibility/loan schedules, and live-money payments. Historical spending is fictional rather than fetched from a bank. Only cooperating Northstar is integrated.
+Purchase and Money explanations use server-authored deterministic templates when Gemini is absent. Suggested page explanations remain usable. Free-text **Ask RiskPilot** instead reports that Gemini is unconfigured; AI goal drafting requires Gemini, while manual goal editing works. No online AI response is claimed in this mode. Shop analysis creates no payment; an optional saved local simulation affects only the isolated demo workspace.
 
-The repository includes [Render deployment preparation](render.yaml) and [deployment instructions](docs/DEPLOYMENT.md), but no public deployment was created or accepted in this work. `autoDeploy` is disabled. CI success and Git push do not publish the demo or update an existing external service.
+Use `npm run dev` for this mode. The `demo` / `demo:shop` launchers intentionally require **PayPal**, not Gemini, because they prepare provider checkout.
 
-Existing Sandbox purchases remain in the forecast and may leave even the no-purchase baseline below the buffer. Preserve these records; do not change risk calculations to make a demo green.
+### Mode 2 — Live Gemini AI
 
-## Documentation
+The unchanged source and `.env.example` use **`gemini-3.6-flash`** via the standard `generateContent` API. Google's [model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash) lists it, and [pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.6-flash) lists free-tier standard input/output. No paid-only model is required or substituted. RiskPilot grounds responses in its own engine evidence; it does not use Google's separately priced Search/Maps grounding tools.
 
-- [Running, reset and recovery](RUNNING.md)
-- [Final purchase experience and implementation notes](docs/FINAL_PURCHASE_EXPERIENCE.md)
-- [Merchant integration](docs/MERCHANT_CHECKOUT.md)
-- [Spending Intelligence](docs/SPENDING_INTELLIGENCE.md)
-- [Implementation and acceptance gaps](docs/IMPLEMENTATION_STATUS.md)
-- [Original architecture roadmap — planned, not current runtime](docs/ARCHITECTURE_ROADMAP.md)
-- [Historical update record](docs/CHANGELOG_2026-11-10.md)
+1. Sign into [Google AI Studio API keys](https://aistudio.google.com/apikey). Follow Google's [key setup](https://ai.google.dev/gemini-api/docs/api-key) to create/select a project and key.
+2. Check that the project can access this model on the free tier; imported projects may need verification. Do not enable paid billing merely to run the financial demo. Free quotas and [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) depend on project eligibility and may change.
+3. In your ignored `.env`, set `GEMINI_API_KEY` to your own key and retain `GEMINI_MODEL=gemini-3.6-flash`. Keep the key server-only; never use a `NEXT_PUBLIC_` name for it.
+4. Restart `npm run dev`. Try **Explain this money plan**, a purchase explanation, or **Ask RiskPilot**. A template label indicates fallback; it is not proof of a live model response. Quota/provider failures do not stop financial calculations.
 
-Earlier phase documents record their validation at that time. The two flows above describe the current product behavior.
+Model availability/free pricing were checked against official documentation; no new live Gemini call was made in this access verification. Account/region restrictions or exhausted quotas can still prevent a particular judge's live AI use. If needed, the owner must arrange a free-to-judge working demo with API credentials held on its backend, or privately grant authorized test-project access—never publish keys.
+
+### Mode 3 — Full PayPal Sandbox Demo
+
+The hackathon [rules](https://paypalaihackathon.devpost.com/rules) identify PayPal Sandbox as free. At [PayPal Developer](https://developer.paypal.com/), log in/sign up, open **Apps & Credentials**, select **Sandbox**, and create/select a REST app associated with a Sandbox business seller. Copy its client ID and secret using PayPal's [setup guide](https://developer.paypal.com/api/rest/).
+
+Under **Testing Tools → Sandbox Accounts**, create/select a **Personal** buyer, separate from the Business seller. Retrieve its test email/password privately; use them only in the PayPal Sandbox login. [Sandbox account instructions](https://developer.paypal.com/tools/sandbox/accounts/)
+
+Set these names in ignored `.env` using your own values:
+
+```dotenv
+PAYPAL_CLIENT_ID=<your-sandbox-app-client-id>
+PAYPAL_CLIENT_SECRET=<your-server-only-sandbox-app-secret>
+NEXT_PUBLIC_PAYPAL_CLIENT_ID=<the-same-sandbox-app-client-id>
+PAYPAL_API_BASE=https://api-m.sandbox.paypal.com
+RISKPILOT_ORIGIN=http://localhost:3100
+MERCHANT_ORIGIN=http://localhost:3200
+MERCHANT_PORT=3200
+```
+
+The public client ID is an identifier; secrets and buyer passwords never belong in browser-exposed settings. Keep Gemini blank for deterministic explanations or configure Mode 2 independently. In one checkout, the local services generate/reuse the ignored bridge key if `MERCHANT_BRIDGE_SECRET` is blank; do not publish it.
+
+```bash
+DEMO_TODAY=2026-11-12 npm run demo
+```
+
+Open [RiskPilot Shop](http://localhost:3100/shop) or [Northstar](http://localhost:3200). Shop uses final Pay Now in PayPal; Northstar uses Continue/approval → signed RiskPilot review → explicit Confirm and Pay → verified merchant receipt. Review can stop before those final actions. Sandbox uses test funds, not production money. No capture was initiated during this access check. [Full startup/isolation instructions](RUNNING.md)
+
+No paid subscription is mandatory for these documented modes. Live provider features require eligible accounts, available quotas and configured credentials. Before judging, the owner must resolve public-source access and arrange a no-charge provider-access alternative if an individual judge cannot obtain eligible free accounts. If a hosted demo needs login, supply dedicated test login details privately in the submission's testing instructions, with API/signing secrets kept on the server.
+
+## Demo and validation
+
+Use the [authoritative rehearsal](docs/STEP7B_DEMO_REHEARSAL.md) and [teammate acceptance checklist](docs/TEAM_ACCEPTANCE_REVIEW.md). [Submission text](docs/DEVPOST_SUBMISSION.md) is prepared; a final video link is not yet available. No public deployment is claimed.
+
+```bash
+npm test
+npm run typecheck
+npm run build
+git diff --check
+```
+
+- Approved implementation freeze: `77730d2cbe8c60c4a9796322b355e6f9a5e8500e`; **324 passing tests**, TypeScript and production build passed. Clean `npm ci` and the same checks were repeated in an isolated copy for release preparation.
+- Financial reference scenarios were independently reproduced. The owner reports a final independent Claude **GO** audit for Step 9.
+- Historical provider-confirmed Sandbox captures: **$900 Northstar** and **$249 RiskPilot Shop**. These were test-environment payments, not production money. Their [sanitized acceptance record](docs/STEP7B_ACCEPTANCE.md) predates Step 8.7; final regressions used deterministic probes and mocked payment services, with no new actual capture.
+
+Passing tests establish evidence for covered cases, not complete financial correctness.
+
+## Current scope and limitations
+
+This is a fictional-data, local, single-instance prototype. Workspace cookies and demo accounts are not production authentication. JSON storage is not a replicated financial ledger. No bank reconciliation, full refund accounting, trading or real installment product is implemented. Public HTTPS/webhook delivery and physical-device payment acceptance remain unverified. Known dependency advisories are documented in [Step 8.5](docs/STEP85_RESULT.md); no dependency migration is included in this frozen release. Financial estimates are not professional advice or guarantees.
+
+## Future vision
+
+RiskPilot could bring planning closer to payment through permissioned financial data, production identity, reconciliation and deeper PayPal ecosystem integration, subject to platform capabilities and permissions. `/vision` illustrates that opportunity. Whether this improves trust, repeat engagement or checkout decisions is a hypothesis to test.
+
+## Team and license
+
+Built by the RiskPilot team. Sheryl's [baseline MVP](https://github.com/SuyaYang/RiskPilot/commit/3d1543e) established the engine and checkout foundation; subsequent team contributions extend the product and verification. Git history preserves attribution. Code: [MIT License](LICENSE). Bundled Inter font: [SIL Open Font License](app/fonts/OFL.txt).
