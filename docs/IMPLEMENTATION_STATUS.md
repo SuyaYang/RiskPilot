@@ -317,5 +317,13 @@ build. The documentation release also passed the same local checks and whitespac
 Publication uses only `cynthia`; its review targets the existing `feature/checkout-mvp` integration
 branch before that branch's existing PR #1 to `main`. Neither shared branch is directly updated.
 See [team review](TEAM_ACCEPTANCE_REVIEW.md) and [submission materials](DEVPOST_SUBMISSION.md).
-Repository visibility remains private; owner-managed judge access, teammate approval, final video
+Repository visibility remains private; the official rules require public open-source code before submission.
+Teammate approval, final video
 and human submission remain separate actions. No actual payment or product behavior changed.
+
+The [judge-access follow-up](STEP9AB_RESULT.md#judge-testing-access-follow-up) verifies actual
+credential-free runtime with an isolated npm installation, blank provider keys and temporary storage.
+README now documents three testing modes and the difference between purchase/Money template
+fallback and key-required free-text questions. Google lists the unchanged Gemini model's standard
+free tier; no paid requirement, provider capture or financial change was introduced. The public-code
+requirement remains an owner action; a private invitation alone does not satisfy it.

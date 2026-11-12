@@ -39,7 +39,7 @@ Both paths validate order ownership, current financial inputs, assessment expiry
 
 The TypeScript engine calculates balances, income/expenses, cash-buffer risk, allocation capacity, goal contributions and dates, purchase timing and educational installment comparisons. Gemini receives server-generated evidence to select and organize explanations. In purchase and Money reviews, the model orders approved fact IDs; the application renders server-authored statements. Other explanation paths validate output against engine evidence. Optional goal drafts require user confirmation.
 
-Gemini does not set authoritative balances, determine payment amounts, authorize payments or execute purchases. Missing credentials, provider errors or invalid responses produce labeled deterministic fallback explanations.
+Gemini does not set authoritative balances, determine payment amounts, authorize payments or execute purchases. Purchase and Money explanations use labeled deterministic fallback for missing credentials, provider errors or invalid responses. Free-text questions need a configured Gemini key; guided page facts and manual goal editing remain available without one.
 
 ## Financial intelligence engine
 
@@ -84,9 +84,11 @@ flowchart LR
 
 There is no connected bank feed, Python forecasting service or Supabase database in the running prototype. [Implementation details](docs/IMPLEMENTATION_STATUS.md)
 
-## Getting started
+## Judge Testing Access
 
-Requires **Node.js 22**, npm, `curl` and Python 3. Repository access is required while the team repository remains private.
+RiskPilot is a working application judges can run locally. The [official rules](https://paypalaihackathon.devpost.com/rules) allow setup instructions instead of hosting and require free testing access plus a **public, open-source repository**. This repository is private; the owner must make it public before submission.
+
+Requires **Node.js 22**, npm, `curl`, Python 3 and Bash. In a fresh clone:
 
 ```bash
 git clone https://github.com/SuyaYang/RiskPilot.git
@@ -96,21 +98,60 @@ npm ci
 cp .env.example .env
 ```
 
-For financial analysis without provider credentials:
+Do not overwrite an existing `.env`. Use a fresh browser profile and isolated ledger paths as described in [RUNNING.md](RUNNING.md).
+
+### Mode 1 — Financial Demo, No Gemini Key Required
+
+Leave `GEMINI_API_KEY`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and `NEXT_PUBLIC_PAYPAL_CLIENT_ID` blank in your new `.env`. Keep `DEMO_SEED_ENABLED=true`, then run:
 
 ```bash
 DEMO_TODAY=2026-11-12 npm run dev
 ```
 
-Open [RiskPilot](http://localhost:3000), sign in as `alex@riskpilot.demo` and use a fresh browser profile for an isolated demo workspace. Do not enter personal financial information. Gemini is optional; explanations fall back to deterministic facts.
+Open [localhost:3000](http://localhost:3000) and select fictional `alex@riskpilot.demo` at `/login`; no password or paid account is needed. Runtime-verified features include Dashboard and its 45-day forecast, Goals and completion estimates, Money Planning, category budget preview/application, Shop purchase-impact comparisons and [Vision](http://localhost:3000/vision). Shopping $90 → $30 increases allocation capacity $90 → $122 while checking stays $3,500.
 
-For both Sandbox sites, configure your own matching PayPal browser/server credentials in ignored `.env`, then run:
+Purchase and Money explanations use server-authored deterministic templates when Gemini is absent. Suggested page explanations remain usable. Free-text **Ask RiskPilot** instead reports that Gemini is unconfigured; AI goal drafting requires Gemini, while manual goal editing works. No online AI response is claimed in this mode. Shop analysis creates no payment; an optional saved local simulation affects only the isolated demo workspace.
+
+Use `npm run dev` for this mode. The `demo` / `demo:shop` launchers intentionally require **PayPal**, not Gemini, because they prepare provider checkout.
+
+### Mode 2 — Live Gemini AI
+
+The unchanged source and `.env.example` use **`gemini-3.6-flash`** via the standard `generateContent` API. Google's [model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash) lists it, and [pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.6-flash) lists free-tier standard input/output. No paid-only model is required or substituted. RiskPilot grounds responses in its own engine evidence; it does not use Google's separately priced Search/Maps grounding tools.
+
+1. Sign into [Google AI Studio API keys](https://aistudio.google.com/apikey). Follow Google's [key setup](https://ai.google.dev/gemini-api/docs/api-key) to create/select a project and key.
+2. Check that the project can access this model on the free tier; imported projects may need verification. Do not enable paid billing merely to run the financial demo. Free quotas and [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) depend on project eligibility and may change.
+3. In your ignored `.env`, set `GEMINI_API_KEY` to your own key and retain `GEMINI_MODEL=gemini-3.6-flash`. Keep the key server-only; never use a `NEXT_PUBLIC_` name for it.
+4. Restart `npm run dev`. Try **Explain this money plan**, a purchase explanation, or **Ask RiskPilot**. A template label indicates fallback; it is not proof of a live model response. Quota/provider failures do not stop financial calculations.
+
+Model availability/free pricing were checked against official documentation; no new live Gemini call was made in this access verification. Account/region restrictions or exhausted quotas can still prevent a particular judge's live AI use. If needed, the owner must arrange a free-to-judge working demo with API credentials held on its backend, or privately grant authorized test-project access—never publish keys.
+
+### Mode 3 — Full PayPal Sandbox Demo
+
+The hackathon [rules](https://paypalaihackathon.devpost.com/rules) identify PayPal Sandbox as free. At [PayPal Developer](https://developer.paypal.com/), log in/sign up, open **Apps & Credentials**, select **Sandbox**, and create/select a REST app associated with a Sandbox business seller. Copy its client ID and secret using PayPal's [setup guide](https://developer.paypal.com/api/rest/).
+
+Under **Testing Tools → Sandbox Accounts**, create/select a **Personal** buyer, separate from the Business seller. Retrieve its test email/password privately; use them only in the PayPal Sandbox login. [Sandbox account instructions](https://developer.paypal.com/tools/sandbox/accounts/)
+
+Set these names in ignored `.env` using your own values:
+
+```dotenv
+PAYPAL_CLIENT_ID=<your-sandbox-app-client-id>
+PAYPAL_CLIENT_SECRET=<your-server-only-sandbox-app-secret>
+NEXT_PUBLIC_PAYPAL_CLIENT_ID=<the-same-sandbox-app-client-id>
+PAYPAL_API_BASE=https://api-m.sandbox.paypal.com
+RISKPILOT_ORIGIN=http://localhost:3100
+MERCHANT_ORIGIN=http://localhost:3200
+MERCHANT_PORT=3200
+```
+
+The public client ID is an identifier; secrets and buyer passwords never belong in browser-exposed settings. Keep Gemini blank for deterministic explanations or configure Mode 2 independently. In one checkout, the local services generate/reuse the ignored bridge key if `MERCHANT_BRIDGE_SECRET` is blank; do not publish it.
 
 ```bash
 DEMO_TODAY=2026-11-12 npm run demo
 ```
 
-RiskPilot: [localhost:3100](http://localhost:3100) · Northstar: [localhost:3200](http://localhost:3200) · [Vision](http://localhost:3100/vision). The launcher checks configuration and starts services; it never pays or resets records. [Full setup, isolation and troubleshooting](RUNNING.md)
+Open [RiskPilot Shop](http://localhost:3100/shop) or [Northstar](http://localhost:3200). Shop uses final Pay Now in PayPal; Northstar uses Continue/approval → signed RiskPilot review → explicit Confirm and Pay → verified merchant receipt. Review can stop before those final actions. Sandbox uses test funds, not production money. No capture was initiated during this access check. [Full startup/isolation instructions](RUNNING.md)
+
+No paid subscription is mandatory for these documented modes. Live provider features require eligible accounts, available quotas and configured credentials. Before judging, the owner must resolve public-source access and arrange a no-charge provider-access alternative if an individual judge cannot obtain eligible free accounts. If a hosted demo needs login, supply dedicated test login details privately in the submission's testing instructions, with API/signing secrets kept on the server.
 
 ## Demo and validation
 

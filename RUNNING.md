@@ -14,7 +14,7 @@ npm ci
 cp .env.example .env
 ```
 
-Run `cp` only in a new clone with no existing `.env`. Preserve existing configuration and ledgers. The repository is currently private: reviewers need access or an owner-approved visibility change before judges can clone it.
+Run `cp` only in a new clone with no existing `.env`. Preserve existing configuration and ledgers. The repository is private; public open-source publication is required before submission. See [Judge Testing Access](README.md#judge-testing-access).
 
 ## Environment
 
@@ -46,7 +46,7 @@ DEMO_TODAY=2026-11-12 npm run dev
 
 Open [localhost:3000](http://localhost:3000), sign in at `/login` as `alex@riskpilot.demo`, and explore Dashboard, Goals, Money and Shop. `sam@riskpilot.demo` and `jordan@riskpilot.demo` select other fixed fictional profiles. There is no in-account persona dropdown or production authentication.
 
-Gemini failures show deterministic/template explanations; manual goal editing remains available. Without PayPal credentials, Shop offers a clearly labeled simulation that makes no PayPal request. A saved simulation changes only that isolated demo workspace. Merely exploring scenarios creates no order or purchase.
+Purchase and Money explanations use deterministic/template fallback without Gemini; guided page facts and manual goal editing remain available. Free-text Ask RiskPilot returns an unconfigured/503 message without a key; AI goal drafts are unavailable. Without PayPal credentials, Shop offers a clearly labeled simulation that makes no PayPal request. A saved simulation changes only that isolated demo workspace. Merely exploring scenarios creates no order or purchase.
 
 ## Both PayPal Sandbox sites
 
@@ -145,7 +145,7 @@ Set `DEMO_SEED_ENABLED=true` in `.env` for fictional production-build simulation
 | Symptom | Action |
 | --- | --- |
 | Launcher says PayPal is missing | Check all three matching Sandbox ID/secret settings and restart. For analysis-only review, use `npm run dev`. |
-| Gemini unavailable or invalid output | Expect labeled deterministic fallback. Verify your own key/model availability without exposing it; checkout and financial calculations remain independent. |
+| Gemini unavailable or invalid output | Purchase/Money explanations fall back; free-text Ask needs a configured key and may return an error. Verify your own key/model/quota without exposing it; financial calculations remain independent. |
 | Port 3100/3200 occupied | Identify the process and stop it only if it is yours. The combined launcher may reuse a healthy older process; use a separate checkout/origins for isolation. |
 | Sandbox login/MFA/CAPTCHA | Use your own Sandbox **personal buyer**, not production credentials or the merchant account. Human login and provider confirmation are manual steps. |
 | Dates/figures differ | Set `DEMO_TODAY=2026-11-12`, restart both services and check applied budgets and purchases. Financial dates are separate from real capture timestamps. |
@@ -159,3 +159,25 @@ Set `DEMO_SEED_ENABLED=true` in `.env` for fictional production-build simulation
 [Sanitized Sandbox acceptance](docs/STEP7B_ACCEPTANCE.md) predates the final financial corrections. [Step 8.7](docs/STEP87_RESULT.md) records final deterministic/mock regressions. The owner reports an independent final GO audit; no new provider payment was performed during release preparation.
 
 Use the [team checklist](docs/TEAM_ACCEPTANCE_REVIEW.md), [current rehearsal](docs/STEP7B_DEMO_REHEARSAL.md) and [submission materials](docs/DEVPOST_SUBMISSION.md). Public hosting/webhooks, physical-device acceptance, production identity, real banking/reconciliation and replicated storage remain outside current acceptance. A GitHub push does not deploy the app. Final recording and human Devpost submission remain separate steps.
+
+## Live AI and free Sandbox account setup
+
+Use the three [Judge Testing Access modes](README.md#judge-testing-access) for full provider-account
+instructions and official sources. `GEMINI_API_KEY` is server-only; the existing `GEMINI_MODEL`
+is `gemini-3.6-flash`, whose standard API input/output currently has a free tier. Quotas, project
+verification and geographic eligibility apply. No new live API call is claimed by the access audit.
+No model, launcher or financial calculation was changed.
+
+For Sandbox, obtain your own REST app under PayPal Developer → Apps & Credentials → Sandbox.
+Use that app's ID in both `PAYPAL_CLIENT_ID` and `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, its secret only
+in `PAYPAL_CLIENT_SECRET`, and the separate Personal Sandbox buyer's password only in PayPal's
+Sandbox login. Both Shop and Northstar use the same configured credentials in this local setup.
+`PAYPAL_WEBHOOK_ID` is optional for local capture; public webhook acceptance is separate.
+The combined `npm run demo` launcher checks PayPal configuration; it never checks for a Gemini key.
+The Shop launcher's no-key readiness check reports missing PayPal credentials, not missing Gemini.
+For completely credential-free financial exploration, use `npm run dev` instead.
+
+If a judge cannot use an eligible free provider account, arrange a no-charge hosted test environment
+with server-held keys and dedicated login details sent through the submission's testing instructions.
+Do not share a personal developer login, publish an API secret or require judges to purchase billing.
+See the [official testing rules](https://paypalaihackathon.devpost.com/rules).
