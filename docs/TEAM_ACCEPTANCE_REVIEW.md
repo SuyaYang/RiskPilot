@@ -3,7 +3,7 @@
 The owner reports a final independent GO audit for implementation freeze `77730d2`. Core product scope is frozen; this review checks blockers and clarity before submission. The release has 324 passing automated tests. No teammate approval is implied.
 
 - Release branch: [cynthia](https://github.com/SuyaYang/RiskPilot/tree/cynthia)
-- Review PR: Pending creation; the release owner will replace this line with the verified URL.
+- Review PR: [#3 — Finalize RiskPilot](https://github.com/SuyaYang/RiskPilot/pull/3).
 - Setup: [RUNNING.md](../RUNNING.md). Use your own isolated browser profile and ledger paths; never experiment in the recording or accepted payment workspace.
 
 ## A. First impression
@@ -66,3 +66,15 @@ Classify each item as **Submission blocker**, **Minor polish**, or **Future prod
 **Would the financial review genuinely help you make a better purchase decision?**
 
 Please leave product acceptance and code-review feedback in the PR. Request owner approval before merging; no automatic merge is authorized. Existing PR #1 remains the subsequent integration-to-main review.
+
+## Ready-to-send team message
+
+Hi team — RiskPilot's final implementation has passed the independent audit reported by the owner,
+with 324 automated tests passing. The release is on `cynthia`; please review
+https://github.com/SuyaYang/RiskPilot/pull/3 and use the checklist at
+https://github.com/SuyaYang/RiskPilot/blob/cynthia/docs/TEAM_ACCEPTANCE_REVIEW.md.
+Please do final product acceptance and code review in isolated test workspaces, focusing on
+submission blockers, financial clarity, checkout UX and setup friction. Core scope is frozen;
+label optional ideas as future suggestions. No experimental purchases in the recording workspace;
+new Sandbox acceptance requires explicit human approval. Please leave your approval or blockers
+in the PR and obtain owner approval before merging. Nothing has been merged automatically.

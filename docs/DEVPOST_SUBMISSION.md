@@ -92,6 +92,6 @@ RiskPilot brings financial context to PayPal checkout with deterministic cash-fl
 
 - Repository: https://github.com/SuyaYang/RiskPilot
 - Release branch: https://github.com/SuyaYang/RiskPilot/tree/cynthia
-- Review PR: Pending creation; replace only with the verified PR URL.
+- Review PR: https://github.com/SuyaYang/RiskPilot/pull/3
 - Demo video: **Not yet available — final recording has not been made.**
 - Repository access: currently private; judge access or an owner-approved visibility change remains necessary.
