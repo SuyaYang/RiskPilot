@@ -81,8 +81,8 @@ This was an actual Sandbox capture, not the local simulation action or a mocked 
 
 | Evidence | Value |
 | --- | --- |
-| Order | `0JE5641215704915A` |
-| Capture | `5DV57240EB846754P` |
+| Order | `[Sandbox identifier redacted]` |
+| Capture | `[Sandbox identifier redacted]` |
 | PayPal order/capture | `COMPLETED` / `COMPLETED` |
 | Verified amount | $900.00 USD |
 | RiskPilot order/projection | `CAPTURED` / `UPDATED` |

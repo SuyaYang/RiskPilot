@@ -1,5 +1,8 @@
 # Step 7B — final Sandbox acceptance and demo readiness
 
+Public copy: provider identifiers are redacted; original payment ledgers remain private and unchanged.
+The historical checkpoint below predates the final Step 8.7 financial correction.
+
 ## Result and checkpoint
 
 **Completed for local Sandbox acceptance.** Branch `cynthia`; approved Step 7A.2 checkpoint:
@@ -39,9 +42,7 @@ created no order/reserve. Explicit application produced lowest cash $1,738, dela
 minimum $1,572, capacity $122; all readiness checks passed. Current cash did not increase.
 Dashboard/Money/Goals hashes and allocations and the Shop baseline were compared directly.
 
-- Clean hash: `0f963d0183bc27b4b2578f29612b31259e24301dc579dd7b66c727d04997ba37`
-- Applied-plan hash: `ee6c4f588c1e5972a4595f74c939c8f7dfae790c5f87590b82f2690b013aeaff`
-- After both captures: `ae057cb9045b08d0eed9bb4a808d3ad8f4cfbd961e6ba874e141d1774c73f157`
+Exact workspace financial hashes and provider identifiers remain in the private acceptance artifacts.
 
 A real pre-change assessment was rejected by order creation before a stubbed provider could
 be called (zero provider calls). Automated regressions cover stale Shop and merchant capture,
@@ -58,8 +59,8 @@ currency and capture IDs; local ledgers and rendered results agreed.
 
 | Flow | Product | Order ID | Capture ID | Amount | Status |
 | --- | --- | --- | --- | ---: | --- |
-| B — Northstar | Aero 14 Laptop | 0B055045PW155242U | 0FL65682BP995802J | $900.00 USD | COMPLETED |
-| A — Shop | Quiet Buds Pro | 3LJ35188YL886274D | 58119035695595002 | $249.00 USD | COMPLETED |
+| B — Northstar | Aero 14 Laptop | [Sandbox identifier redacted] | [Sandbox identifier redacted] | $900.00 USD | COMPLETED |
+| A — Shop | Quiet Buds Pro | [Sandbox identifier redacted] | [Sandbox identifier redacted] | $249.00 USD | COMPLETED |
 
 Each order has exactly **one economic purchase reserve and one saved forecast snapshot**.
 Both have `projectionStatus: UPDATED`. Snapshot IDs are `capture:<capture ID>`.
@@ -94,7 +95,7 @@ verified. The existing Continue → RiskPilot review → explicit Confirm and pa
 was preserved. The intermediate approved-but-uncaptured interval was not separately polled in
 this live transaction; automated merchant tests verify that approval/return alone cannot capture.
 
-The first Shop $900 order, `2UJ70438VG054603B`, was left unpaid after the SDK session was closed.
+The first Shop $900 order, `[Sandbox identifier redacted]`, was left unpaid after the SDK session was closed.
 A provider lookup confirmed no capture. After Northstar changed the financial hash, its old
 assessment was treated as stale; it was not paid. A fresh Quiet Buds assessment was used for the
 successful Shop test. The unused order has no economic reserve and was preserved for inspection.

@@ -235,8 +235,8 @@ Step 7B live Sandbox acceptance and Vision remain unimplemented.
 
 Step 7A.2 is checkpointed as `0008f283960d98bbee5b36d6229c7214953212de` on `cynthia`.
 Both live Sandbox journeys completed with product-owner participation in an isolated acceptance
-ledger: Northstar $900 (order `0B055045PW155242U`, capture `0FL65682BP995802J`) and Shop
-$249 (order `3LJ35188YL886274D`, capture `58119035695595002`). Read-only provider verification,
+ledger: Northstar $900 (order `[Sandbox identifier redacted]`, capture `[Sandbox identifier redacted]`) and Shop
+$249 (order `[Sandbox identifier redacted]`, capture `[Sandbox identifier redacted]`). Read-only provider verification,
 merchant receipt/Shop success and exactly one reserve/saved forecast per capture agree.
 No original demo workspace was reset; payment and financial implementations were unchanged.
 Final failure-case QA reproduced decision AI's 50-second maximum exceeding Shop's 40-second
@@ -302,3 +302,20 @@ Headroom uses the full existing payment horizon and conservative income/current-
 preview/captured results, income replacement eligibility and both checkout journeys are preserved.
 The stale replacement disclosure is corrected. No payment, workspace reset, publication or Step 9
 work occurred. This step is committed locally; independent recheck remains available.
+
+## Step 9A/9B — release documentation and review preparation
+
+The approved product implementation remains `77730d2cbe8c60c4a9796322b355e6f9a5e8500e`.
+The owner reports independent final Claude GO acceptance. Release preparation changes documentation
+only: judge-facing README/setup, teammate acceptance checklist, copy-ready English submission
+materials and redaction of Sandbox identifiers from current historical documentation. The original
+private ledgers remain unchanged; Git history is preserved. Historical revisions may retain
+non-credential Sandbox identifiers; no historical credential exposure was found by the release scan.
+
+A fresh isolated installation of the approved freeze passed all 324 tests, TypeScript and production
+build. The documentation release also passed the same local checks and whitespace validation.
+Publication uses only `cynthia`; its review targets the existing `feature/checkout-mvp` integration
+branch before that branch's existing PR #1 to `main`. Neither shared branch is directly updated.
+See [team review](TEAM_ACCEPTANCE_REVIEW.md) and [submission materials](DEVPOST_SUBMISSION.md).
+Repository visibility remains private; owner-managed judge access, teammate approval, final video
+and human submission remain separate actions. No actual payment or product behavior changed.
