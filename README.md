@@ -152,6 +152,15 @@ The repository includes [Render deployment preparation](render.yaml) and [deploy
 
 Existing Sandbox purchases remain in the forecast and may leave even the no-purchase baseline below the buffer. Preserve these records; do not change risk calculations to make a demo green.
 
+## Future vision showcase
+
+Open [the standalone `/vision` page](http://localhost:3100/vision) with the local demo running
+(or append `/vision` to your app URL). It is a static, presentation-ready closing frame for the
+hackathon video: a future PayPal ecosystem concept, **not an official PayPal interface or existing
+native integration**. Figures are labeled illustrative demo values, not live account data.
+The actual implemented payment experience remains the merchant-integrated PayPal Sandbox prototype
+and the separate Shop Sandbox checkout described above. Vision is intentionally outside the primary navigation.
+
 ## Documentation
 
 - [Running, reset and recovery](RUNNING.md)

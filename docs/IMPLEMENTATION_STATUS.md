@@ -254,3 +254,22 @@ browser widths 375/390/768/1280px and screenshots cover the main pages, review, 
 saved payment outcomes. Physical devices/public webhook delivery remain separate. See the
 [precise live-versus-mock evidence and limits](STEP7B_ACCEPTANCE.md) and [2:50 rehearsal](STEP7B_DEMO_REHEARSAL.md).
 Step 8 `/vision`, new product features and Devpost copy were not implemented.
+
+## Step 8 — standalone future vision showcase (November 11, 2026)
+
+The approved Step 7B changes are checkpointed as `42e94b99ca7de0513ba9f8d9bba3ed3766c92509`
+on `cynthia`. `/vision` is a static presentation route outside the four-item product navigation.
+It uses the existing local Inter font, CSS, SVG and icons; the concept does not mount account
+navigation, fetch financial data, calculate forecasts, or expose a payment action. All product
+routes retain their existing shell. No financial/payment services or acceptance ledgers were changed.
+
+The phone illustration labels the verified clean Alex budget/allocation example as illustrative.
+Today’s merchant-integrated Sandbox implementation is distinguished from a possible future
+PayPal ecosystem integration requiring platform support and user permission. This is not an
+official PayPal interface, partnership or measured business-outcome claim.
+
+272 tests, TypeScript, production build and whitespace checks pass. Rendered browser screenshots
+were inspected at 375/390/768/1280/1440/1920px. The complete desktop composition fits at 1280×800,
+1440×900 and 1920×1080; mobile stacks naturally with scrolling. Screenshots and verification logs
+are outside Git in `../artifacts/step-8/`. No payment was initiated or captured in Step 8.
+Final submission, Devpost and video preparation remain separate, unperformed work.
